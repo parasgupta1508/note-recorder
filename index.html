@@ -105,21 +105,22 @@
   #tTarget,#scTarget{font-size:15px} #tTarget{color:#d5dbea;font-variant-numeric:tabular-nums}
   #tHeard,#scHeard{font-size:17px;font-weight:550;font-variant-numeric:tabular-nums;min-height:26px}
   .verdict{font-size:24px;font-weight:650;text-align:center;min-height:32px}
-  #tMeter{aspect-ratio:auto;height:292px;background:#10141c;border:1px solid var(--line);border-radius:16px}
+  #tMeter{aspect-ratio:auto;height:290px;background:#10141c;border:1px solid var(--line);border-radius:16px}
   .sub-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
   .sub-row .sub{margin:0}
   .sub-row button{font-size:14.5px;padding:6px 14px;min-height:38px}
-  #autoBtn.on{background:#243055;color:#fff;box-shadow:inset 0 0 0 1.5px var(--acc)}
   /* headstock with tuning pegs */
-  .hs{display:grid;grid-template-columns:1fr minmax(64px,104px) 1fr;gap:6px;align-items:center}
-  .hs svg{width:100%;display:block}
-  .hs-col{display:grid;justify-items:center;align-items:center}
-  .peg{width:64px;height:64px;border-radius:50%;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:var(--raise);color:var(--fg);border:2.5px solid #5a6684;position:relative;line-height:1}
-  .peg b{font-size:20px;font-weight:700} .peg small{font-size:12.5px;color:var(--mut);font-weight:600}
-  .peg.on{border-color:var(--acc);box-shadow:0 0 0 3px rgba(108,141,255,.4)}
-  .peg.done{background:#17402f;border-color:var(--ok);color:#d3fbe7} .peg.done small{color:#a7e9c9}
-  .peg.lock::before{content:'';position:absolute;inset:-8px;border:2px dashed var(--acc);border-radius:50%}
-  .peg i{position:absolute;top:-5px;right:-5px;background:var(--ok);color:#06281b;width:22px;height:22px;border-radius:50%;font-size:14px;font-style:normal;display:grid;place-items:center;font-weight:800}
+  #instChips .chip{background:transparent;border:1px solid var(--line);color:var(--mut);font-size:14px;padding:6px 14px;font-weight:500}
+  #instChips .chip.on{color:#f4f6fb;border-color:#aeb8d0;background:#1a2030}
+  #strRow{justify-content:flex-end;margin-bottom:8px}
+  #strRow button{font-size:13.5px;min-height:34px;padding:4px 14px;background:transparent;border:1px solid var(--line);color:var(--mut)}
+  #autoBtn.on{color:#f4f6fb;border-color:#aeb8d0;background:#1a2030;box-shadow:none}
+  #strChips{display:flex;gap:6px;justify-content:center}
+  .sp{flex:1 1 0;min-width:0;max-width:76px;padding:9px 4px 8px;border-radius:12px;background:transparent;border:1px solid var(--line);color:#f4f6fb;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1;position:relative}
+  .sp b{font-size:19px;font-weight:600} .sp small{font-size:11.5px;color:var(--mut);font-weight:500}
+  .sp.on{border-color:#aeb8d0;background:#1a2030}
+  .sp.lock{border-color:var(--acc)}
+  .sp.done{color:var(--ok);border-color:#1f6b50} .sp.done small{color:#4fae8c}
   @media (max-width:719px){ .tuner .t-side{display:contents} #instBox{order:0} .t-main{order:1} #strBox{order:2} }
   @media (max-height:520px) and (orientation:landscape){ .tuner .t-side{display:flex} #tMeter{height:250px} }
   .advice{font-size:19px;font-weight:650;text-align:center;min-height:28px;line-height:1.25}
@@ -302,17 +303,17 @@
 <!-- ============ TUNER ============ -->
 <section id="tab-tuner" class="panel tuner">
   <div class="t-side stack">
-    <div id="instBox"><p class="sub">Instrument</p><div id="instChips"></div></div>
+    <div id="instBox"><div id="instChips"></div></div>
     <div id="strBox">
-      <div class="sub-row" id="strRow"><p class="sub">Strings</p><div class="row"><button id="autoBtn" class="sec on">● Auto</button><button id="retune" class="sec" title="Clear the ✓ marks and start tuning again">↻ Retune</button></div></div>
+      <div class="sub-row" id="strRow"><div class="row"><button id="autoBtn" class="sec on">Auto</button><button id="retune" class="sec" title="Clear the marks and start again">Reset</button></div></div>
       <div id="strChips"></div>
     </div>
   </div>
   <div class="t-main">
     <div class="hint center" id="tHint"></div>
-    <canvas id="tMeter" aria-label="Tuning dial: how far the pitch is from the target note"></canvas>
+    <canvas id="tMeter" aria-label="Tuner: how far the pitch is from the target note"></canvas>
     <div class="advice" id="tAdvice"></div>
-    <div class="center mut" id="tTarget">target –</div>
+    <div class="center mut" id="tTarget"></div>
     <div class="hide" id="tHeard"></div>
     <div class="hide"><div id="tNote"></div><div id="tVerdict"></div></div>
     <div class="foot" style="margin-top:6px"><label class="check"><input type="checkbox" id="beep"> Beep when in tune</label></div>
@@ -665,11 +666,11 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
 
 // ----- TUNER -----
 let inst = 'chromatic'; const tuned = new Set();
-const hist = []; let lastVoiced = -9, inTuneSince = null, confirmed = false, shownActive = -2;
+const hist = []; let pend = null, lastVoiced = -9, inTuneSince = null, confirmed = false, shownActive = -2;
 const strMidis = () => PRESETS[inst].strings.map(nameToMidi);
 
 function resetTuner() {
-  tuned.clear(); hist.length = 0; lastVoiced = -9; inTuneSince = null; confirmed = false; shownActive = -2; offSince = null; lock = null; updateAuto();
+  tuned.clear(); hist.length = 0; pend = null; lastVoiced = -9; inTuneSince = null; confirmed = false; shownActive = -2; offSince = null; lock = null; updateAuto();
   trail.length = 0; tTgMidi = null; tm = { idle: true };
   $('tHint').textContent = ''; $('tAdvice').textContent = ''; buildStrChips(-1);
 }
@@ -682,32 +683,20 @@ function buildInstChips() {
   }
 }
 let lock = null;                                       // null = Auto (detect the string), number = locked to that string
-const PEG_COLS = { 6: [[2, 1, 0], [3, 4, 5]], 4: [[1, 0], [2, 3]], 3: [[1, 0], [2]], 5: [[2, 1, 0], [3, 4]] };
-function updateAuto() { $('autoBtn').classList.toggle('on', lock == null); $('autoBtn').textContent = lock == null ? '● Auto' : 'Auto'; }
+function updateAuto() { $('autoBtn').classList.toggle('on', lock == null); }
 function buildStrChips(activeIdx = -1) {
   const box = $('strChips'), S = PRESETS[inst].strings; box.innerHTML = '';
   $('strRow').classList.toggle('hide', !S.length);
-  if (!S.length) { box.innerHTML = '<span class="mut">Chromatic mode — play any note.</span>'; return; }
-  const [L, Rt] = PEG_COLS[S.length] || [[...S.keys()].slice(0, S.length >> 1).reverse(), [...S.keys()].slice(S.length >> 1)];
-  const rows = Math.max(L.length, Rt.length), RH = 74, SH = rows * RH;
-  const peg = i => {
-    const n = S[i], b = document.createElement('button');
-    b.className = 'peg' + (i === activeIdx ? ' on' : '') + (tuned.has(i) ? ' done' : '') + (lock === i ? ' lock' : '');
-    b.innerHTML = `<b>${nm(n.replace(/\d+/, ''))}</b><small>${n.match(/\d+/)[0]}</small>` + (tuned.has(i) ? '<i>✓</i>' : '');
+  S.forEach((n, i) => {
+    const b = document.createElement('button');
+    b.className = 'sp' + (i === activeIdx ? ' on' : '') + (tuned.has(i) ? ' done' : '') + (lock === i ? ' lock' : '');
+    b.innerHTML = `<b>${nm(n.replace(/\d+/, ''))}</b><small>${n.match(/\d+/)[0]}</small>`;
     b.title = 'Hear ' + n + ' and tune to this string';
-    b.onclick = () => { lock = i; updateAuto(); shownActive = -2; buildStrChips(i); playTone(noteToFreq(nameToMidi(n), a4()), 1.4); };
-    return b;
-  };
-  const col = list => { const d = document.createElement('div'); d.className = 'hs-col'; d.style.gridTemplateRows = `repeat(${rows},${RH}px)`; list.forEach(i => d.appendChild(peg(i))); return d; };
-  let svg = `<svg viewBox="0 0 100 ${SH}" preserveAspectRatio="none" height="${SH}"><path d="M14 6 H86 Q94 6 94 14 V${SH - 34} Q94 ${SH - 24} 80 ${SH - 22} H62 V${SH} H38 V${SH - 22} H20 Q6 ${SH - 24} 6 ${SH - 34} V14 Q6 6 14 6 Z" fill="#262d3d" stroke="#46526c" stroke-width="1.5"/>`;
-  const line = (i, side, r) => { const y = RH / 2 + r * RH, c = i === activeIdx ? '#8aa4ff' : tuned.has(i) ? '#34d399' : '#8b96b0'; return `<line x1="50" y1="${SH - 8}" x2="${side ? 100 : 0}" y2="${y}" stroke="${c}" stroke-width="${i === activeIdx ? 2.6 : 1.6}"/>`; };
-  L.forEach((i, r) => svg += line(i, 0, r)); Rt.forEach((i, r) => svg += line(i, 1, r));
-  svg += '</svg>';
-  const hs = document.createElement('div'); hs.className = 'hs';
-  hs.appendChild(col(L)); const mid = document.createElement('div'); mid.innerHTML = svg; hs.appendChild(mid); hs.appendChild(col(Rt));
-  box.appendChild(hs);
+    b.onclick = () => { lock = i; updateAuto(); shownActive = -2; pend = null; buildStrChips(i); playTone(noteToFreq(nameToMidi(n), a4()), 1.4); };
+    box.appendChild(b);
+  });
 }
-$('autoBtn').onclick = () => { lock = null; updateAuto(); shownActive = -2; buildStrChips(-1); };
+$('autoBtn').onclick = () => { lock = null; pend = null; updateAuto(); shownActive = -2; buildStrChips(-1); };
 // Pitch history + smoothing: the raw reading jumps around too fast to follow, so the needle is smoothed,
 // a band shows how far it is wobbling, and a 3-second trail shows which way it is drifting.
 const trail = [], TRAIL_S = 3, SC = { ok: '#34d399', warn: '#fbbf24', bad: '#fb7185' };
@@ -724,9 +713,17 @@ function tunerIdle() {
   if (!was) drawTMeter();
 }
 function tunerFrame(t, f) {
-  if (f) { if (t - lastVoiced > 0.25) hist.length = 0; hist.push(f); if (hist.length > 5) hist.shift(); lastVoiced = t; }
+  // Outlier guard: a single reading far from the recent median (octave jump, pluck click) is held back
+  // until the next frame agrees with it, so the needle never lurches on one bad frame.
+  if (f) {
+    if (t - lastVoiced > 0.25) { hist.length = 0; pend = null; }
+    if (hist.length >= 3 && Math.abs(centsBetween(f, median(hist))) > 120) {
+      if (pend && Math.abs(centsBetween(f, pend)) < 40) { hist.length = 0; hist.push(pend, f); pend = null; lastVoiced = t; }
+      else { pend = f; f = null; }
+    } else { pend = null; hist.push(f); if (hist.length > 7) hist.shift(); lastVoiced = t; }
+  }
   if (!hist.length || t - lastVoiced > 1.0) { tunerIdle(); inTuneSince = null; confirmed = false; offSince = null; return; }
-  const fm = median(hist), A = a4(), T = tol();
+  const fm = median(hist), A = a4(), T = tol();   // median of the last 7 good readings
   const tg = pickTarget(fm, A, strMidis(), lock);
   const c = tg.cents, tn = midiName(tg.midi), m = tn.match(/^([A-G]#?)(-?\d+)$/);
   if (tg.midi !== tTgMidi) { tTgMidi = tg.midi; trail.length = 0; tDisp = c; tLastT = t; tShown = 0; nPos = c; nVel = 0; }
@@ -735,21 +732,18 @@ function tunerFrame(t, f) {
   { const s = Math.min(dt, 0.05); nVel += (120 * (c - nPos) - 18.6 * nVel) * s; nPos += nVel * s; }   // analog-style needle: heavy, springy, calm
   if (f) trail.push({ t, c }); while (trail.length && t - trail[0].t > TRAIL_S) trail.shift();
   const a = Math.abs(tDisp), st = tState(tDisp);
-  tm = { idle: false, t, midi: tg.midi, disp: tDisp, needle: nPos, state: st, lo: nm(midiName(tg.midi - 1)), hi: nm(midiName(tg.midi + 1)), letter: nm(m[1]), oct: m[2], T, confirmed: confirmed && a <= T };
+  tm = { idle: false, t, hz: fm, midi: tg.midi, disp: tDisp, needle: nPos, state: st, lo: nm(midiName(tg.midi - 1)), hi: nm(midiName(tg.midi + 1)), letter: nm(m[1]), oct: m[2], T, confirmed: confirmed && a <= T };
   if (t - tShown > 0.12) {                               // numbers update ~8×/s so they are readable
     tShown = t;
     const stringy = inst !== 'chromatic';
-    $('tHint').textContent = tg.idx >= 0 ? `Tuning the ${tn} string` : '';
+    $('tHint').textContent = tg.idx >= 0 ? `String ${tg.idx + 1} · ${nm(tn)}` : '';
     $('tNote').innerHTML = `${m[1]}<small>${m[2]}</small>`;
-    $('tTarget').textContent = `target ${tn} · ${tg.hz.toFixed(2)} Hz  |  heard ${fm.toFixed(1)} Hz`;
+    $('tTarget').textContent = `${fm.toFixed(1)} Hz  ·  target ${tg.hz.toFixed(1)} Hz`;
     $('tHeard').textContent = '';
     $('tVerdict').textContent = (a <= T ? 'In tune' : tDisp > 0 ? 'Sharp ♯' : 'Flat ♭') + `  ${tDisp >= 0 ? '+' : '−'}${a.toFixed(0)}¢`;
     $('tVerdict').className = 'verdict ' + st + '-t';
-    $('tAdvice').textContent = a <= T ? '✓ In tune — hold it steady'
-      : a > 50 ? (tg.idx >= 0 ? 'Far off — is this the right string?' : 'Far from this note')
-      : tDisp < 0 ? `▲ ${stringy ? 'Tighten the string' : 'Raise the pitch'} · ${a.toFixed(0)}¢ to go`
-      : `▼ ${stringy ? 'Loosen the string' : 'Lower the pitch'} · ${a.toFixed(0)}¢ to go`;
-    $('tAdvice').className = 'advice ' + st + '-t';
+    $('tAdvice').textContent = a <= T ? '' : a > 60 ? 'Not close to this note' : tDisp < 0 ? 'Tune up' : 'Tune down';
+    $('tAdvice').className = 'advice';
   }
   drawTMeter();
   if (tg.idx !== shownActive) { shownActive = tg.idx; buildStrChips(tg.idx); }
@@ -757,7 +751,7 @@ function tunerFrame(t, f) {
   if (a <= T) {
     offSince = null;
     if (inTuneSince == null) inTuneSince = t;
-    if (!confirmed && t - inTuneSince >= 0.3) {
+    if (!confirmed && t - inTuneSince >= 0.5) {   // held in tune for half a second
       confirmed = true;
       if (tg.idx >= 0 && !tuned.has(tg.idx)) { tuned.add(tg.idx); buildStrChips(tg.idx); }
       $('tNote').classList.remove('pulse'); void $('tNote').offsetWidth; $('tNote').classList.add('pulse');
@@ -774,42 +768,42 @@ function drawTMeter() {
   const W = tcv.clientWidth, H = tcv.clientHeight; if (!W || !H) return;
   const dpr = Math.min(3, window.devicePixelRatio || 1);
   if (tcv.width !== Math.round(W * dpr) || tcv.height !== Math.round(H * dpr)) { tcv.width = Math.round(W * dpr); tcv.height = Math.round(H * dpr); }
-  const g = tg2; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H); g.lineCap = 'butt'; g.textBaseline = 'alphabetic';
-  const INK = '#f6f8fd', MUT = '#c3cade', T = tol(), idle = tm.idle, BG = '#10141c';
-  const px = W / 2, py = H * 0.56, R = Math.min(W / 2 - 22, H * 0.52), SW = 72 * Math.PI / 180;
-  const ang = c => c / 50 * SW - Math.PI / 2, pt = (c, r) => [px + r * Math.cos(ang(c)), py + r * Math.sin(ang(c))];
-  const col = idle ? '#8b96b0' : SC[tm.state], tuned = !idle && tm.confirmed;
-  // coloured rim: red / yellow / green zones (the zone the needle is in is full strength)
-  g.strokeStyle = '#1c2231'; g.lineWidth = 26; g.beginPath(); g.arc(px, py, R - 10, ang(-52), ang(52)); g.stroke();
-  const band = (c0, c1, colr) => { const on = !idle && tm.disp >= c0 && tm.disp <= c1; g.globalAlpha = idle ? 0.35 : on ? 1 : 0.62; g.strokeStyle = colr; g.lineWidth = 18; g.beginPath(); g.arc(px, py, R - 10, ang(c0), ang(c1)); g.stroke(); g.globalAlpha = 1; };
-  band(-50, -25, SC.bad); band(-25, -T, SC.warn); band(-T, T, SC.ok); band(T, 25, SC.warn); band(25, 50, SC.bad);
-  if (tuned) { g.save(); g.shadowColor = SC.ok; g.shadowBlur = 22; g.strokeStyle = SC.ok; g.lineWidth = 18; g.beginPath(); g.arc(px, py, R - 10, ang(-T), ang(T)); g.stroke(); g.restore(); }
-  // wobble: where the pitch has been in the last half second
-  if (!idle) { const rec = trail.filter(q => tm.t - q.t < 0.5); if (rec.length > 1) { let lo = 1e9, hi = -1e9; for (const q of rec) { lo = Math.min(lo, q.c); hi = Math.max(hi, q.c); } lo = Math.max(-50, lo); hi = Math.min(50, Math.max(hi, lo + 1.5)); g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 5; g.beginPath(); g.arc(px, py, R + 5, ang(lo), ang(hi)); g.stroke(); } }
-  // scale
-  for (let c = -50; c <= 50; c += 5) {
-    const big = c % 25 === 0, mid = c % 10 === 0, [x0, y0] = pt(c, R - 24), [x1, y1] = pt(c, R - 24 - (big ? 17 : mid ? 12 : 7));
-    g.strokeStyle = c === 0 ? INK : big ? '#e4e9f5' : '#9ba6c0'; g.lineWidth = c === 0 ? 3 : big ? 2.2 : 1.4; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
-  }
-  g.font = '700 15px system-ui,sans-serif'; g.textAlign = 'center'; g.fillStyle = INK;
-  for (const c of [-50, -25, 0, 25, 50]) { const [x, y] = pt(c, R - 56); g.fillText((c > 0 ? '+' : c < 0 ? '−' : '') + Math.abs(c), x, y + 5); }
-  // needle
-  if (!idle) {
-    const nc = Math.max(-57, Math.min(57, tm.needle)), [nx, ny] = pt(nc, R - 2);
-    g.save(); g.shadowColor = col; g.shadowBlur = 12; g.strokeStyle = col; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(px, py); g.lineTo(nx, ny); g.stroke(); g.restore();
-  }
-  g.fillStyle = idle ? '#59627a' : col; g.beginPath(); g.arc(px, py, 10, 0, 7); g.fill(); g.fillStyle = BG; g.beginPath(); g.arc(px, py, 4, 0, 7); g.fill();
-  // big note + status
+  const g = tg2; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H); g.lineCap = 'round'; g.textBaseline = 'alphabetic';
+  const INK = '#f4f6fb', MUT = '#8f9ab3', T = tol(), idle = tm.idle, FONT = 'system-ui,-apple-system,"Segoe UI",sans-serif';
+  const a = idle ? 0 : Math.abs(tm.disp), inTune = !idle && a <= T, tunedNow = !idle && tm.confirmed;
+  const col = idle ? MUT : inTune ? SC.ok : INK, cx = W / 2;
+  // note name
+  const y0 = H * 0.38;
   g.textAlign = 'center';
-  if (idle) { g.fillStyle = '#9aa5bf'; g.font = '700 26px system-ui,sans-serif'; g.fillText('Play a note', px, py + 78); }
+  if (idle) { g.fillStyle = '#4b546b'; g.font = '300 88px ' + FONT; g.fillText('–', cx, y0); }
   else {
-    g.font = '800 74px system-ui,sans-serif'; const wl = g.measureText(tm.letter).width; g.font = '700 28px system-ui,sans-serif'; const wo = g.measureText(tm.oct).width, x0 = px - (wl + wo + 4) / 2;
-    g.textAlign = 'left'; g.fillStyle = tuned ? SC.ok : INK; g.font = '800 74px system-ui,sans-serif'; g.fillText(tm.letter, x0, py + 84); g.fillStyle = MUT; g.font = '700 28px system-ui,sans-serif'; g.fillText(tm.oct, x0 + wl + 4, py + 84);
-    g.textAlign = 'center'; g.font = '800 26px system-ui,sans-serif'; g.fillStyle = col;
-    const a = Math.abs(tm.disp); g.fillText(tuned ? '✓ Tuned' : a <= T ? 'In tune' : `${tm.disp > 0 ? '+' : '−'}${a.toFixed(0)}¢  ${tm.disp > 0 ? 'sharp' : 'flat'}`, px, H - 14);
-    const [lx, ly] = pt(-50, R - 10), [rx, ry] = pt(50, R - 10), cl = x => Math.max(38, Math.min(W - 38, x));
-    g.textAlign = 'center'; g.font = '700 17px system-ui,sans-serif'; g.fillStyle = '#e8ecf6'; g.fillText(tm.lo, cl(lx), ly + 40); g.fillText(tm.hi, cl(rx), ry + 40);
-    g.font = '600 12.5px system-ui,sans-serif'; g.fillStyle = MUT; g.fillText('♭ lower', cl(lx), ly + 57); g.fillText('higher ♯', cl(rx), ry + 57);
+    const L = tm.letter[0], acc = tm.letter.slice(1);
+    g.font = '300 96px ' + FONT; const wl = g.measureText(L).width;
+    g.font = '400 30px ' + FONT; const wa = acc ? g.measureText(acc).width + 2 : 0, wo = g.measureText(tm.oct).width + 4;
+    const x = cx - (wl + wa + wo) / 2; g.textAlign = 'left';
+    g.fillStyle = tunedNow ? SC.ok : INK; g.font = '300 96px ' + FONT; g.fillText(L, x, y0);
+    g.font = '400 30px ' + FONT; g.fillStyle = tunedNow ? SC.ok : INK; if (acc) g.fillText(acc, x + wl + 2, y0 - 50);
+    g.fillStyle = MUT; g.fillText(tm.oct, x + wl + wa + 4, y0);
+  }
+  // cents readout
+  g.textAlign = 'center'; g.font = '500 22px ' + FONT; g.fillStyle = col;
+  g.fillText(idle ? 'Play a note' : tunedNow ? 'In tune' : inTune ? '0¢' : `${tm.disp > 0 ? '+' : '−'}${a.toFixed(0)}¢`, cx, y0 + 40);
+  // linear meter
+  const my = H * 0.76, x0 = 30, x1 = W - 30, pos = c => cx + Math.max(-50, Math.min(50, c)) / 50 * (x1 - cx);
+  g.fillStyle = idle ? 'rgba(52,211,153,.07)' : 'rgba(52,211,153,.22)'; rr(g, pos(-T), my - 22, pos(T) - pos(-T), 44, 6); g.fill();
+  for (let c = -50; c <= 50; c += 5) {
+    const h = c === 0 ? 22 : c % 10 === 0 ? 12 : 7;
+    g.strokeStyle = c === 0 ? '#c9d1e4' : '#4b546b'; g.lineWidth = c === 0 ? 2 : 1.2; g.beginPath(); g.moveTo(pos(c), my - h); g.lineTo(pos(c), my + h); g.stroke();
+  }
+  g.font = '500 12.5px ' + FONT; g.fillStyle = MUT; g.textAlign = 'center';
+  g.fillText('−50', pos(-50), my + 42); g.fillText('0', pos(0), my + 42); g.fillText('+50', pos(50), my + 42);
+  g.font = '400 18px ' + FONT; g.fillText('♭', x0 - 8, my - 30); g.fillText('♯', x1 + 8, my - 30);
+  if (!idle) {
+    const rec = trail.filter(q => tm.t - q.t < 0.5);                    // where the pitch wandered in the last half second
+    if (rec.length > 1) { let lo = 1e9, hi = -1e9; for (const q of rec) { lo = Math.min(lo, q.c); hi = Math.max(hi, q.c); } g.fillStyle = 'rgba(255,255,255,.14)'; rr(g, pos(lo), my - 5, Math.max(4, pos(hi) - pos(lo)), 10, 5); g.fill(); }
+    const nx = pos(tm.needle);
+    g.save(); if (tunedNow) { g.shadowColor = SC.ok; g.shadowBlur = 14; }
+    g.strokeStyle = col; g.lineWidth = 4; g.beginPath(); g.moveTo(nx, my - 28); g.lineTo(nx, my + 28); g.stroke(); g.restore();
   }
 }
 function rr(g, x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
@@ -1886,7 +1880,14 @@ function loop() {
   updateLevel(rms, pk); calibFrame(rms);
   let f = null, fR = null;
   if (rms > +$('gate').value) {
-    const r = yin(buf, ctx.sampleRate, +$('fmin').value, +$('fmax').value), conf = +$('conf').value;
+    let lo = +$('fmin').value, hi = +$('fmax').value;
+    if (tab === 'tuner' && !recording && !sc.running) {          // the tuner only needs the instrument's own range: fewer octave errors, less CPU
+      const S = strMidis(); if (S.length) {
+        const A = a4(), one = lock != null && S[lock] != null;
+        lo = noteToFreq((one ? S[lock] : Math.min(...S)) - (one ? 5 : 4), A); hi = noteToFreq((one ? S[lock] : Math.max(...S)) + (one ? 5 : 4), A);
+      }
+    }
+    const r = yin(buf, ctx.sampleRate, lo, hi), conf = +$('conf').value;
     if (r && r.clarity > conf) f = r.freq;
     if (recording) fR = recPitch(r, rms, pk, conf);   // the recorder is stricter than the tuner: fewer wrong notes from noise
   }
