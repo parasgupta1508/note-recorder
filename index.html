@@ -1,0 +1,1431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d12">
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tuner">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Tuner & Scale Trainer</title>
+<style>
+  :root{
+    --bg:#0b0d12;--surface:#141821;--surface2:#1a1f2b;--raise:#222938;--line:#262c3a;
+    --fg:#eceff6;--mut:#8d95a8;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--acc:#6c8dff;
+    --r:14px;--sab:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+       padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left))}
+  .wrap{max-width:1080px;margin:0 auto}
+  .hide{display:none!important}
+  .mut{color:var(--mut)} .center{text-align:center}
+  .ok-t{color:var(--ok)} .warn-t{color:var(--warn)} .bad-t{color:var(--bad)}
+  b{font-weight:600}
+
+  /* ---------- app bar (sticky) ---------- */
+  .appbar{position:sticky;top:0;z-index:20;margin:0 calc(-1 * max(14px,env(safe-area-inset-left))) 0 calc(-1 * max(14px,env(safe-area-inset-right)));
+          padding:calc(10px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right)) 8px max(14px,env(safe-area-inset-left));
+          background:rgba(11,13,18,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .appbar .in{max-width:1080px;margin:0 auto}
+  .bar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:650;font-size:16px;letter-spacing:.1px;min-width:0}
+  .brand svg{flex:none;color:var(--acc)}
+  .brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* phones: brand + button on row 1, status text on its own row so nothing wraps or truncates */
+  .bar{display:grid;grid-template-columns:minmax(0,1fr) auto;row-gap:2px}
+  .bar-r{display:contents}
+  #start{white-space:nowrap;grid-column:2;grid-row:1}
+  #status{grid-column:1/-1;grid-row:2;color:var(--mut);font-size:11.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  @media (min-width:560px){
+    .bar{display:flex} .bar-r{display:flex;align-items:center;gap:12px;min-width:0}
+    #status{font-size:12.5px;max-width:40vw}
+  }
+  .level{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.5px;color:var(--mut)}
+  .lvl-track{position:relative;flex:1;height:6px;background:var(--raise);border-radius:3px;overflow:hidden}
+  #lvlDb{min-width:60px;text-align:right;font-variant-numeric:tabular-nums}
+
+  /* ---------- controls ---------- */
+  button,select,input{font:inherit;color:inherit}
+  button{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;font-weight:550;transition:filter .12s,transform .05s}
+  button:hover{filter:brightness(1.1)} button:active{transform:scale(.98)}
+  button.sec{background:var(--raise);color:var(--fg)} button.rec{background:var(--bad);color:#1a0b0b}
+  button:disabled{opacity:.4;cursor:default;filter:none;transform:none}
+  button:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  button,summary{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  select,input[type=number]{background:var(--raise);border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-width:0;width:100%}
+  input[type=range]{width:100%;accent-color:var(--acc);height:24px;margin:0}
+  input[type=checkbox]{width:18px;height:18px;accent-color:var(--acc);flex:none}
+  .field{display:grid;gap:5px;font-size:12px;color:var(--mut)}
+  .field>span{display:flex;justify-content:space-between;gap:6px}
+  .check{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--fg);padding:4px 0}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .grid{display:grid;gap:12px 14px;grid-template-columns:repeat(auto-fit,minmax(138px,1fr))}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+
+  /* ---------- navigation: bottom bar on phones, pill bar on tablets ---------- */
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);
+        background:rgba(20,24,33,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+        border-top:1px solid var(--line);padding:6px 6px calc(6px + var(--sab))}
+  .tabs button{background:none;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:12px;font-size:11px;font-weight:550}
+  .tabs button svg{width:22px;height:22px}
+  .tabs button.on{color:var(--fg);background:var(--surface2)}
+  .tabs button.on svg{color:var(--acc)}
+  main{padding:14px 0 calc(84px + var(--sab))}
+
+  /* ---------- panels ---------- */
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+  .stack>*+*{margin-top:14px}
+  .sub{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600;margin:0 0 10px}
+
+  .chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--raise);color:var(--fg);border:1.5px solid transparent;border-radius:999px;padding:7px 14px;min-width:48px;font-weight:550;white-space:nowrap}
+  button.chip{cursor:pointer}
+  .chip.on{border-color:var(--acc);background:#243055}
+  .chip.done{color:var(--ok)}
+  .chip.ok{background:#17402f;color:#b8f5d9} .chip.close{background:#52410f;color:#fde8a6} .chip.bad{background:#552222;color:#fecaca}
+  .chip.cur{border-color:var(--acc);background:#26325a} .chip.pend{color:var(--mut)}
+  .chip.mini{min-width:42px;padding:5px 10px;font-size:13px}
+  .chip .play{background:#2f3850;color:var(--fg);padding:2px 8px;border-radius:999px;font-size:11px;min-height:0}
+
+  /* tuner */
+  .tuner{display:flex;flex-direction:column;gap:16px}
+  #instChips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+  #instChips::-webkit-scrollbar{display:none}
+  #instChips .chip{flex:none}
+  #strChips{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;min-height:42px}
+  #strChips>.mut{grid-column:1/-1;align-self:center}
+  #strChips .chip{padding:8px 10px}
+  .readout{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 2px}
+  .hint{color:var(--acc);min-height:20px;font-size:14px;font-weight:550}
+  .big{font-size:clamp(76px,24vw,132px);font-weight:700;line-height:1;text-align:center;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .big small{font-size:.36em;color:var(--mut);font-weight:600;letter-spacing:0}
+  #tTarget,#scTarget{font-size:14px}
+  #tHeard,#scHeard{font-size:17px;font-weight:550;font-variant-numeric:tabular-nums;min-height:26px}
+  .verdict{font-size:22px;font-weight:650;text-align:center;min-height:32px}
+  .nbr{display:flex;justify-content:center;gap:clamp(18px,8vw,44px);margin:4px 0 2px;font-size:19px;color:var(--mut);font-variant-numeric:tabular-nums}
+  .nbr b{color:var(--fg);border-bottom:3px solid var(--acc);padding-bottom:2px}
+  #meter{position:relative;height:46px;border-radius:23px;overflow:hidden;background:var(--raise);
+         background-image:repeating-linear-gradient(90deg,transparent 0 calc(10% - 1px),rgba(255,255,255,.08) calc(10% - 1px) 10%)}
+  #zone{position:absolute;top:0;bottom:0;background:rgba(52,211,153,.2)}
+  #meter .mid{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.35)}
+  #needle{position:absolute;top:5px;bottom:5px;width:8px;border-radius:4px;background:var(--mut);left:50%;transform:translateX(-50%);transition:left .08s,opacity .1s,background .1s}
+  .scalelab{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-top:6px;padding:0 4px;font-variant-numeric:tabular-nums}
+  .pulse{animation:pulse .5s}
+  @keyframes pulse{0%{text-shadow:0 0 0 rgba(52,211,153,.9)}100%{text-shadow:0 0 36px rgba(52,211,153,0)}}
+  .foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:var(--mut);font-size:12.5px}
+
+  /* scale */
+  .sc-grid{display:grid;gap:14px}
+  .actions{display:grid;grid-template-columns:1.4fr 1.3fr .8fr;gap:8px}
+  .actions button{padding:12px 8px;white-space:nowrap}
+  details>summary{cursor:pointer;color:var(--mut);padding:8px 0;font-size:13.5px;font-weight:550;list-style:none;display:flex;align-items:center;gap:8px}
+  details>summary::-webkit-details-marker{display:none}
+  details>summary::before{content:"▸";transition:transform .15s;display:inline-block}
+  details[open]>summary::before{transform:rotate(90deg)}
+  #scRow1{display:flex;flex-wrap:nowrap;gap:4px}
+  #scRow1 .chip{flex:1 1 0;min-width:0;padding:6px 0;font-size:12.5px}
+  #scRow1.wrap{flex-wrap:wrap} #scRow1.wrap .chip{flex:0 0 calc(12.5% - 4px);padding:6px 0}
+  #scRow1.dense .chip{font-size:10.5px;letter-spacing:-.2px}
+  .livecard{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:16px 14px}
+  .srow{margin-top:14px}
+  .dev-bar{position:relative;height:26px;border-radius:13px;overflow:hidden;background:var(--raise)}
+  .dev-mid{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.4);z-index:1}
+  .dev-marker{position:absolute;top:3px;bottom:3px;width:9px;border-radius:5px;background:#fff;left:50%;transform:translateX(-50%);transition:left .06s;box-shadow:0 0 0 2px rgba(0,0,0,.35);z-index:2}
+  .dev-marker.ok{box-shadow:0 0 0 3px var(--ok)} .dev-marker.warn{box-shadow:0 0 0 3px var(--warn)} .dev-marker.bad{box-shadow:0 0 0 3px var(--bad)}
+  .dev-labels{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--mut);margin-top:6px;gap:6px}
+  #devRead{font-size:19px;font-weight:650;color:var(--fg);font-variant-numeric:tabular-nums}
+  #scAcc{font-size:14px;font-weight:550;min-height:22px}
+  #cardTiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:8px;margin-top:10px}
+  #cardTiles>.mut{grid-column:1/-1}
+  .tile{display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-radius:12px;cursor:pointer;background:var(--raise);border:1.5px solid transparent;font-size:12.5px;line-height:1.25}
+  .tile b{font-size:14px} .tile span{font-size:19px;font-weight:650;font-variant-numeric:tabular-nums} .tile .tb{font-size:11px;font-weight:500;opacity:.85}
+  .tile.ok{background:#17402f} .tile.mid{background:#52410f} .tile.bad{background:#552222} .tile.na{color:var(--mut)}
+  .tile.sel{border-color:var(--acc)}
+  .cardbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+  .cardbar b{font-size:16px}
+  .cb-row{display:flex;gap:8px;flex:1 1 230px;justify-content:flex-end}
+  .cb-row select{flex:1 1 auto;width:auto;min-width:0}
+  .cb-row button{flex:none}
+
+  /* scorecard table, profile, analysis, settings */
+  .who-wrap{display:flex;align-items:center;gap:8px;min-width:0;font-size:12px;color:var(--mut)}
+  .who{width:auto;min-width:128px;max-width:100%;padding:10px 12px;font-size:16px;font-weight:650;border:1.5px solid var(--acc);background:var(--surface2);border-radius:10px;min-height:44px}
+  #status:empty{display:none}
+  th.srt{cursor:pointer;user-select:none;white-space:nowrap}
+  th.srt:hover{color:var(--fg)}
+  .scroll.tbl{max-height:none;overflow-x:auto}
+  .sc{display:inline-block;min-width:38px;text-align:center;padding:2px 8px;border-radius:8px;font-weight:650;background:var(--raise)}
+  .sc.ok{background:#17402f;color:#b8f5d9} .sc.mid{background:#52410f;color:#fde8a6} .sc.bad{background:#552222;color:#fecaca}
+  .mid-t{color:var(--warn)}
+  .seg{display:inline-flex;background:var(--raise);border-radius:10px;padding:3px;gap:2px}
+  .seg button{background:none;color:var(--mut);padding:7px 14px;border-radius:8px;min-height:0}
+  .seg button.on{background:var(--acc);color:#fff}
+  .an-head{display:grid;gap:12px;grid-template-columns:1fr 1fr;align-items:end}
+  .an-head .seg{grid-column:1/-1;justify-self:start} .an-head .scope{grid-column:1/-1}
+  .card2{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+  .card2 h3{margin:0 0 4px;font-size:15px} .card2 p.mut{margin:0 0 10px;font-size:12.5px}
+  .tiles2{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+  .tiles2 .t{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .tiles2 .t b{display:block;font-size:22px;font-variant-numeric:tabular-nums} .tiles2 .t span{font-size:12px;color:var(--mut)}
+  .legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .legend button{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--raise);color:var(--fg);font-size:12.5px;min-height:0}
+  .legend button.off{opacity:.38} .legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  svg.ch{width:100%;height:auto;display:block}
+  svg.ch text{fill:var(--mut);font-size:11px}
+  .two{display:grid;gap:14px}
+  .set-group{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+  .set-group h3{margin:0 0 2px;font-size:15px} .set-group>p{margin:0 0 12px;font-size:12.5px;color:var(--mut)}
+  .hint2{font-size:11.5px;color:var(--mut);font-weight:400}
+  .opt-h{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600;margin:14px 0 8px}
+  @media (min-width:720px){ .two{grid-template-columns:1fr 1fr} .an-head{grid-template-columns:auto 1.6fr 1fr 1fr} .an-head .seg,.an-head .scope{grid-column:auto} }
+
+  .tempo{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,.9fr) auto;gap:8px;align-items:end}
+  .stepper{display:grid;grid-template-columns:44px 1fr 44px;gap:6px}
+  .stepper button{padding:8px 0;font-size:18px;line-height:1}
+  .stepper input{text-align:center;font-weight:650}
+  #metro{padding-left:12px;padding-right:12px;white-space:nowrap} #metro.on{background:var(--acc);color:#fff}
+  .beats{display:flex;gap:8px;justify-content:center;min-height:14px}
+  .beats i{width:12px;height:12px;border-radius:50%;background:var(--raise);display:block;transition:background .05s}
+  .beats i.on{background:var(--ok)} .beats i.on.acc{background:var(--warn)}
+  ul.ins{margin:6px 0 0;padding-left:18px;font-size:14px} ul.ins li{margin:4px 0}
+  
+
+  /* recorder + tables */
+  canvas{width:100%;height:auto;aspect-ratio:900/400;background:#0f1218;border-radius:10px;display:block}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--mut);font-weight:550;font-size:12px}
+  .scroll{max-height:300px;overflow:auto}
+  #scSum .scroll{max-height:none;overflow-x:auto}
+
+  /* ---------- touch devices ---------- */
+  @media (pointer:coarse){
+    button{min-height:44px}
+    select,input[type=number]{min-height:44px;font-size:16px}
+    input[type=checkbox]{width:24px;height:24px}
+    input[type=range]{height:36px}
+    .chip .play{min-height:32px;min-width:38px;font-size:13px}
+  }
+
+  /* ---------- very small phones ---------- */
+  @media (max-width:420px){ .brand svg{display:none} .brand{font-size:15.5px} #start{padding:10px 13px} }
+  @media (max-width:360px){ .actions{grid-template-columns:1fr 1fr} .actions #scStart{grid-column:1/-1} }
+
+  /* ---------- landscape phones: keep the readout visible without scrolling ---------- */
+  @media (max-height:520px) and (orientation:landscape){
+    .big{font-size:clamp(56px,22vh,96px)} .verdict{min-height:26px;font-size:19px}
+    main{padding-top:8px}
+    .tuner{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  }
+
+  /* ---------- tablets and up ---------- */
+  @media (min-width:720px){
+    body{font-size:16px}
+    .tabs{position:static;display:inline-grid;grid-template-columns:repeat(5,auto);gap:4px;border:1px solid var(--line);border-radius:999px;padding:4px;margin:14px auto 0;backdrop-filter:none;background:var(--surface)}
+    .tabs-wrap{display:flex;justify-content:center}
+    .tabs button{flex-direction:row;gap:8px;padding:8px 18px;border-radius:999px;font-size:14px;min-height:40px}
+    .tabs button svg{width:18px;height:18px}
+    main{padding:16px 0 40px}
+    .panel{padding:22px}
+    .tuner{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:28px;align-items:start}
+    .t-main{order:1} .t-side{order:2}
+    #instChips{flex-wrap:wrap;overflow:visible}
+    #strChips{grid-template-columns:repeat(2,1fr)}
+    .big{font-size:clamp(110px,15vw,168px)}
+    .sc-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:22px;align-items:start}
+    .actions{grid-template-columns:1.4fr 1.3fr .8fr}
+  }
+  @media (min-width:720px) and (max-width:900px){ #strChips{grid-template-columns:repeat(3,1fr)} }
+  @media (min-width:1000px){ .panel{padding:26px} }
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<header class="appbar"><div class="in">
+  <div class="bar">
+    <label class="who-wrap"><span>Player</span><select id="profile" class="who" aria-label="Who is playing"><option>Nandini</option><option>Nayonika</option></select></label>
+    <div class="bar-r"><span id="status"></span><button id="start">▶ Start listening</button></div>
+  </div>
+  <!-- live input level (−60…0 dBFS, after boost); the white tick is the gate: sound must reach past it to be analysed -->
+  <div class="level"><span>Input</span>
+    <div class="lvl-track"><div id="lvlBar" style="position:absolute;left:0;top:0;bottom:0;width:0;background:var(--mut)"></div><div id="lvlGate" style="position:absolute;top:0;bottom:0;width:2px;background:#fff"></div></div>
+    <span id="lvlDb">–</span></div>
+</div></header>
+
+<div class="wrap">
+<div class="tabs-wrap"><nav class="tabs" aria-label="Mode">
+  <button data-tab="tuner" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/></svg>Tuner</button>
+  <button data-tab="scale"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h4v-4h4v-4h4V8h6"/></svg>Practice</button>
+  <button data-tab="analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Analysis</button>
+  <button data-tab="rec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>Recorder</button>
+  <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Settings</button>
+</nav></div>
+
+<main>
+<!-- ============ TUNER ============ -->
+<section id="tab-tuner" class="panel tuner">
+  <div class="t-side stack">
+    <div><p class="sub">Instrument</p><div id="instChips"></div></div>
+    <div><p class="sub">Strings</p><div id="strChips"></div></div>
+  </div>
+  <div class="t-main">
+    <div class="readout">
+      <div class="hint" id="tHint"></div>
+      <div id="tNote" class="big">–</div>
+      <div class="center mut" id="tTarget">target –</div>
+      <div class="center" id="tHeard">heard –</div>
+      <div class="verdict" id="tVerdict"></div>
+    </div>
+    <div class="nbr" id="nbr"><span>–</span><span>–</span><span>–</span></div>
+    <div id="meter"><div id="zone"></div><div class="mid"></div><div id="needle"></div></div>
+    <div class="scalelab"><span>♭ −50¢</span><span>0</span><span>+50¢ ♯</span></div>
+    <div class="foot" style="margin-top:14px">
+      <span>Strings are detected automatically — just play. Tap ▶ to hear a string.</span>
+      <label class="check"><input type="checkbox" id="beep"> Beep when in tune</label>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCALE ============ -->
+<section id="tab-scale" class="panel hide">
+  <div class="sc-grid">
+    <div class="stack">
+      <div class="actions">
+        <button id="scStart">Start practice</button>
+        <button id="scDemo" class="sec">▶ Hear scale</button>
+        <button id="scStop" class="sec">Stop</button>
+      </div>
+      <div class="tempo">
+        <label class="field bpm"><span>Tempo (BPM)</span><div class="stepper"><button id="bpmDn" class="sec" aria-label="Slower">−</button><input id="scBpm" type="number" value="80" min="30" max="240" inputmode="numeric"><button id="bpmUp" class="sec" aria-label="Faster">+</button></div></label>
+        <label class="field"><span>Beats</span><select id="scSig"><option value="2">2/2</option><option value="3">3/4</option><option value="4" selected>4/4</option></select></label>
+        <button id="metro" class="sec" aria-label="Metronome">♩ Click</button>
+      </div>
+      <div class="beats" id="beats" aria-hidden="true"></div>
+      <details id="scOpts"><summary>Scale options</summary>
+        <div class="opt-h" style="margin-top:6px">Scale</div>
+        <div class="grid">
+          <label class="field"><span>Instrument</span><select id="scInst"></select></label>
+          <label class="field"><span>Root</span><select id="scRoot"></select></label>
+          <label class="field"><span>Octave</span><select id="scOct"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+          <label class="field"><span>Scale</span><select id="scType"></select></label>
+          <label class="field"><span>Span</span><select id="scSpan"><option value="1">1 octave</option><option value="2">2 octaves</option><option value="3">3 octaves</option><option value="4">4 octaves</option></select></label>
+          <label class="field"><span>Direction</span><select id="scDir"><option value="asc">Ascending</option><option value="desc">Descending</option><option value="both">Both</option></select></label>
+        </div>
+        <div class="hint2" style="margin-top:8px"><span id="instRange"></span> The instrument also adjusts the steadiness part of the score: violin allows vibrato, guitar and ukulele are held steadier.</div>
+        <div class="opt-h">Practice</div>
+        <div style="margin-top:-4px">
+          <label class="check"><input type="checkbox" id="scStrict" checked> Strict — flag wrong notes</label>
+          <label class="check"><input type="checkbox" id="scRepeat" checked> Repeat scale and keep scoring</label>
+        </div>
+        <div class="opt-h">Export this run</div>
+        <div class="row"><button id="scCsv" class="sec">CSV</button><button id="scJson" class="sec">JSON</button></div>
+      </details>
+
+      <!-- Row 1: all scale notes -->
+      <div id="scRow1"></div>
+      <div id="scRange" class="hint2 center"></div>
+
+      <div class="livecard">
+        <!-- Row 2: current expected note -->
+        <div class="readout">
+          <div id="scCur" class="big">–</div>
+          <div id="scTarget" class="center mut">Press Start practice</div>
+          <div id="scHeard" class="center">&nbsp;</div>
+          <div id="scVerdict" class="verdict"></div>
+          <div id="scMsg" class="center mut" style="min-height:20px;font-size:14px"></div>
+        </div>
+        <!-- Row 3: deviation bar (±1 semitone) -->
+        <div class="srow">
+          <div class="dev-bar" id="devBar"><div class="dev-mid"></div><div id="devMarker" class="dev-marker"></div></div>
+          <div class="dev-labels"><span>♭ −1 semitone</span><span id="devRead">–</span><span>+1 semitone ♯</span></div>
+        </div>
+        <!-- Row 4: live accuracy for the current note -->
+        <div class="srow center" id="scAcc">Waiting for note…</div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div id="scSum"></div>
+      <!-- per-note scorecard: which notes are weak / strong, built up over repeated passes -->
+      <div>
+        <div class="cardbar"><b>Note scorecard</b>
+          <div class="cb-row"><select id="cardView" aria-label="Period"><option value="sess">This session</option><option value="all">All-time (saved)</option></select>
+          <button id="cardReset" class="sec">Reset</button><button id="cardCsv" class="sec">Export</button></div></div>
+        <div id="cardTrend" class="mut" style="margin-top:8px"></div>
+        <div id="cardTable" class="scroll tbl" style="margin-top:8px"></div>
+        <div class="mut" style="font-size:12px;margin-top:6px">Notes follow the chosen scale. Tap a heading to sort. A note needs 3 plays to get a score.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ANALYSIS ============ -->
+<section id="tab-analysis" class="panel hide stack">
+  <div class="an-head">
+    <div class="seg" id="anMode"><button data-m="prog" class="on">Progress</button><button data-m="cmp">Compare kids</button></div>
+    <label class="field scope"><span>Scale</span><select id="anScope"><option value="cur">Current scale</option><option value="all">All scales</option></select></label>
+    <label class="field"><span>Measure</span><select id="anMetric"><option value="score">Note score</option><option value="acc">In-tune %</option><option value="err">Pitch offset (¢)</option></select></label>
+    <label class="field"><span>Time axis</span><select id="anX"><option value="play">Per play</option><option value="date">By date</option></select></label>
+  </div>
+  <div id="anBody" class="stack"></div>
+</section>
+
+<!-- ============ RECORDER ============ -->
+<section id="tab-rec" class="panel hide stack">
+  <div class="row">
+    <button id="rec" class="sec" disabled>● Record</button>
+    <button id="clear" class="sec">Clear</button>
+    <button id="csv" class="sec">Export CSV</button>
+    <button id="json" class="sec">Export JSON</button>
+    <span class="mut" id="recInfo">Session 0.0 s</span>
+  </div>
+  <canvas id="roll" width="900" height="400"></canvas>
+  <div class="scroll"><table>
+    <thead><tr><th>#</th><th>Note</th><th>Avg Hz</th><th>Avg cents</th><th>Start (s)</th><th>Duration (ms)</th></tr></thead>
+    <tbody id="rows"></tbody></table></div>
+</section>
+
+<!-- ============ SETTINGS ============ -->
+<section id="tab-settings" class="panel hide stack">
+  <div class="set-group"><h3>Tuning</h3><p>How notes are judged.</p>
+    <div class="grid">
+      <label class="field"><span>A4 reference (Hz)</span><input id="a4" type="number" value="440" min="400" max="480"></label>
+      <label class="field"><span>In-tune tolerance (±¢)</span><input id="tol" type="number" value="10" min="1" max="30"></label>
+    </div>
+    <p class="hint2" style="margin:10px 0 0">±10¢ suits learners. Most tuners use ±5¢; people rarely hear less than 3–5¢. Try 5 when scores are all green.</p></div>
+  <div class="set-group"><h3>Microphone</h3><p>Watch the Input bar at the top while you play. Sound must pass the white tick to be analysed.</p>
+    <div class="grid">
+      <label class="field"><span>Gate (noise floor)</span><input id="gate" type="range" min="0.002" max="0.1" step="0.001" value="0.004"></label>
+      <label class="field"><span>Boost <b id="boostVal">1×</b></span><input id="boost" type="range" min="1" max="8" step="0.5" value="1"></label>
+    </div>
+    <div class="row" style="margin-top:12px"><button id="calib" class="sec">Calibrate noise floor</button><span class="hint2" id="calibMsg">Stay quiet for 2 seconds, then tap.</span></div>
+    <div class="hint2" id="micProc" style="margin-top:10px">Mic processing: start listening to check.</div></div>
+  <div class="set-group"><h3>Detection</h3><p>Advanced. The defaults suit most instruments.</p>
+    <div class="grid">
+      <label class="field"><span>Pitch confidence <b id="confVal">0.85</b></span><input id="conf" type="range" min="0.7" max="0.95" step="0.01" value="0.85"></label>
+      <label class="field"><span>Min note length (ms)</span><input id="mindur" type="number" value="60" min="20" max="1000" step="10"></label>
+      <label class="field"><span>Pitch range (Hz)</span><div class="pair"><input id="fmin" type="number" value="60"><input id="fmax" type="number" value="1500"></div></label>
+    </div>
+    <p class="hint2" style="margin:10px 0 0">Higher confidence = fewer wrong readings but slower to react. Narrow the pitch range to your instrument (for example 150–1200) to avoid octave jumps and save battery.</p></div>
+  <div class="set-group"><h3>Accuracy check</h3><p>Feeds generated tones (clean, noisy and quiet, with random detune) through the detector and shows the worst error for each. Press again for a fresh run.</p>
+    <button id="selftest" class="sec">Run accuracy self-test</button><div id="stOut" style="margin-top:10px"></div></div>
+  <div class="set-group"><h3>Backup &amp; restore</h3><p>Saves both children's scores and history in one file. Send it to yourself by WhatsApp or email, or keep the downloaded copy. A backup can only be imported if its version number is higher than the data on this device.</p>
+    <div class="hint2" id="verInfo"></div>
+    <div class="row" style="margin-top:10px"><button id="bkShare">Back up &amp; share</button><button id="bkDl" class="sec">Save file only</button><button id="bkImp" class="sec">Import backup…</button><input type="file" id="impFile" class="hide" accept=".json,.txt,application/json,text/plain"></div>
+    <div class="hint2" id="bkMsg" style="margin-top:8px"></div></div>
+  <div class="set-group"><h3>Reset</h3><p>Put every setting above back to its recommended value.</p>
+    <button id="defaults" class="sec">Restore default settings</button></div>
+</section>
+</main>
+</div>
+
+<script>
+// ---------- DSP / LOGIC (pure; no DOM) ----------
+function yin(buf, sr, fmin, fmax, threshold = 0.15) {
+  const N = buf.length, W = N >> 1;
+  const tauMin = Math.max(2, Math.floor(sr / fmax));
+  const tauMax = Math.min(W - 1, Math.ceil(sr / fmin));
+  const d = new Float32Array(tauMax + 2);
+  for (let tau = 1; tau <= tauMax + 1 && tau < W; tau++) {
+    let s = 0;
+    for (let i = 0; i < W; i++) { const x = buf[i] - buf[i + tau]; s += x * x; }
+    d[tau] = s;
+  }
+  let run = 0; d[0] = 1;
+  for (let tau = 1; tau <= tauMax + 1 && tau < W; tau++) {
+    run += d[tau];
+    d[tau] = run === 0 ? 1 : d[tau] * tau / run;
+  }
+  let tau = -1;
+  for (let t = tauMin; t <= tauMax; t++) {
+    if (d[t] < threshold) { while (t + 1 <= tauMax && d[t + 1] < d[t]) t++; tau = t; break; }
+  }
+  if (tau < 0) return null;
+  let better = tau;
+  if (tau > 1 && tau < tauMax) {
+    const a = d[tau - 1], b = d[tau], c = d[tau + 1], den = a + c - 2 * b;
+    if (den !== 0) better = tau + (a - c) / (2 * den);
+  }
+  return { freq: sr / better, clarity: 1 - d[tau] };
+}
+
+const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const midiName = m => NOTES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+function nameToMidi(n) { const m = n.match(/^([A-G]#?)(-?\d+)$/); return NOTES.indexOf(m[1]) + 12 * (+m[2] + 1); }
+const noteToFreq = (midi, a4 = 440) => a4 * Math.pow(2, (midi - 69) / 12);
+function freqToNote(f, a4) {
+  const midiF = 69 + 12 * Math.log2(f / a4), midi = Math.round(midiF);
+  return { midi, cents: (midiF - midi) * 100, name: midiName(midi) };
+}
+const centsBetween = (f, target) => 1200 * Math.log2(f / target);
+const median = a => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+
+const PRESETS = {
+  chromatic:  { label: 'Chromatic', strings: [] },
+  guitar:     { label: 'Guitar',    strings: ['E2','A2','D3','G3','B3','E4'] },
+  violin:     { label: 'Violin',    strings: ['G3','D4','A4','E5'] },
+  ukulele:    { label: 'Ukulele (GCEA)',  strings: ['G4','C4','E4','A4'] },
+  ukuleleLow: { label: 'Ukulele (Low-G)', strings: ['G3','C4','E4','A4'] },
+};
+const SCALES = {
+  major:['Major',[0,2,4,5,7,9,11]], naturalMinor:['Natural minor',[0,2,3,5,7,8,10]],
+  harmonicMinor:['Harmonic minor',[0,2,3,5,7,8,11]], majorPent:['Major pentatonic',[0,2,4,7,9]],
+  minorPent:['Minor pentatonic',[0,3,5,7,10]], blues:['Blues',[0,3,5,6,7,10]],
+  dorian:['Dorian',[0,2,3,5,7,9,10]], mixolydian:['Mixolydian',[0,2,4,5,7,9,10]],
+  chromatic:['Chromatic',[0,1,2,3,4,5,6,7,8,9,10,11]],
+};
+function buildScale(rootPc, octave, type, span, dir) {
+  const root = 12 * (octave + 1) + rootPc, iv = SCALES[type][1], up = [];
+  for (let o = 0; o < span; o++) for (const i of iv) up.push(root + 12 * o + i);
+  up.push(root + 12 * span);
+  const down = [...up].reverse();
+  return dir === 'asc' ? up : dir === 'desc' ? down : up.concat(down.slice(1));
+}
+function gradeCents(cents, tol) { const a = Math.abs(cents); return a <= tol ? 'In tune' : a <= 25 ? 'Close' : 'Out of tune'; }
+
+function pickTarget(f, a4, strings, lockIdx) {
+  if (!strings.length) { const n = freqToNote(f, a4); return { idx: -1, midi: n.midi, hz: noteToFreq(n.midi, a4), cents: n.cents }; }
+  let idx = lockIdx;
+  if (idx != null && (idx < 0 || idx >= strings.length)) idx = null;
+  if (idx == null) {
+    let best = Infinity;
+    strings.forEach((m, i) => { const c = Math.abs(centsBetween(f, noteToFreq(m, a4))); if (c < best) { best = c; idx = i; } });
+  }
+  const hz = noteToFreq(strings[idx], a4);
+  return { idx, midi: strings[idx], hz, cents: centsBetween(f, hz) };
+}
+
+class Segmenter {
+  constructor(onNote) { this.onNote = onNote; this.cur = null; this.cand = null; this.miss = 0; this.minDur = 60; this.a4 = 440; }
+  frame(t, f) {
+    const MISS = 5, CONFIRM = 3;
+    if (f) {
+      const m = freqToNote(f, this.a4).midi;
+      if (this.cur) {
+        if (m === this.cur.midi) { this.cur.f.push(f); this.cur.last = t; this.miss = 0; return; }
+        if (++this.miss >= MISS) this.end(); else return;
+      }
+      if (this.cand && this.cand.midi === m) { this.cand.f.push(f); this.cand.last = t; }
+      else this.cand = { midi: m, start: t, last: t, f: [f] };
+      if (this.cand.f.length >= CONFIRM) { this.cur = this.cand; this.cand = null; this.miss = 0; }
+    } else {
+      this.cand = null;
+      if (this.cur && ++this.miss >= MISS) this.end();
+    }
+  }
+  end() {
+    const c = this.cur; this.cur = null; this.miss = 0;
+    if (!c) return;
+    const dur = (c.last - c.start) * 1000;
+    if (dur < this.minDur) return;
+    const hz = median(c.f), n = freqToNote(hz, this.a4);
+    this.onNote({ midi: c.midi, note: midiName(c.midi), hz, cents: n.cents, start: c.start, dur });
+  }
+}
+
+class AttemptDetector {
+  constructor(onAttempt) { this.onAttempt = onAttempt; this.cur = null; this.gap = 99; this.lastMidi = null; this.need = 6; }
+  frame(t, f, a4) {
+    if (!f) { if (++this.gap >= 3) { this.cur = null; this.lastMidi = null; } return; }
+    this.gap = 0;
+    let n = freqToNote(f, a4);
+    if (this.cur && n.midi !== this.cur.midi) {
+      const c = centsBetween(f, noteToFreq(this.cur.midi, a4));
+      if (Math.abs(c) < 65) n = { midi: this.cur.midi, cents: c };
+    }
+    if (!this.cur || this.cur.midi !== n.midi) this.cur = { midi: n.midi, cents: [], hz: [], reg: false, t };
+    this.cur.cents.push(n.cents); this.cur.hz.push(f);
+    if (!this.cur.reg && this.cur.cents.length >= this.need) {
+      this.cur.reg = true;
+      if (n.midi === this.lastMidi) return;
+      this.lastMidi = n.midi;
+      this.onAttempt({ t: this.cur.t, midi: n.midi, cents: median(this.cur.cents.slice(2)), hz: median(this.cur.hz.slice(2)) });
+    }
+  }
+}
+
+// ---------- APP ----------
+if (typeof document !== 'undefined') (function () {
+const $ = id => document.getElementById(id);
+const a4 = () => +$('a4').value || 440, tol = () => +$('tol').value || 10;
+let ctx, analyser, stream, srcNode, hpNode, rafId, buf, listening = false, t0 = 0;
+
+function getCtx() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+  if (ctx.state === 'suspended') ctx.resume();
+  return ctx;
+}
+
+let toneNode = null;
+function stopTone() { if (toneNode) { try { toneNode.stop(); } catch {} toneNode = null; } }
+async function playTone(hz, dur = 1.2, type = 'triangle', vol = 0.25) {
+  const c = getCtx();
+  if (c.state === 'suspended') await c.resume();
+  stopTone();
+  const o = c.createOscillator(), g = c.createGain(), now = c.currentTime;
+  toneNode = o; o.onended = () => { if (toneNode === o) toneNode = null; };
+  o.type = type; o.frequency.value = hz;
+  g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(vol, now + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  o.connect(g); g.connect(c.destination); o.start(now); o.stop(now + dur + 0.05);
+}
+
+// ----- tabs -----
+let tab = 'tuner';
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  for (const t of ['tuner', 'scale', 'analysis', 'rec', 'settings']) $('tab-' + t).classList.toggle('hide', t !== tab);
+  if (tab !== 'scale') { stopDemo(); stopMetro(); finalizeHold(); if (sc.running) { sc.running = false; $('scStart').textContent = 'Start practice'; $('scMsg').textContent = 'Paused — press Start practice'; renderScale(); } }
+  if (tab === 'analysis') renderAnalysis();
+});
+
+// ----- TUNER -----
+let inst = 'chromatic'; const tuned = new Set();
+const hist = []; let lastVoiced = -9, inTuneSince = null, confirmed = false, shownActive = -2;
+const strMidis = () => PRESETS[inst].strings.map(nameToMidi);
+
+function resetTuner() {
+  tuned.clear(); hist.length = 0; lastVoiced = -9; inTuneSince = null; confirmed = false; shownActive = -2;
+  $('tHint').textContent = ''; buildStrChips(-1);
+}
+function buildInstChips() {
+  $('instChips').innerHTML = '';
+  for (const k in PRESETS) {
+    const b = document.createElement('button'); b.className = 'chip' + (k === inst ? ' on' : ''); b.textContent = PRESETS[k].label;
+    b.onclick = () => { inst = k; resetTuner(); buildInstChips(); };
+    $('instChips').appendChild(b);
+  }
+}
+function buildStrChips(activeIdx = -1) {
+  const box = $('strChips'); box.innerHTML = '';
+  if (!PRESETS[inst].strings.length) { box.innerHTML = '<span class="mut">Chromatic mode — no strings to track, just play.</span>'; return; }
+  PRESETS[inst].strings.forEach((n, i) => {
+    const c = document.createElement('div');
+    c.className = 'chip' + (i === activeIdx ? ' on' : '') + (tuned.has(i) ? ' done' : '');
+    c.append(n + (tuned.has(i) ? ' ✓' : ''));
+    const p = document.createElement('button'); p.className = 'play'; p.textContent = '▶'; p.title = 'Hear ' + n;
+    p.onclick = e => { e.stopPropagation(); playTone(noteToFreq(nameToMidi(n), a4())); };
+    c.appendChild(p); box.appendChild(c);
+  });
+}
+function tunerIdle() {
+  $('tNote').innerHTML = '–'; $('tTarget').textContent = 'target –'; $('tHeard').textContent = 'heard –'; $('tHint').textContent = '';
+  $('tVerdict').textContent = ''; $('needle').style.left = '50%'; $('needle').style.background = 'var(--mut)'; $('needle').style.opacity = 1;
+  $('nbr').innerHTML = '<span>–</span><span>–</span><span>–</span>';
+  if (shownActive !== -1) { shownActive = -1; buildStrChips(-1); }
+}
+function tunerFrame(t, f) {
+  if (f) { if (t - lastVoiced > 0.25) hist.length = 0; hist.push(f); if (hist.length > 5) hist.shift(); lastVoiced = t; }
+  if (!hist.length || t - lastVoiced > 1.0) { tunerIdle(); inTuneSince = null; confirmed = false; return; }
+  const fm = median(hist), A = a4(), T = tol();
+  const tg = pickTarget(fm, A, strMidis(), null);
+  const c = tg.cents, a = Math.abs(c), tn = midiName(tg.midi), m = tn.match(/^([A-G]#?)(-?\d+)$/);
+  $('tHint').textContent = tg.idx >= 0 ? `Tuning the ${tn} string` : '';
+  $('tNote').innerHTML = `${m[1]}<small>${m[2]}</small>`;
+  $('tTarget').textContent = `target ${tn} · ${tg.hz.toFixed(2)} Hz`;
+  $('tHeard').textContent = `heard ${fm.toFixed(2)} Hz   ${c >= 0 ? '+' : '−'}${Math.abs(c).toFixed(0)}¢`;
+  const cls = a <= T ? 'ok' : a <= 25 ? 'warn' : 'bad';
+  $('tVerdict').textContent = (a <= T ? 'In tune' : c > 0 ? 'Sharp ♯' : 'Flat ♭') + (a > 50 ? (c > 0 ? ' ≫' : ' ≪') : '');
+  $('tVerdict').className = 'verdict ' + cls + '-t';
+  $('nbr').innerHTML = [-1, 0, 1].map(d => d === 0 ? `<b>${midiName(tg.midi)}</b>` : `<span>${midiName(tg.midi + d)}</span>`).join('');
+  $('needle').style.left = (50 + Math.max(-50, Math.min(50, c))) + '%';
+  $('needle').style.opacity = a > 50 ? 0.4 : 1;
+  $('needle').style.background = `var(--${cls})`;
+  if (tg.idx !== shownActive) { shownActive = tg.idx; buildStrChips(tg.idx); }
+  
+  if (a <= T) {
+    if (inTuneSince == null) inTuneSince = t;
+    if (!confirmed && t - inTuneSince >= 0.3) {
+      confirmed = true;
+      if (tg.idx >= 0 && !tuned.has(tg.idx)) { tuned.add(tg.idx); buildStrChips(tg.idx); }
+      $('tNote').classList.remove('pulse'); void $('tNote').offsetWidth; $('tNote').classList.add('pulse');
+      if ($('beep').checked) playTone(1318, 0.12, 'sine', 0.12);
+    }
+  } else { inTuneSince = null; confirmed = false; }
+}
+
+// ----- SCALE -----
+const sc = { seq: [], pos: 0, grades: [], attempts: [], running: false, wrong: 0, pass: 1, passes: [] };
+let demoIdx = -1, demoTimers = [], liveBuf = [], silentFrames = 99;
+const det = new AttemptDetector(onAttempt);
+for (const k in SCALES) $('scType').add(new Option(SCALES[k][0], k));
+NOTES.forEach((n, i) => $('scRoot').add(new Option(n, i)));
+$('scRoot').value = 0;
+for (const k in PRESETS) $('scInst').add(new Option(PRESETS[k].label, k));
+
+const scaleSeq = () => buildScale(+$('scRoot').value, +$('scOct').value, $('scType').value, +$('scSpan').value, $('scDir').value);
+const noteHtml = m => { const n = midiName(m).match(/^([A-G]#?)(-?\d+)$/); return `${n[1]}<small>${n[2]}</small>`; };
+const complete = () => sc.attempts.length > 0 && sc.pos >= sc.seq.length && !sc.running;
+
+function neutralLive(msg = 'Waiting for note…') {
+  $('scHeard').innerHTML = '&nbsp;'; $('scVerdict').textContent = '';
+  $('devMarker').className = 'dev-marker'; $('devMarker').style.left = '50%';
+  $('devRead').textContent = '–'; $('devRead').className = '';
+  $('scAcc').textContent = msg; $('scAcc').className = 'srow center';
+}
+function renderScale() {
+  const seq = sc.seq, A = a4(), demo = demoIdx >= 0;
+  { const lo = Math.min(...seq), hi = Math.max(...seq), fl = noteToFreq(lo, A), fh = noteToFreq(hi, A);
+    $('scRange').innerHTML = `${midiName(lo)}–${midiName(hi)} · ${fl.toFixed(0)}–${fh.toFixed(0)} Hz` + (fl < +$('fmin').value || fh > +$('fmax').value ? ' · <span class="bad-t">outside the detection range — widen it in Settings</span>' : ''); }
+  $('scRow1').className = seq.length > 16 ? 'dense wrap' : seq.length > 9 ? 'dense' : ''; $('scStop').disabled = !(sc.running || demo);
+  $('scRow1').innerHTML = seq.map((m, i) => {
+    let cls;
+    if (demo) cls = i < demoIdx ? 'ok' : i === demoIdx ? 'cur' : 'pend';
+    else if (i < sc.pos && sc.grades[i]) cls = { 'In tune': 'ok', 'Close': 'close', 'Skipped': 'pend' }[sc.grades[i]] || 'bad';
+    else cls = sc.running && i === sc.pos ? 'cur' : 'pend';
+    return `<span class="chip mini ${cls}"${sc.grades[i] === 'Skipped' && !demo ? ' title="Skipped"' : ''}>${midiName(m)}</span>`;
+  }).join('');
+  const idx = demo ? demoIdx : sc.running ? sc.pos : -1;
+  if (idx >= 0 && idx < seq.length) {
+    $('scCur').innerHTML = noteHtml(seq[idx]); $('scTarget').textContent = `target ${noteToFreq(seq[idx], A).toFixed(2)} Hz`;
+    if (demo) { neutralLive('Demo playing'); $('scHeard').textContent = 'demo playback'; }
+  } else if (complete()) {
+    $('scCur').textContent = '✓'; $('scTarget').textContent = 'Scale complete'; neutralLive('');
+  } else { $('scCur').textContent = '–'; $('scTarget').textContent = 'Press Start practice'; neutralLive(); }
+}
+function setMsg(text, cls = 'mut') { $('scMsg').textContent = text; $('scMsg').className = 'center ' + (cls === 'mut' ? 'mut' : cls + '-t'); }
+
+function liveScaleFrame(f) {
+  if (!sc.running || demoIdx >= 0 || sc.pos >= sc.seq.length) return;
+  if (!f) { if (++silentFrames > 8) neutralLive(); return; }
+  silentFrames = 0;
+  const T = tol(), target = noteToFreq(sc.seq[sc.pos], a4()), c = centsBetween(f, target), a = Math.abs(c);
+  const cls = a <= T ? 'ok' : a <= 25 ? 'warn' : 'bad';
+  $('scHeard').textContent = `heard ${f.toFixed(2)} Hz   ${c >= 0 ? '+' : '−'}${a.toFixed(0)}¢`;
+  $('scVerdict').textContent = gradeCents(c, T); $('scVerdict').className = `verdict ${cls}-t`;
+  const u = Math.max(-10, Math.min(10, c / 10));
+  $('devMarker').style.left = (50 + u * 5) + '%'; $('devMarker').className = 'dev-marker ' + cls;
+  $('devRead').textContent = `${c >= 0 ? '+' : '−'}${a.toFixed(0)}¢`; $('devRead').className = cls + '-t';
+  liveBuf.push(a <= T ? 1 : 0); if (liveBuf.length > 90) liveBuf.shift();
+  const pct = 100 * liveBuf.reduce((s, x) => s + x, 0) / liveBuf.length;
+  $('scAcc').textContent = `Accuracy this note: ${pct.toFixed(0)}% (${liveBuf.length} frames)`;
+  $('scAcc').className = 'srow center ' + (pct >= 80 ? 'ok' : pct >= 50 ? 'warn' : 'bad') + '-t';
+}
+
+// ----- per-note scorecard (keybr-style) -----
+// Every play of a note adds one event: hit {c: mean cents, a: share of frames in tolerance, s: wobble},
+// skip {k:'s'} or slip {k:'w'} (a wrong note played while this one was expected). Recent events weigh more.
+const PROFILES = ['Nandini', 'Nayonika'], PCOLOR = { Nandini: '#6c8dff', Nayonika: '#f472b6' };
+const CARD_MAX = 150;                                   // plays kept per note (older ones fall off)
+const ckey = p => 'tuner-scorecard-v2-' + p, pkey = p => 'tuner-passes-v2-' + p;
+const lsGet = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+let profile = (() => { try { const p = localStorage.getItem('tuner-profile'); return PROFILES.includes(p) ? p : PROFILES[0]; } catch { return PROFILES[0]; } })();
+let cardAll = lsGet(ckey(profile), {}), passAll = lsGet(pkey(profile), []), cardSess = {}, hold = null;
+$('profile').value = profile;
+const profEvents = p => p === profile ? cardAll : lsGet(ckey(p), {});
+const profPasses = p => p === profile ? passAll : lsGet(pkey(p), []);
+function addEv(midi, ev, quiet) {
+  ev.t = Date.now(); ev.sl = ev.sl || scaleLabel(); ev.i = ev.i || $('scInst').value;
+  for (const s of [cardSess, cardAll]) { const a = (s[midi] = s[midi] || []); a.push(ev); if (a.length > CARD_MAX) a.shift(); }
+  lsSet(ckey(profile), cardAll);
+  if (!quiet) renderCard();
+}
+function savePass(pct) { passAll.push({ t: Date.now(), pct, s: scaleLabel() }); if (passAll.length > 300) passAll.shift(); lsSet(pkey(profile), passAll); }
+const clamp01 = x => Math.max(0, Math.min(1, x));
+// Instrument-specific steadiness: how much pitch wobble (¢, std-dev) earns zero steadiness credit.
+// Bowed/vibrato instruments forgive more; fretted instruments (fixed pitch) are held to a tighter standard.
+const INST_WOBBLE = { chromatic: 25, guitar: 20, ukulele: 20, ukuleleLow: 20, violin: 40 };
+const wobbleCap = e => INST_WOBBLE[e.i] || 25;
+function noteScore(evs) {
+  const n = evs.length; if (n < 3) return null;                 // not enough data yet
+  let W = 0, Wh = 0, Ws = 0, acc = 0, bias = 0, sd = 0, sdn = 0;
+  evs.forEach((e, i) => {
+    const w = Math.pow(0.9, n - 1 - i); W += w;
+    if (e.k === 'h') {
+      Wh += w; acc += w * e.a; bias += w * e.c;
+      if (typeof e.s === 'number') { Ws += w; sd += w * e.s; sdn += w * e.s / wobbleCap(e); }   // very short notes carry no wobble measurement
+    }
+  });
+  const hitRate = Wh / W; if (Wh) { acc /= Wh; bias /= Wh; }
+  const sdv = Ws ? sd / Ws : 0, sdnv = Ws ? sdn / Ws : 0.5;     // wobble unknown => half steadiness credit, never full
+  const hit = Wh > 0;                                            // never actually played => no credit for "centred"/"steady"
+  const score = 100 * (0.4 * acc + (hit ? 0.25 * clamp01(1 - Math.abs(bias) / 30) + 0.15 * clamp01(1 - sdnv) : 0) + 0.2 * hitRate);
+  return { score, bias, acc, sd: sdv, hitRate, n, hit };
+}
+const biasText = (b, hit = true) => !hit ? 'never played' : Math.abs(b) < 5 ? 'centred' : `${b > 0 ? 'sharp' : 'flat'} by ${Math.abs(b).toFixed(0)}¢`;
+// While a note is held, keep collecting its frames (after the attack) so we can score accuracy and steadiness.
+function collectHold(f) {
+  if (!hold) return;
+  if (f) {
+    const c = centsBetween(f, noteToFreq(hold.midi, a4()));
+    if (Math.abs(c) <= 65) { hold.frames.push(c); hold.gap = 0; } else finalizeHold();
+  } else if (++hold.gap >= 4) finalizeHold();
+}
+function finalizeHold() {
+  const h = hold; hold = null; if (!h) return;
+  let c = h.c0, a = Math.abs(h.c0) <= h.T ? 1 : 0, s = null;   // s stays null when the note was too short to measure wobble
+  const fr = h.frames;
+  if (fr.length >= 4) {
+    c = fr.reduce((x, y) => x + y, 0) / fr.length;
+    s = Math.sqrt(fr.reduce((x, y) => x + (y - c) * (y - c), 0) / fr.length);
+    a = fr.filter(x => Math.abs(x) <= h.T).length / fr.length;
+  }
+  addEv(h.midi, { k: 'h', c, a, s, sl: h.sl, i: h.i });
+}
+const SPARK = '▁▂▃▄▅▆▇█';
+const sortSt = { card: { k: 'm', d: 1 }, ana: { k: 'latest', d: 1 }, cmp: { k: 'm', d: 1 } };
+function sortRows(id, rows) { const s = sortSt[id]; return rows.slice().sort((a, b) => { const x = a[s.k], y = b[s.k]; if (x == null || y == null) return (x == null) - (y == null); return (x - y) * s.d; }); }
+function thead(id, cols) { const s = sortSt[id]; return '<tr>' + cols.map(c => c[2] === false ? `<th>${c[1]}</th>` : `<th class="srt" data-t="${id}" data-k="${c[0]}">${c[1]}${s.k === c[0] ? (s.d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '</tr>'; }
+document.addEventListener('click', e => {
+  const th = e.target.closest('th.srt'); if (!th) return;
+  const s = sortSt[th.dataset.t], k = th.dataset.k;
+  if (s.k === k) s.d = -s.d; else { s.k = k; s.d = 1; }
+  if (th.dataset.t === 'card') renderCard(); else renderAnalysis();
+});
+const scaleNotes = () => [...new Set(sc.seq)].sort((a, b) => a - b);
+const scaleLabel = () => `${$('scRoot').selectedOptions[0].text} ${$('scType').selectedOptions[0].text} · oct ${$('scOct').value} · ${$('scSpan').value} oct · ${$('scDir').value}`;
+const statusOf = s => !s ? ['Needs data', 'na'] : s.score >= 85 ? ['Strong', 'ok'] : s.score >= 70 ? ['OK', 'mid'] : ['Weak', 'bad'];
+const cmtOf = (evs, s) => {
+  const sk = evs.filter(e => e.k === 's').length, wr = evs.filter(e => e.k === 'w').length, p = [];
+  p.push(s ? biasText(s.bias, s.hit) : evs.length ? `${evs.length}/3 plays so far` : 'not played yet');
+  if (sk) p.push(`${sk} skipped`); if (wr) p.push(`${wr} wrong`);
+  return p.join(' · ');
+};
+function renderCard() {
+  const store = $('cardView').value === 'all' ? cardAll : cardSess;
+  const mids = scaleNotes();            // the scorecard always follows the scale chosen in the options
+  const rows = mids.map(m => {
+    const evs = store[m] || [], s = noteScore(evs), [st, cls] = statusOf(s);
+    return { m, name: midiName(m), score: s ? s.score : null, stk: s ? s.score : null, bias: s ? s.bias : null, st, cls, cmt: cmtOf(evs, s) };
+  });
+  $('cardTable').innerHTML = rows.length ? `<table>${thead('card', [['score', 'Score'], ['m', 'Note'], ['stk', 'Status'], ['bias', 'Comment']])}` +
+    sortRows('card', rows).map(r => `<tr><td><span class="sc ${r.cls}">${r.score != null ? r.score.toFixed(0) : '–'}</span></td><td><b>${r.name}</b></td><td class="${r.cls === 'na' ? 'mut' : r.cls + '-t'}">${r.st}</td><td>${r.cmt}</td></tr>`).join('') + '</table>'
+    : '<span class="mut">Play a scale to build the scorecard.</span>';
+  const ps = sc.passes;
+  $('cardTrend').textContent = ps.length ? `Passes: ${ps.map(p => SPARK[Math.min(7, Math.floor(p.pct / 12.5))]).join('')}  ${ps.map(p => p.pct.toFixed(0) + '%').join(' → ')}` : '';
+}
+$('cardView').onchange = renderCard;
+$('cardReset').onclick = () => {
+  const all = $('cardView').value === 'all';
+  if (!confirm(all ? `Delete ALL saved note scores for ${profile}?` : 'Clear this session\'s note scores?')) return;
+  if (all) { cardAll = {}; passAll = []; try { localStorage.removeItem(ckey(profile)); localStorage.removeItem(pkey(profile)); } catch {} } else cardSess = {};
+  renderCard(); renderAnalysis();
+};
+$('cardCsv').onclick = () => {
+  const store = $('cardView').value === 'all' ? cardAll : cardSess;
+  const rows = Object.keys(store).map(Number).sort((x, y) => x - y).map(m => {
+    const s = noteScore(store[m]);
+    return [midiName(m), store[m].length, s ? s.score.toFixed(0) : '', s ? s.bias.toFixed(1) : '', s ? (100 * s.acc).toFixed(0) : '', s ? s.sd.toFixed(1) : '', s ? (100 * s.hitRate).toFixed(0) : ''].join(',');
+  });
+  download(`scorecard-${profile}-${stamp()}.csv`, ['note,plays,score,bias_cents,in_tune_pct,wobble_cents,played_pct', ...rows].join('\n'), 'text/csv');
+};
+
+// ----- ANALYSIS tab: progress per note / per scale over time, net score, insights, and a side-by-side of the two profiles -----
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const METRICS = {
+  score: { label: 'Note score', short: 'score', unit: '', max: 100, f: s => s.score },
+  acc: { label: 'In-tune %', short: 'in-tune %', unit: '%', max: 100, f: s => 100 * s.acc },
+  err: { label: 'Pitch offset (¢, lower is better)', short: 'pitch offset', unit: '¢', max: null, f: s => Math.abs(s.bias) }
+};
+sortSt.scl = { k: 'net', d: -1 }; sortSt.cmpS = { k: 'name', d: 1 };
+let anMode = 'prog'; const anHidden = new Set();
+const noteColor = (i, n) => `hsl(${Math.round(i * 360 / Math.max(n, 1))},70%,62%)`;
+const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+const dayKey = t => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+const dateOf = t => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+// value after each play (from the 3rd on), scoring the 30 most recent plays — the same weighting as the scorecard
+const seriesFor = (evs, f, byDate) => { const pts = []; for (let i = 2; i < evs.length; i++) pts.push({ x: byDate && evs[i].t ? evs[i].t : i + 1, y: f(noteScore(evs.slice(Math.max(0, i - 29), i + 1))) }); return pts; };
+const latestVal = (evs, f) => { const s = noteScore(evs.slice(-30)); return s ? f(s) : null; };
+const fmtV = (v, m) => v == null ? '–' : v.toFixed(0) + m.unit;
+const sparkOf = pts => { const v = pts.slice(-10).map(p => p.y); if (v.length < 2) return ''; const lo = Math.min(...v), hi = Math.max(...v); return v.map(y => SPARK[hi === lo ? 3 : Math.round((y - lo) / (hi - lo) * 7)]).join(''); };
+const EMPTY = '<div class="mut" style="padding:16px 0">Not enough data yet — play each note at least 3 times.</div>';
+
+// events/notes/passes of one profile inside the chosen scale scope ('cur', 'all', or a scale label)
+function scopeData(p, scope) {
+  const all = profEvents(p), cur = scaleLabel(), L = scope === 'cur' ? cur : scope;
+  let ev = {};
+  if (scope === 'all') ev = all; else for (const m in all) { const f = all[m].filter(e => e.sl === L); if (f.length) ev[m] = f; }
+  const notes = Object.keys(ev).map(Number);
+  if (scope !== 'all' && L === cur) scaleNotes().forEach(n => { if (!notes.includes(n)) notes.push(n); });
+  notes.sort((a, b) => a - b);
+  return { ev, notes, passes: profPasses(p).filter(x => scope === 'all' || x.s === L), label: scope === 'all' ? 'All scales' : L };
+}
+// "net score": the average of every note's score as it stood at the end of each practice day
+function netSeries(ev, notes, f) {
+  const days = [...new Set(Object.values(ev).flat().filter(e => e.t).map(e => dayKey(e.t)))].sort((a, b) => a - b), pts = [];
+  for (const d of days) {
+    const end = d + 86400000 - 1, vals = [];
+    notes.forEach(n => { const v = latestVal((ev[n] || []).filter(e => e.t && e.t <= end), f); if (v != null) vals.push(v); });
+    if (vals.length) pts.push({ x: d + 43200000, y: avg(vals) });
+  }
+  return pts;
+}
+const chartW = () => Math.max(300, Math.min(900, ($('anBody').clientWidth || 340) - 30));
+
+function lineChart(series, yMaxFixed, label, dateX) {
+  const W = chartW(), H = W < 480 ? 220 : 280, L = 32, R = 12, T = 12, B = 26, all = series.flatMap(s => s.pts);
+  if (!all.length) return EMPTY;
+  const xMin = Math.min(...all.map(p => p.x)), xMax = Math.max(...all.map(p => p.x));
+  const yMax = yMaxFixed || Math.max(10, Math.ceil(Math.max(...all.map(p => p.y)) / 10) * 10);
+  const X = x => L + (xMax === xMin ? (W - L - R) / 2 : (x - xMin) / (xMax - xMin) * (W - L - R)), Y = y => T + (1 - y / yMax) * (H - T - B);
+  let g = '';
+  for (let i = 0; i <= 4; i++) { const v = yMax * i / 4, y = Y(v); g += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#262c3a"/><text x="${L - 6}" y="${y + 4}" text-anchor="end">${Math.round(v)}</text>`; }
+  const nt = W < 480 ? 4 : 6, seen = new Set();
+  for (let i = 0; i < nt; i++) {
+    const x = xMin + (xMax - xMin) * i / Math.max(1, nt - 1), lab = dateX ? dateOf(x) : String(Math.round(x));
+    if (seen.has(lab)) continue; seen.add(lab);
+    g += `<text x="${X(x).toFixed(1)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : i === nt - 1 ? 'end' : 'middle'}">${lab}</text>`;
+  }
+  for (const s of series) {
+    if (!s.pts.length) continue;
+    const last = s.pts[s.pts.length - 1];
+    if (s.pts.length > 1) g += `<polyline fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${s.pts.map(p => X(p.x).toFixed(1) + ',' + Y(p.y).toFixed(1)).join(' ')}"/>`;
+    g += `<circle cx="${X(last.x).toFixed(1)}" cy="${Y(last.y).toFixed(1)}" r="3.5" fill="${s.color}"><title>${esc(s.name)}: ${last.y.toFixed(0)}</title></circle>`;
+  }
+  return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">${g}</svg>`;
+}
+function barChart(names, A, B, yMaxFixed, label) {
+  const W = chartW(), H = W < 480 ? 220 : 280, L = 32, R = 12, T = 12, B_ = 26, vals = [...A, ...B].filter(v => v != null);
+  if (!vals.length) return EMPTY;
+  const yMax = yMaxFixed || Math.max(10, Math.ceil(Math.max(...vals) / 10) * 10), n = names.length, gw = (W - L - R) / n, bw = Math.min(22, gw / 2.4);
+  const Y = y => T + (1 - y / yMax) * (H - T - B_);
+  let g = '';
+  for (let i = 0; i <= 4; i++) { const v = yMax * i / 4, y = Y(v); g += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#262c3a"/><text x="${L - 6}" y="${y + 4}" text-anchor="end">${Math.round(v)}</text>`; }
+  names.forEach((nm, i) => {
+    const cx = L + gw * (i + .5);
+    [[A[i], PROFILES[0]], [B[i], PROFILES[1]]].forEach(([v, p], k) => { if (v != null) g += `<rect x="${(cx + (k ? 1 : -bw - 1)).toFixed(1)}" y="${Y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(Y(0) - Y(v)).toFixed(1)}" rx="3" fill="${PCOLOR[p]}"><title>${p} ${nm}: ${v.toFixed(0)}</title></rect>`; });
+    if (gw >= 17 || i % 2 === 0) g += `<text x="${cx.toFixed(1)}" y="${H - 8}" text-anchor="middle" style="font-size:${gw < 24 ? 9 : 11}px">${nm}</text>`;
+  });
+  return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">${g}</svg>`;
+}
+function statsFor(d, m) {
+  let plays = 0, last = 0; const lat = [];
+  for (const n of d.notes) { const e = d.ev[n] || []; plays += e.filter(x => x.k === 'h').length; if (e.length) last = Math.max(last, e[e.length - 1].t || 0); const v = latestVal(e, m.f); if (v != null) lat.push(v); }
+  const net = netSeries(d.ev, d.notes, m.f), days = new Set(Object.values(d.ev).flat().filter(e => e.t).map(e => dayKey(e.t))).size;
+  return { plays, last, net: lat.length ? avg(lat) : null, scored: lat.length, passes: d.passes.length, best: d.passes.length ? Math.max(...d.passes.map(x => x.pct)) : null, days, gain: net.length > 1 ? net[net.length - 1].y - net[0].y : null };
+}
+const tilesHtml = (st, m) => `<div class="tiles2">
+  <div class="t"><b>${fmtV(st.net, m)}</b><span>Net ${m.short}</span></div>
+  <div class="t"><b class="${st.gain == null ? '' : (st.gain >= 0) !== (m === METRICS.err) ? 'ok-t' : 'bad-t'}">${st.gain == null ? '–' : (st.gain >= 0 ? '+' : '−') + Math.abs(st.gain).toFixed(0)}</b><span>Change since first day</span></div>
+  <div class="t"><b>${st.plays}</b><span>Notes played</span></div>
+  <div class="t"><b>${st.days}</b><span>Days practised</span></div>
+  <div class="t"><b>${st.best == null ? '–' : st.best.toFixed(0) + '%'}</b><span>Best full pass</span></div>
+  <div class="t"><b>${st.last ? dateOf(st.last) : '–'}</b><span>Last practised</span></div></div>`;
+
+// one row per scale ever practised, for one profile
+function scaleRows(p, m) {
+  const all = profEvents(p), ps = profPasses(p), labels = new Set(ps.map(x => x.s).filter(Boolean));
+  for (const k in all) all[k].forEach(e => { if (e.sl) labels.add(e.sl); });
+  return [...labels].map(name => {
+    const d = scopeData(p, name), lat = d.notes.map(n => latestVal(d.ev[n] || [], m.f)).filter(v => v != null), pp = d.passes.map(x => x.pct);
+    const last = Math.max(0, ...Object.values(d.ev).flat().map(e => e.t || 0), ...d.passes.map(x => x.t || 0));
+    return { name, net: lat.length ? avg(lat) : null, passes: pp.length, best: pp.length ? Math.max(...pp) : null, latest: pp.length ? pp[pp.length - 1] : null, last: last || null };
+  });
+}
+function insightsHtml(d, m, rows) {
+  const out = [], scored = rows.filter(r => r.latest != null);
+  if (!scored.length) return '';
+  const byLatest = scored.slice().sort((a, b) => a.latest - b.latest), lowerBetter = m === METRICS.err;
+  const weak = (lowerBetter ? byLatest.slice().reverse() : byLatest).slice(0, 3);
+  out.push(`<li><b>Needs most work:</b> ${weak.map(r => midiName(r.m)).join(', ')}</li>`);
+  const imp = scored.filter(r => r.plays >= 6).sort((a, b) => (lowerBetter ? a.chg - b.chg : b.chg - a.chg))[0];
+  if (imp && (lowerBetter ? imp.chg < -3 : imp.chg > 3)) out.push(`<li><b>Most improved:</b> ${midiName(imp.m)} (${imp.chg > 0 ? '+' : '−'}${Math.abs(imp.chg).toFixed(0)}${m.unit})</li>`);
+  const biases = d.notes.map(n => { const s = noteScore((d.ev[n] || []).slice(-30)); return s && s.hit ? s.bias : null; }).filter(b => b != null);
+  if (biases.length >= 3) { const b = avg(biases); if (Math.abs(b) >= 4) out.push(`<li><b>Pattern:</b> on average ${Math.abs(b).toFixed(0)}¢ ${b > 0 ? 'sharp' : 'flat'} — ${b > 0 ? 'ease the pitch down a little' : 'bring the pitch up a little'}.</li>`); }
+  const wob = d.notes.map(n => { const s = noteScore((d.ev[n] || []).slice(-30)); return s && s.hit ? s.sd : null; }).filter(v => v != null);
+  if (wob.length >= 3 && avg(wob) > 12) out.push(`<li><b>Steadiness:</b> notes wobble about ±${avg(wob).toFixed(0)}¢ while held — try longer, steadier notes.</li>`);
+  const recent = new Set(Object.values(d.ev).flat().filter(e => e.t && e.t > Date.now() - 7 * 86400000).map(e => dayKey(e.t))).size;
+  out.push(`<li><b>Consistency:</b> practised on ${recent} of the last 7 days.</li>`);
+  return `<div class="card2"><h3>Insights</h3><ul class="ins">${out.join('')}</ul></div>`;
+}
+
+function fillScopeOptions() {
+  const sel = $('anScope'), keep = sel.value || 'cur', labels = new Set();
+  PROFILES.forEach(p => { profPasses(p).forEach(x => x.s && labels.add(x.s)); const e = profEvents(p); for (const k in e) e[k].forEach(v => v.sl && labels.add(v.sl)); });
+  sel.innerHTML = '';
+  sel.add(new Option(`Current scale (${scaleLabel()})`, 'cur')); sel.add(new Option('All scales', 'all'));
+  [...labels].sort().forEach(l => sel.add(new Option(l, l)));
+  sel.value = [...sel.options].some(o => o.value === keep) ? keep : 'cur';
+}
+function renderAnalysis() {
+  if (tab !== 'analysis') return;
+  fillScopeOptions();
+  const m = METRICS[$('anMetric').value], scope = $('anScope').value, byDate = $('anX').value === 'date', lowerBetter = m === METRICS.err;
+  if (anMode === 'cmp') return renderCompare(m, scope, lowerBetter);
+  const d = scopeData(profile, scope), notes = d.notes, st = statsFor(d, m);
+  const info = notes.map((n, i) => ({ n, color: noteColor(i, notes.length), pts: seriesFor(d.ev[n] || [], m.f, byDate), plays: (d.ev[n] || []).length }));
+  const rows = info.filter(r => r.pts.length).map(r => ({ m: r.n, plays: r.plays, first: r.pts[0].y, latest: r.pts[r.pts.length - 1].y, chg: r.pts[r.pts.length - 1].y - r.pts[0].y, spark: sparkOf(r.pts) }));
+  const net = netSeries(d.ev, notes, m.f), srows = scaleRows(profile, m);
+  const fixOk = (r, v) => (v >= 0) !== lowerBetter ? 'ok-t' : 'bad-t';
+  $('anBody').innerHTML = `<div class="card2"><h3 style="color:${PCOLOR[profile]}">${profile}</h3><p class="mut">${esc(d.label)}</p>${tilesHtml(st, m)}</div>
+    <div class="card2"><h3>Net ${m.short} over time</h3><p class="mut">Average of all notes, at the end of each practice day</p>
+      ${lineChart([{ name: 'Net', color: PCOLOR[profile], pts: net }], m.max, 'Net score over time', true)}</div>
+    <div class="card2"><h3>Each note over time</h3><p class="mut">${byDate ? 'By date' : 'By play number'} · tap a note to hide or show it</p>
+      ${lineChart(info.filter(r => !anHidden.has(r.n)).map(r => ({ name: midiName(r.n), color: r.color, pts: r.pts })), m.max, 'Progress of each note', byDate)}
+      <div class="legend">${info.map(r => `<button data-m="${r.n}" class="${anHidden.has(r.n) ? 'off' : ''}"${r.pts.length ? '' : ' disabled'}><i style="background:${r.color}"></i>${midiName(r.n)}${r.pts.length ? '' : ` <span class="hint2">${r.plays}/3</span>`}</button>`).join('')}</div></div>
+    <div class="card2"><h3>Full-scale passes</h3><p class="mut">In-tune % of every complete run${d.passes.length ? ` · ${dateOf(d.passes[0].t)} to ${dateOf(d.passes[d.passes.length - 1].t)}` : ''}</p>
+      ${d.passes.length ? lineChart([{ name: 'In tune', color: PCOLOR[profile], pts: d.passes.map((x, i) => ({ x: byDate && x.t ? x.t : i + 1, y: x.pct })) }], 100, 'Pass accuracy', byDate) : '<div class="mut" style="padding:16px 0">Finish a full scale to see passes here.</div>'}</div>
+    ${insightsHtml(d, m, rows)}
+    <div class="card2"><h3>Scale by scale</h3><div class="scroll tbl">${srows.length ? `<table>${thead('scl', [['name', 'Scale'], ['net', 'Net'], ['passes', 'Passes'], ['best', 'Best %'], ['latest', 'Latest %'], ['last', 'Last']])}${sortRows('scl', srows).map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${fmtV(r.net, m)}</td><td>${r.passes}</td><td>${r.best == null ? '–' : r.best.toFixed(0)}</td><td>${r.latest == null ? '–' : r.latest.toFixed(0)}</td><td>${r.last ? dateOf(r.last) : '–'}</td></tr>`).join('')}</table>` : '<span class="mut">No scales practised yet.</span>'}</div></div>
+    <div class="card2"><h3>Note by note</h3><div class="scroll tbl">${rows.length ? `<table>${thead('ana', [['m', 'Note'], ['plays', 'Plays'], ['first', 'First'], ['latest', 'Latest'], ['chg', 'Change'], ['spark', 'Trend', false]])}${sortRows('ana', rows).map(r => `<tr><td><b>${midiName(r.m)}</b></td><td>${r.plays}</td><td>${fmtV(r.first, m)}</td><td><b>${fmtV(r.latest, m)}</b></td><td class="${fixOk(r, r.chg)}">${r.chg >= 0 ? '+' : '−'}${Math.abs(r.chg).toFixed(0)}</td><td>${r.spark}</td></tr>`).join('')}</table>` : EMPTY}</div></div>`;
+}
+function renderCompare(m, scope, lowerBetter) {
+  const byDate = $('anX').value === 'date';
+  const ds = PROFILES.map(p => ({ p, ...scopeData(p, scope) }));
+  const notes = [...new Set(ds.flatMap(d => d.notes))].sort((a, b) => a - b);
+  const A = notes.map(n => latestVal(ds[0].ev[n] || [], m.f)), B = notes.map(n => latestVal(ds[1].ev[n] || [], m.f));
+  const rows = notes.map((n, i) => ({ m: n, a: A[i], b: B[i], gap: A[i] != null && B[i] != null ? A[i] - B[i] : null }));
+  const winner = g => (g > 0) !== lowerBetter ? PROFILES[0] : PROFILES[1];
+  const ahead = g => g == null || Math.abs(g) < 0.5 ? '–' : `<span style="color:${PCOLOR[winner(g)]}">${winner(g)}</span> +${Math.abs(g).toFixed(0)}`;
+  const legend = `<div class="legend">${PROFILES.map(p => `<span class="chip mini" style="flex:none"><i style="width:9px;height:9px;border-radius:50%;background:${PCOLOR[p]}"></i>&nbsp;${p}</span>`).join('')}</div>`;
+  const sA = scaleRows(PROFILES[0], m), sB = scaleRows(PROFILES[1], m), names = [...new Set([...sA, ...sB].map(r => r.name))];
+  const srows = names.map(name => { const a = sA.find(r => r.name === name), b = sB.find(r => r.name === name); return { name, a: a ? a.net : null, b: b ? b.net : null, gap: a && b && a.net != null && b.net != null ? a.net - b.net : null }; });
+  $('anBody').innerHTML = `<div class="two">${ds.map(d => `<div class="card2"><h3 style="color:${PCOLOR[d.p]}">${d.p}</h3><p class="mut">${esc(d.label)}</p>${tilesHtml(statsFor(d, m), m)}</div>`).join('')}</div>
+    <div class="card2"><h3>Net ${m.short} over time</h3><p class="mut">Average of all notes, end of each practice day</p>
+      ${lineChart(ds.map(d => ({ name: d.p, color: PCOLOR[d.p], pts: netSeries(d.ev, d.notes, m.f) })), m.max, 'Net score, both profiles', true)}${legend}</div>
+    <div class="card2"><h3>Full-scale passes</h3><p class="mut">In-tune % of each complete run · ${byDate ? 'by date' : 'by pass number'}</p>
+      ${lineChart(ds.map(d => ({ name: d.p, color: PCOLOR[d.p], pts: d.passes.map((x, i) => ({ x: byDate && x.t ? x.t : i + 1, y: x.pct })) })), 100, 'Pass accuracy, both profiles', byDate)}${legend}</div>
+    <div class="card2"><h3>${m.label} by note</h3><p class="mut">Latest value for each note</p>
+      ${barChart(notes.map(midiName), A, B, m.max, 'Per-note comparison')}${legend}</div>
+    <div class="card2"><h3>Scale by scale</h3><div class="scroll tbl">${srows.length ? `<table>${thead('cmpS', [['name', 'Scale'], ['a', PROFILES[0]], ['b', PROFILES[1]], ['gap', 'Ahead']])}${sortRows('cmpS', srows).map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${fmtV(r.a, m)}</td><td>${fmtV(r.b, m)}</td><td>${ahead(r.gap)}</td></tr>`).join('')}</table>` : '<span class="mut">No scales practised yet.</span>'}</div></div>
+    <div class="card2"><h3>Note by note</h3><div class="scroll tbl">${rows.length ? `<table>${thead('cmp', [['m', 'Note'], ['a', PROFILES[0]], ['b', PROFILES[1]], ['gap', 'Ahead']])}${sortRows('cmp', rows).map(r => `<tr><td><b>${midiName(r.m)}</b></td><td>${fmtV(r.a, m)}</td><td>${fmtV(r.b, m)}</td><td>${ahead(r.gap)}</td></tr>`).join('')}</table>` : EMPTY}</div></div>`;
+}
+$('anBody').onclick = e => { const b = e.target.closest('.legend button'); if (!b) return; const n = +b.dataset.m; anHidden.has(n) ? anHidden.delete(n) : anHidden.add(n); renderAnalysis(); };
+document.querySelectorAll('#anMode button').forEach(b => b.onclick = () => { anMode = b.dataset.m; document.querySelectorAll('#anMode button').forEach(x => x.classList.toggle('on', x === b)); renderAnalysis(); });
+$('anMetric').onchange = $('anScope').onchange = $('anX').onchange = renderAnalysis;
+let rzT = null; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(renderAnalysis, 150); });
+$('profile').onchange = () => {
+  finalizeHold(); stopScale(); profile = $('profile').value;
+  try { localStorage.setItem('tuner-profile', profile); } catch {}
+  cardAll = lsGet(ckey(profile), {}); passAll = lsGet(pkey(profile), []); cardSess = {};
+  resetPractice(); renderScale(); renderCard(); renderAnalysis();
+};
+
+// ----- metronome (Web Audio clock, accent on beat 1) -----
+let metroOn = false, metroTimer = null, metroNext = 0, metroBeat = 0, beatTimers = [];
+const sigBeats = () => +$('scSig').value || 4;
+function buildBeats() { $('beats').innerHTML = '<i></i>'.repeat(sigBeats()); }
+function flashBeat(b) { document.querySelectorAll('#beats i').forEach((e, i) => { e.className = i === b ? (b === 0 ? 'on acc' : 'on') : ''; }); }
+function clickAt(time, accent) {
+  const c = getCtx(), o = c.createOscillator(), g = c.createGain();
+  o.type = 'sine'; o.frequency.value = accent ? 1500 : 1000;
+  g.gain.setValueAtTime(0.0001, time); g.gain.linearRampToValueAtTime(accent ? 0.5 : 0.32, time + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, time + 0.06);
+  o.connect(g); g.connect(c.destination); o.start(time); o.stop(time + 0.07);
+}
+function metroTick() {
+  const c = getCtx(), spb = 60 / (+$('scBpm').value || 80), n = sigBeats();
+  while (metroNext < c.currentTime + 0.3) {
+    const b = metroBeat % n, delay = Math.max(0, (metroNext - c.currentTime) * 1000);
+    clickAt(metroNext, b === 0); beatTimers.push(setTimeout(() => flashBeat(b), delay));
+    metroNext += spb; metroBeat++;
+  }
+  if (beatTimers.length > 12) beatTimers.splice(0, beatTimers.length - 12);
+}
+function startMetro() {
+  stopMetro(); const c = getCtx(); metroNext = c.currentTime + 0.08; metroBeat = 0; metroOn = true;
+  metroTick(); metroTimer = setInterval(metroTick, 50); $('metro').classList.add('on'); $('metro').textContent = '■ Click';
+}
+function stopMetro() {
+  clearInterval(metroTimer); metroTimer = null; beatTimers.forEach(clearTimeout); beatTimers = []; metroOn = false;
+  if ($('beats')) flashBeat(-1); $('metro').classList.remove('on'); $('metro').textContent = '♩ Click';
+}
+$('metro').onclick = () => metroOn ? stopMetro() : startMetro();
+const clampBpm = v => Math.max(30, Math.min(240, Math.round(+v || 80)));
+$('bpmDn').onclick = () => { $('scBpm').value = clampBpm(+$('scBpm').value - 2); savePrefs(); };
+$('bpmUp').onclick = () => { $('scBpm').value = clampBpm(+$('scBpm').value + 2); savePrefs(); };
+$('scBpm').onchange = () => { $('scBpm').value = clampBpm($('scBpm').value); };
+$('scSig').onchange = () => { buildBeats(); if (metroOn) startMetro(); };
+buildBeats();
+
+// ----- remembered scale / tempo choices -----
+const PREF_IDS = ['scInst', 'scRoot', 'scOct', 'scType', 'scSpan', 'scDir', 'scBpm', 'scSig'], PREF_CHK = ['scStrict', 'scRepeat'], PREF_KEY = 'tuner-scaleprefs-v1';
+function savePrefs() { const o = {}; PREF_IDS.forEach(id => o[id] = $(id).value); PREF_CHK.forEach(id => o[id] = $(id).checked); try { localStorage.setItem(PREF_KEY, JSON.stringify(o)); } catch {} }
+function loadPrefs() { try { const o = JSON.parse(localStorage.getItem(PREF_KEY)); if (!o) return; PREF_IDS.forEach(id => { if (o[id] != null && [...($(id).options || [{ value: o[id] }])].some(op => op.value === String(o[id]))) $(id).value = o[id]; else if (o[id] != null && !$(id).options) $(id).value = o[id]; }); PREF_CHK.forEach(id => { if (typeof o[id] === 'boolean') $(id).checked = o[id]; }); } catch {} }
+$('tab-scale').addEventListener('change', savePrefs);
+
+// ----- accuracy self-test: known pure tones through the same detector (checks the software, not the microphone) -----
+let stRun = 0;
+$('selftest').onclick = async () => {
+  const btn = $('selftest'); if (btn.disabled) return;
+  btn.disabled = true; const label = btn.textContent, run = ++stRun, keepOpen = $('stDet') ? $('stDet').open : true;
+  try {
+    const sr = getCtx().sampleRate, N = 4096, fmin = +$('fmin').value, fmax = +$('fmax').value, conf = +$('conf').value, TR = 4;
+    const tones = [['E2', 82.41], ['A2', 110], ['D3', 146.83], ['G3', 196], ['B3', 246.94], ['E4', 329.63], ['A4', 440], ['E5', 659.25], ['A5', 880], ['E6', 1318.5]].filter(t => t[1] >= fmin && t[1] <= fmax);
+    if (!tones.length) { $('stOut').innerHTML = '<p class="warn-t">No test tones fall inside your pitch range.</p>'; return; }
+    let seed = (Date.now() ^ Math.imul(run, 2654435761)) >>> 0;
+    const rnd = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+    // one randomised trial: random phases and a random detune of up to ±50¢; returns error in cents, or null if not detected
+    const trial = (f0, amp, noiseK) => {
+      const det = (rnd() - 0.5) * 100, f = f0 * Math.pow(2, det / 1200), p1 = rnd() * 6.283, p2 = rnd() * 6.283, p3 = rnd() * 6.283, b = new Float32Array(N);
+      for (let i = 0; i < N; i++) { const t = i / sr; b[i] = amp * (Math.sin(6.283185 * f * t + p1) + 0.5 * Math.sin(12.56637 * f * t + p2) + 0.27 * Math.sin(18.849556 * f * t + p3)) + noiseK * (rnd() - 0.5); }
+      const r = yin(b, sr, fmin, fmax); return r && r.clarity > conf ? centsBetween(r.freq, f) : null;
+    };
+    const conds = [['clean', 0.3, 0], ['noisy', 0.3, 0.084], ['quiet', 0.03, 0.0084]], lim = { clean: 2, noisy: 5, quiet: 5 };
+    const rows = []; let bad = 0, soft = 0, total = 0;
+    for (let ti = 0; ti < tones.length; ti++) {
+      btn.textContent = `Testing ${ti + 1}/${tones.length}…`; await new Promise(r => setTimeout(r, 0));
+      const cells = conds.map(([nm, amp, nk]) => {
+        let worst = 0, miss = 0; for (let k = 0; k < TR; k++) { const e = trial(tones[ti][1], amp, nk); if (e == null) miss++; else worst = Math.max(worst, Math.abs(e)); }
+        total++; if (miss || worst > 10) bad++; else if (worst > lim[nm]) soft++;
+        return `<td class="${miss || worst > 10 ? 'bad-t' : worst <= lim[nm] ? 'ok-t' : 'warn-t'}">${miss ? miss + ' missed' : '±' + worst.toFixed(2) + '¢'}</td>`;
+      });
+      rows.push(`<tr><td><b>${tones[ti][0]}</b></td><td>${tones[ti][1].toFixed(1)} Hz</td>${cells.join('')}</tr>`);
+    }
+    const ok = bad === 0, head = bad ? `⚠ ${bad} of ${total} checks failed (missed or over 10¢ off)` : soft ? `✓ Passed — ${soft} reading(s) between ${'5'}¢ and 10¢ under noise (typical for very low notes)` : '✓ Passed';
+    $('stOut').innerHTML = `<p class="${ok ? 'ok-t' : 'warn-t'}" style="margin:0 0 8px"><b>${head}</b> — run ${run}, ${new Date().toLocaleTimeString()}, ${sr} Hz sampling, ${TR} random trials per cell.</p>
+      <details id="stDet"${keepOpen ? ' open' : ''}><summary>Results by tone (worst error)</summary><div class="scroll tbl"><table><tr><th>Tone</th><th>Frequency</th><th>Clean</th><th>Noisy</th><th>Quiet</th></tr>${rows.join('')}</table></div>
+      <p class="hint2" style="margin:8px 0 0">Limits: clean ±2¢, noisy (about 20 dB signal-to-noise) and quiet ±5¢. Each press uses new random phases, detunes and noise. This checks the software only; your microphone, room and instrument add their own error.</p></details>`;
+  } finally { btn.disabled = false; btn.textContent = label; }
+};
+
+// ----- backup / restore (versioned) -----
+const VER_KEY = 'tuner-data-version', APP_ID = 'tuner-scale-trainer';
+const dataVer = () => { try { return parseInt(localStorage.getItem(VER_KEY)) || 0; } catch { return 0; } };
+const bkMsg = (t, cls) => { $('bkMsg').textContent = t; $('bkMsg').className = 'hint2 ' + (cls || ''); };
+function updBackupInfo() { $('verInfo').textContent = `Data version on this device: v${dataVer()}`; }
+async function doBackup(share) {
+  const v = dataVer() + 1, profiles = {};
+  PROFILES.forEach(p => profiles[p] = { scorecard: profEvents(p), passes: profPasses(p) });
+  const text = JSON.stringify({ app: APP_ID, format: 1, version: v, created: new Date().toISOString(), profiles });
+  const name = `tuner-backup-v${v}-${stamp().slice(0, 10)}.json`;
+  let shared = false;
+  if (share && typeof File === 'function' && navigator.canShare) {
+    const file = new File([text], name, { type: 'text/plain' });   // plain-text type is accepted by more share targets (WhatsApp, email apps)
+    if (navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: `Tuner backup v${v}`, text: `Tuner & Scale Trainer backup, version ${v}` }); shared = true; }
+      catch (e) { if (e && e.name === 'AbortError') { bkMsg('Sharing cancelled — nothing changed.'); return; } }
+    }
+  }
+  if (!shared) download(name, text, 'application/json');
+  try { localStorage.setItem(VER_KEY, String(v)); } catch {}
+  updBackupInfo(); bkMsg(shared ? `Backup v${v} shared.` : `Backup v${v} saved to this device's downloads as ${name}.`, 'ok-t');
+}
+$('bkShare').onclick = () => doBackup(true);
+$('bkDl').onclick = () => doBackup(false);
+$('bkImp').onclick = () => $('impFile').click();
+const cleanEv = o => {
+  const out = {};
+  for (const k of Object.keys(o || {})) {
+    const m = +k; if (!Number.isInteger(m) || m < 0 || m > 127 || !Array.isArray(o[k])) continue;
+    out[m] = o[k].filter(e => e && ['h', 's', 'w'].includes(e.k)).slice(-CARD_MAX).map(e => {
+      const r = { k: e.k, t: +e.t || 0 }; if (typeof e.sl === 'string') r.sl = e.sl.slice(0, 60);
+      if (typeof e.i === 'string') r.i = e.i.slice(0, 20);
+      if (e.k === 'h') { r.c = +e.c || 0; r.a = clamp01(+e.a || 0); r.s = e.s == null ? null : Math.max(0, +e.s || 0); }
+      return r;
+    });
+  }
+  return out;
+};
+const cleanPass = a => (Array.isArray(a) ? a : []).slice(-300).map(x => ({ t: +x.t || 0, pct: Math.max(0, Math.min(100, +x.pct || 0)), s: String((x && x.s) || '').slice(0, 60) }));
+$('impFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    if (f.size > 20e6) throw new Error('the file is too large');
+    let b; try { b = JSON.parse(await f.text()); } catch { throw new Error('the file is not readable JSON'); }
+    if (!b || b.app !== APP_ID || !Number.isInteger(b.version) || b.version < 1 || !b.profiles || typeof b.profiles !== 'object') throw new Error('this is not a Tuner & Scale Trainer backup');
+    const cur = dataVer();
+    if (b.version <= cur) { bkMsg(`Not imported: this backup is v${b.version} and this device is already at v${cur}. Only a higher version can be imported.`, 'bad-t'); return; }
+    const found = PROFILES.filter(p => b.profiles[p]);
+    if (!found.length) throw new Error('it contains no profile data for ' + PROFILES.join(' or '));
+    const cleaned = {}; found.forEach(p => cleaned[p] = { sc: cleanEv(b.profiles[p].scorecard), ps: cleanPass(b.profiles[p].passes) });
+    const sum = found.map(p => `${p}: ${Object.values(cleaned[p].sc).reduce((s, a) => s + a.length, 0)} plays, ${cleaned[p].ps.length} passes`).join('\n');
+    if (!confirm(`Import backup v${b.version}${b.created ? ' from ' + String(b.created).slice(0, 10) : ''}?\nThis REPLACES the data for ${found.join(' and ')} on this device (now v${cur}).\n\n${sum}`)) { bkMsg('Import cancelled.'); return; }
+    found.forEach(p => { lsSet(ckey(p), cleaned[p].sc); lsSet(pkey(p), cleaned[p].ps); });
+    try { localStorage.setItem(VER_KEY, String(b.version)); } catch {}
+    cardAll = lsGet(ckey(profile), {}); passAll = lsGet(pkey(profile), []); cardSess = {};
+    updBackupInfo(); renderCard(); renderAnalysis(); bkMsg(`Imported backup v${b.version}.`, 'ok-t');
+  } catch (err) { bkMsg('Could not import: ' + err.message, 'bad-t'); }
+};
+updBackupInfo();
+
+// Playable range of each instrument (sounding pitch, MIDI): guitar E2–C6, violin G3–E6 (kept under the 1500 Hz detection limit),
+// ukulele GCEA C4–C6, low-G ukulele G3–C6. Octave and span choices that would leave the range are hidden. Chromatic is unrestricted.
+const INST_RANGE = { guitar: [40, 84], violin: [55, 88], ukulele: [60, 84], ukuleleLow: [55, 84] };
+function fillSel(sel, pairs, val) { sel.innerHTML = ''; pairs.forEach(([v, t]) => sel.add(new Option(t, v))); sel.value = val; }
+const nearestOf = (list, v) => list.reduce((b, x) => Math.abs(x - v) < Math.abs(b - v) ? x : b, list[0]);
+function applyLimits() {
+  const inst = $('scInst').value, rng = INST_RANGE[inst], root = +$('scRoot').value, type = $('scType').value, dir = $('scDir').value;
+  const fits = (o, n) => { if (!rng) return true; const q = buildScale(root, o, type, n, dir); return Math.min(...q) >= rng[0] && Math.max(...q) <= rng[1]; };
+  let octs = (rng ? [1, 2, 3, 4, 5, 6] : [2, 3, 4, 5, 6]).filter(o => [1, 2, 3, 4].some(n => fits(o, n)));
+  if (!octs.length) octs = [+$('scOct').value];
+  const oct = nearestOf(octs, +$('scOct').value);
+  fillSel($('scOct'), octs.map(o => [o, String(o)]), oct);
+  let spans = [1, 2, 3, 4].filter(n => fits(oct, n)); if (!spans.length) spans = [1];
+  const span = nearestOf(spans, +$('scSpan').value || 1);
+  fillSel($('scSpan'), spans.map(n => [n, n + (n > 1 ? ' octaves' : ' octave')]), span);
+  $('instRange').textContent = rng ? `${PRESETS[inst].label}: ${midiName(rng[0])}–${midiName(rng[1])}. Octave and span choices that go outside this range are hidden.` : 'Chromatic: no limits.';
+}
+function resetPractice() {
+  finalizeHold(); sc.pass = 1; sc.passes = [];
+  sc.seq = scaleSeq(); sc.pos = 0; sc.grades = []; sc.attempts = []; sc.wrong = 0; sc.running = false;
+  liveBuf = []; silentFrames = 99; det.cur = null; det.lastMidi = null;
+  $('scStart').textContent = 'Start practice'; $('scSum').innerHTML = ''; setMsg('');
+}
+function startScale() {
+  stopDemo(); resetPractice(); sc.running = true;
+  setMsg(listening ? 'Play the first note (or any note — earlier ones are marked skipped)' : 'Starting microphone…');
+  $('scStart').textContent = 'Restart'; $('scOpts').open = false; renderScale();   // fold the options so the live rows fit on a phone
+  if (!listening) {
+    startListening()
+      .then(() => setMsg('Play the first note (or any note — earlier ones are marked skipped)'))
+      .catch(e => { sc.running = false; $('scStart').textContent = 'Start practice'; $('status').textContent = 'Mic error: ' + e.message; setMsg('Mic error: ' + e.message, 'bad'); renderScale(); });
+  }
+}
+function stopScale() {                       // stops the demo and/or the practice run and returns to "Start practice"
+  const was = sc.running || demoIdx >= 0;
+  stopDemo(); stopMetro(); finalizeHold();
+  sc.running = false; det.cur = null; det.lastMidi = null; liveBuf = [];
+  $('scStart').textContent = 'Start practice';
+  setMsg(was ? 'Stopped — press Start practice to begin again' : '');
+  renderScale(); renderSummary(); renderCard(); renderAnalysis();
+}
+const newHold = (a, T) => ({ midi: a.midi, c0: a.cents, T, frames: [], gap: 0, sl: scaleLabel(), i: $('scInst').value });
+function onAttempt(a) {
+  if (!sc.running || demoIdx >= 0 || sc.pos >= sc.seq.length) return;
+  const seq = sc.seq, exp = seq[sc.pos], T = tol();
+  const rec = { index: sc.pos + 1, expected: midiName(exp), played: midiName(a.midi), hz: a.hz, cents: a.cents, time_s: a.t, pass: sc.pass };
+  // Re-playing the note just played is a retry: scored as another play of that note, never a skip or a wrong note.
+  if (sc.pos > 0 && a.midi === seq[sc.pos - 1] && a.midi !== exp) {
+    const g = gradeCents(a.cents, T);
+    finalizeHold(); hold = newHold(a, T); sc.grades[sc.pos - 1] = g; liveBuf = []; silentFrames = 99; neutralLive();
+    setMsg(`Retry ${midiName(a.midi)} ${a.cents >= 0 ? '+' : '−'}${Math.abs(a.cents).toFixed(0)}¢ — ${g}`, g === 'In tune' ? 'ok' : g === 'Close' ? 'warn' : 'bad'); renderScale(); return;
+  }
+  // Only look ahead (never backwards). You may start anywhere, but after that at most 2 notes can be skipped at once.
+  let k = seq.indexOf(a.midi, sc.pos);
+  if (k > sc.pos + (sc.pos === 0 ? seq.length : 2)) k = -1;
+  
+  if (k >= 0) {
+    const skipped = [];
+    for (let i = sc.pos; i < k; i++) {
+      sc.grades[i] = 'Skipped'; skipped.push(midiName(seq[i]));
+      sc.attempts.push({ index: i + 1, expected: midiName(seq[i]), played: '–', grade: 'Skipped', hz: null, cents: null, time_s: a.t, pass: sc.pass });
+      addEv(seq[i], { k: 's' }, true);
+    }
+    const g = gradeCents(a.cents, T);
+    sc.attempts.push({ ...rec, index: k + 1, expected: midiName(seq[k]), grade: g }); sc.grades[k] = g;
+    finalizeHold(); hold = newHold(a, T);   // scored when the note ends
+    sc.pos = k + 1; liveBuf = []; silentFrames = 99; neutralLive();
+    const fb = `${midiName(a.midi)} ${a.cents >= 0 ? '+' : '−'}${Math.abs(a.cents).toFixed(0)}¢ — ${g}` + (skipped.length ? ` · skipped ${skipped.join(', ')}` : '');
+    
+    if (sc.pos >= seq.length) {
+      const done = sc.attempts.filter(x => x.pass === sc.pass && x.played === x.expected), n = done.filter(x => x.grade === 'In tune').length;
+      const wr = sc.attempts.filter(x => x.pass === sc.pass && /^Wrong/.test(x.grade)).length, pct = 100 * n / (seq.length + wr);   // wrong notes count against the pass
+      sc.passes.push({ pct }); savePass(pct);
+      if ($('scRepeat').checked) {                       // loop: next pass starts from the root, scorecard keeps growing
+        setMsg(`Pass ${sc.pass} done — ${pct.toFixed(0)}% in tune. Play the root to start pass ${sc.pass + 1}`, 'ok');
+        sc.pass++; sc.pos = 0; sc.grades = []; renderScale(); renderSummary(); renderCard(); return;
+      }
+      sc.running = false; $('scStart').textContent = 'Start practice'; setMsg(fb); renderScale(); renderSummary(); renderCard(); return;
+    }
+    setMsg(fb, g === 'In tune' ? 'ok' : g === 'Close' ? 'warn' : 'bad'); renderScale();
+  } else if ($('scStrict').checked) {
+    const g = (a.midi - exp) % 12 === 0 ? 'Wrong octave' : 'Wrong note';
+    sc.wrong++; sc.attempts.push({ ...rec, grade: g }); addEv(exp, { k: 'w' });
+    setMsg(`Heard ${midiName(a.midi)} — expected ${midiName(exp)} (${g.toLowerCase()})`, 'bad');
+  } else {
+    sc.attempts.push({ ...rec, grade: 'Ignored (lenient)' });
+  }
+}
+function renderSummary() {
+  const ok = sc.attempts.filter(a => a.played === a.expected);
+  if (!ok.length) { $('scSum').innerHTML = ''; return; }
+  const inTune = ok.filter(a => a.grade === 'In tune').length;
+  const avg = ok.reduce((s, a) => s + Math.abs(a.cents), 0) / ok.length;
+  const worst = ok.reduce((w, a) => Math.abs(a.cents) > Math.abs(w.cents) ? a : w);
+  const resolved = ok.length + sc.attempts.filter(a => a.grade === 'Skipped').length;   // note slots played or skipped, across all passes
+  $('scSum').innerHTML = `<div class="scroll"><table><tr><th>Passes</th><th>Notes</th><th>In tune</th><th>Avg error</th><th>Worst</th><th>Wrong</th><th>In-tune %</th></tr>
+    <tr><td>${sc.passes.length}</td><td>${ok.length}/${resolved}</td><td>${inTune}</td><td>${avg.toFixed(1)}¢</td><td>${worst.expected} (${Math.abs(worst.cents).toFixed(0)}¢)</td><td>${sc.wrong}</td><td><b>${(100 * inTune / (resolved + sc.wrong)).toFixed(0)}%</b></td></tr></table></div>`;
+}
+
+function stopDemo() {
+  demoTimers.forEach(clearTimeout); demoTimers = [];
+  stopTone();
+  const was = demoIdx >= 0; demoIdx = -1;
+  $('scDemo').textContent = '▶ Hear scale';
+  if (was) { det.cur = null; det.lastMidi = null; liveBuf = []; renderScale(); }
+}
+function startDemo() {
+  finalizeHold(); sc.seq = scaleSeq();
+  const step = 60 / (+$('scBpm').value || 80) , seq = sc.seq, off = metroOn ? 90 : 0;
+  if (metroOn) startMetro();
+  demoIdx = 0; $('scDemo').textContent = '■ Stop demo';
+  seq.forEach((m, i) => demoTimers.push(setTimeout(() => {
+    demoIdx = i; renderScale(); playTone(noteToFreq(m, a4()), step * 0.95, 'triangle', 0.25);
+  }, off + i * step * 1000)));
+  demoTimers.push(setTimeout(stopDemo, off + seq.length * step * 1000));
+  renderScale();
+}
+$('scDemo').onclick = () => { if (demoIdx >= 0) stopDemo(); else startDemo(); };
+$('scStart').onclick = startScale;
+$('scStop').onclick = stopScale;
+['scInst', 'scRoot', 'scOct', 'scType', 'scSpan', 'scDir'].forEach(id => $(id).onchange = () => { applyLimits(); stopDemo(); resetPractice(); renderScale(); renderCard(); renderAnalysis(); });
+
+// ----- RECORDER -----
+let events = [], recording = false, recT0 = 0;
+const seg = new Segmenter(ev => { if (recording) addEvent(ev); });
+function addEvent(ev) {
+  ev.start -= recT0; events.push(ev);
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${events.length}</td><td><b>${ev.note}</b></td><td>${ev.hz.toFixed(2)}</td><td>${ev.cents >= 0 ? '+' : ''}${ev.cents.toFixed(1)}</td><td>${ev.start.toFixed(3)}</td><td>${ev.dur.toFixed(0)}</td>`;
+  $('rows').prepend(tr);
+}
+function setRecording(on) {
+  if (on && !recording) recT0 = ctx.currentTime - t0;
+  if (!on && recording) seg.end();
+  recording = on; $('rec').textContent = on ? '■ Stop recording' : '● Record'; $('rec').className = on ? 'rec' : 'sec';
+}
+const cv = $('roll'), g2 = cv.getContext('2d'), WIN = 15;
+function drawRoll(t) {
+  const W = cv.width, H = cv.height; g2.clearRect(0, 0, W, H);
+  const tNow = recording ? t - recT0 : t, tL = tNow - WIN;
+  const all = events.slice(-60).map(e => ({ s: e.start, d: e.dur / 1000, m: e.midi }));
+  if (recording && seg.cur) all.push({ s: seg.cur.start - recT0, d: seg.cur.last - seg.cur.start, m: seg.cur.midi, live: true });
+  if (!all.length) { g2.fillStyle = '#4a5064'; g2.fillText('Notes will appear here while recording', 12, 20); return; }
+  const lo = Math.min(...all.map(e => e.m)) - 2, hi = Math.max(...all.map(e => e.m)) + 2, rows = Math.max(hi - lo, 8), rh = H / rows;
+  g2.strokeStyle = '#1f2330'; g2.fillStyle = '#4a5064'; g2.font = '10px sans-serif';
+  for (let m = lo; m <= lo + rows; m++) { const y = H - (m - lo) * rh; g2.beginPath(); g2.moveTo(0, y); g2.lineTo(W, y); g2.stroke(); if (m % 12 === 0 || rows < 16) g2.fillText(midiName(m), 2, y - 2); }
+  for (const e of all) {
+    const x = (e.s - tL) / WIN * W, w = Math.max(3, e.d / WIN * W); if (x + w < 0) continue;
+    g2.fillStyle = e.live ? '#ffb020' : '#5b8cff'; g2.fillRect(x, H - (e.m - lo + 1) * rh + 1, w, rh - 2);
+  }
+}
+
+// ----- audio engine -----
+// Keep the screen on while listening (phones otherwise dim/lock, which suspends the mic). Silently skipped if unsupported.
+let wakeLock = null;
+async function keepAwake() { try { if (navigator.wakeLock && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.onrelease = () => { wakeLock = null; }; } } catch {} }
+function releaseAwake() { try { if (wakeLock) wakeLock.release(); } catch {} wakeLock = null; }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && listening) keepAwake(); });
+let starting = false;
+async function startListening() {
+  if (listening || starting) return;
+  starting = true;
+  try { await openMic(); } finally { starting = false; }
+}
+async function openMic() {
+  stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+  const c = getCtx(); if (c.state === 'suspended') await c.resume();
+  srcNode = c.createMediaStreamSource(stream);
+  hpNode = c.createBiquadFilter(); hpNode.type = 'highpass'; hpNode.frequency.value = 70;
+  analyser = c.createAnalyser(); analyser.fftSize = 4096; analyser.smoothingTimeConstant = 0;
+  boostNode = c.createGain(); boostNode.gain.value = +$('boost').value;   // input boost for quiet mics (AGC is off)
+  srcNode.connect(hpNode); hpNode.connect(boostNode); boostNode.connect(analyser);
+  buf = new Float32Array(analyser.fftSize); t0 = c.currentTime; listening = true; keepAwake();
+  showMicProc(); $('start').textContent = '■ Stop listening'; $('rec').disabled = false; $('status').textContent = '';
+  loop();
+}
+function stopListening() {
+  listening = false; releaseAwake(); cancelAnimationFrame(rafId); finalizeHold(); seg.end(); setRecording(false);
+  stream.getTracks().forEach(t => t.stop()); srcNode.disconnect(); hpNode.disconnect(); boostNode.disconnect(); analyser = null;
+  $('lvlBar').style.width = '0'; $('lvlDb').textContent = '–';
+  sc.running = false; $('scStart').textContent = 'Start practice'; liveBuf = [];
+  $('start').textContent = '▶ Start listening'; $('rec').disabled = true; $('status').textContent = '';
+  hist.length = 0; lastVoiced = -9; tunerIdle(); renderScale();
+}
+let boostNode = null;
+const dbPos = r => Math.max(0, Math.min(100, (20 * Math.log10(Math.max(r, 1e-6)) + 60) / 60 * 100));   // −60…0 dBFS → 0…100 %
+function updateGateMark() { $('lvlGate').style.left = dbPos(+$('gate').value) + '%'; }
+function updateLevel(rms, pk = 0) {
+  const open = rms > +$('gate').value, clip = pk >= 0.98;
+  $('lvlBar').style.width = dbPos(rms) + '%'; $('lvlBar').style.background = clip ? 'var(--bad)' : open ? 'var(--ok)' : 'var(--mut)';
+  $('lvlDb').textContent = clip ? 'CLIPPING' : (20 * Math.log10(Math.max(rms, 1e-6))).toFixed(0) + ' dB'; $('lvlDb').style.color = clip ? 'var(--bad)' : '';
+}
+$('gate').oninput = updateGateMark;
+$('boost').oninput = () => { $('boostVal').textContent = $('boost').value + '×'; if (boostNode) boostNode.gain.value = +$('boost').value; };
+updateGateMark();
+// What the browser really applied (some browsers ignore the "off" request): shown in Settings.
+function showMicProc() {
+  try {
+    const st = stream.getAudioTracks()[0].getSettings(), on = ['echoCancellation', 'noiseSuppression', 'autoGainControl'].filter(k => st[k] === true);
+    $('micProc').innerHTML = on.length ? `<span class="warn-t">Browser left ${on.join(', ')} switched on — it can disturb pitch readings. Try Chrome, or play a little louder/closer.</span>` : '<span class="ok-t">Mic processing is off (echo cancellation, noise suppression, auto-gain) — good for tuning.</span>';
+  } catch { $('micProc').textContent = 'Mic processing: could not be read on this browser.'; }
+}
+// Noise-floor calibration: listen ~2 s of silence, put the gate just above the ambient level.
+let calib = null;
+$('calib').onclick = () => {
+  if (!listening) { $('calibMsg').textContent = 'Start listening first.'; return; }
+  calib = { vals: [], end: performance.now() + 2000 }; $('calibMsg').textContent = 'Listening to the room…';
+};
+function calibFrame(rms) {
+  if (!calib) return;
+  calib.vals.push(rms);
+  if (performance.now() < calib.end) return;
+  const v = calib.vals.sort((x, y) => x - y), p95 = v[Math.floor(v.length * 0.95)] || 0;
+  const g = Math.min(0.1, Math.max(0.002, Math.round(p95 * 2.5 * 1000) / 1000));
+  $('gate').value = g; updateGateMark(); saveSettings();
+  $('calibMsg').textContent = `Gate set to ${g.toFixed(3)} (room noise ≈ ${(20 * Math.log10(Math.max(p95, 1e-6))).toFixed(0)} dB).`; calib = null;
+}
+// Settings: saved on this device, restorable to the recommended values.
+const SET_IDS = ['a4', 'tol', 'gate', 'boost', 'conf', 'mindur', 'fmin', 'fmax'], SET_KEY = 'tuner-settings-v1';
+const SET_DEFAULTS = { a4: 440, tol: 10, gate: 0.004, boost: 1, conf: 0.85, mindur: 60, fmin: 60, fmax: 1500 };
+function saveSettings() { const o = {}; SET_IDS.forEach(id => o[id] = $(id).value); try { localStorage.setItem(SET_KEY, JSON.stringify(o)); } catch {} }
+function applySettings(o) {
+  SET_IDS.forEach(id => { if (o[id] != null) $(id).value = o[id]; });
+  $('boostVal').textContent = $('boost').value + '×'; $('confVal').textContent = (+$('conf').value).toFixed(2);
+  if (boostNode) boostNode.gain.value = +$('boost').value;
+  updateGateMark(); applyTol(); resetTuner(); renderScale();
+}
+SET_IDS.forEach(id => $(id).addEventListener('input', saveSettings));
+$('conf').addEventListener('input', () => { $('confVal').textContent = (+$('conf').value).toFixed(2); });
+$('defaults').onclick = () => { applySettings(SET_DEFAULTS); saveSettings(); $('calibMsg').textContent = 'Defaults restored.'; };
+function loop() {
+  rafId = requestAnimationFrame(loop);
+  analyser.getFloatTimeDomainData(buf);
+  const t = ctx.currentTime - t0;
+  let rms = 0, pk = 0; for (let i = 0; i < buf.length; i++) { rms += buf[i] * buf[i]; const a = Math.abs(buf[i]); if (a > pk) pk = a; } rms = Math.sqrt(rms / buf.length);
+  updateLevel(rms, pk); calibFrame(rms);
+  let f = null;
+  if (rms > +$('gate').value) {
+    const r = yin(buf, ctx.sampleRate, +$('fmin').value, +$('fmax').value);
+    if (r && r.clarity > +$('conf').value) f = r.freq;
+  }
+  seg.a4 = a4(); seg.minDur = +$('mindur').value;
+  seg.frame(t, f);
+  if (tab === 'tuner') tunerFrame(t, f);
+  if (demoIdx < 0) collectHold(f);                   // keep scoring the note that is still sounding
+  if (sc.running && demoIdx < 0) { det.frame(t, f, a4()); liveScaleFrame(f); }
+  if (tab === 'rec') { drawRoll(t); $('recInfo').textContent = `Session ${(recording ? t - recT0 : t).toFixed(1)} s`; }
+}
+
+// ----- export / wiring -----
+function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); }
+const stamp = () => new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+$('csv').onclick = () => download(`notes-${stamp()}.csv`, ['index,note,midi,avg_hz,avg_cents,start_s,duration_ms',
+  ...events.map((e, i) => [i + 1, e.note, e.midi, e.hz.toFixed(3), e.cents.toFixed(2), e.start.toFixed(3), e.dur.toFixed(0)].join(','))].join('\n'), 'text/csv');
+$('json').onclick = () => download(`notes-${stamp()}.json`, JSON.stringify(events, null, 2), 'application/json');
+$('scCsv').onclick = () => download(`scale-${stamp()}.csv`, ['pass,index,expected,played,grade,hz,cents,time_s',
+  ...sc.attempts.map(a => [a.pass, a.index, a.expected, a.played, a.grade, a.hz == null ? '' : a.hz.toFixed(2), a.cents == null ? '' : a.cents.toFixed(1), a.time_s.toFixed(3)].join(','))].join('\n'), 'text/csv');
+$('scJson').onclick = () => download(`scale-${stamp()}.json`, JSON.stringify({ scale: $('scType').value, notes: sc.seq.map(midiName), attempts: sc.attempts }, null, 2), 'application/json');
+$('clear').onclick = () => { events = []; $('rows').innerHTML = ''; };
+$('rec').onclick = () => setRecording(!recording);
+$('start').onclick = async () => { try { listening ? stopListening() : await startListening(); } catch (e) { $('status').textContent = 'Mic error: ' + e.message; } };
+
+function applyTol() {
+  const T = tol();
+  $('zone').style.left = (50 - T) + '%'; $('zone').style.width = (2 * T) + '%';
+  
+  // Gradient for the deviation bar (Red -> Yellow -> Green -> Yellow -> Red)
+  // 1 cent = 0.5% of the bar width.
+  const g = T * 0.5;          // Green zone half-width %
+  const w = 25;               // Warning zone half-width % (so total yellow area is 25% - 5% = 20% wide)
+  
+  // Format: linear-gradient(direction, color1 start%, color1 end%, color2 start%, etc)
+  $('devBar').style.background = `linear-gradient(90deg, 
+    var(--bad) 0%, var(--bad) ${50 - w - 4}%, 
+    var(--warn) ${50 - w}%, var(--warn) ${50 - g - 1}%, 
+    var(--ok) ${50 - g}%, var(--ok) ${50 + g}%, 
+    var(--warn) ${50 + g + 1}%, var(--warn) ${50 + w}%, 
+    var(--bad) ${50 + w + 4}%, var(--bad) 100%)`;
+}
+
+$('tol').oninput = () => { applyTol(); };
+$('a4').onchange = () => { resetTuner(); renderScale(); applyTol(); };
+
+loadPrefs(); applyLimits(); buildInstChips(); resetTuner(); resetPractice(); renderCard(); renderScale(); renderAnalysis(); drawRoll(0); applyTol(); $('scOpts').open = innerWidth >= 720;
+try { const o = JSON.parse(localStorage.getItem(SET_KEY)); if (o) applySettings(o); } catch {}
+})();
+
+// Offline / installable: only works on https:// or localhost (silently skipped on file://).
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
