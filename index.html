@@ -242,29 +242,48 @@
   #scSum .scroll{max-height:none;overflow-x:auto}
 
   /* ---------- recorder ---------- */
-  #roll{aspect-ratio:auto;height:320px;background:#0c0f15;border:1px solid var(--line);touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
-  #roll.drag{cursor:grabbing}
+  #tab-rec{padding:12px} #tab-rec.stack>*+*{margin-top:10px}
+  .rbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"rec info clear" "view view view";gap:8px 10px;align-items:center}
+  #rec{grid-area:rec;min-width:116px;border-radius:999px;padding:10px 18px}
+  #recInfo{grid-area:info;font-size:13px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #clear{grid-area:clear;background:none;border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:9px 16px}
+  .segc{grid-area:view;display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px}
+  .segc button{background:none;color:var(--mut);border-radius:999px;padding:7px 10px;font-size:14px}
+  .segc button.on{background:var(--raise);color:var(--fg)}
+  #roll{aspect-ratio:auto;height:300px;background:#0c0f15;border-radius:12px;box-shadow:0 0 0 1px var(--line);touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
+  #roll.fall{touch-action:none} #roll.drag{cursor:grabbing}
+  #noteInfo{min-height:20px;font-size:13px;color:var(--fg);text-align:center}
   button.rec{background:#ef4444;color:#fff}
-  .rec-opts{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+  .tport{display:grid;gap:6px}
+  .tr1,.tr2{display:flex;align-items:center;gap:8px}
+  #pbPlay{min-width:116px;font-size:15px;border-radius:999px;padding:9px 18px}
+  #pbPlay.playing{background:var(--warn);color:#1a1405}
+  #pbTime{margin-left:auto;font-variant-numeric:tabular-nums;font-size:13px;color:var(--mut);white-space:nowrap}
+  .tr2 input[type=range]{flex:1;min-width:0}
+  .zm{display:flex;gap:4px;flex:none}
+  button.ic{padding:0;width:36px;height:36px;border-radius:10px;font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+  .zm button.on{background:var(--acc);color:#fff}
+  #tab-rec[data-view="fall"] #rvLive{display:none}
+  .ropts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px}
+  .ropts .wide{grid-column:1/-1}
+  .ropts select,.ropts input{padding:7px 9px;font-size:14px}
+  .more>summary{padding:6px 2px;justify-content:center}
+  .more[open]>summary{margin-bottom:8px}
   .rstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
   .rstat div{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
   .rstat b{display:block;font-size:17px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rstat span{font-size:12.5px;color:var(--mut)}
-  .rv-bar button{padding:9px 14px;font-size:15px}
-  .rv-bar button.on{background:var(--acc);color:#fff}
-  #rvPos{margin:2px 0}
-  .pbar{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:10px}
-  .pbar .row label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mut)}
-  .pbar select{width:auto;font-size:14px}
-  #pbPlay{min-width:116px;font-size:16px}
-  #pbPlay.playing{background:var(--warn);color:#1a1405}
-  #pbTime{font-variant-numeric:tabular-nums;font-size:15px;color:var(--fg);margin-left:auto}
   .rlegend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--fg)}
-  .rlegend i{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:5px}
-  #noteInfo{min-height:20px;font-size:14px;color:var(--fg)}
+  .rlegend i{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:5px}
   #rows tr{cursor:pointer} #rows tr.sel td{background:rgba(108,141,255,.22)}
   .cg{color:#34d399} .cy{color:#fbbf24} .cr{color:#fb7185}
-  @media (min-width:700px){#roll{height:380px}}
+  @media (min-width:720px){
+    #tab-rec{padding:18px} #tab-rec.stack>*+*{margin-top:14px}
+    .rbar{grid-template-columns:auto minmax(0,1fr) 230px auto;grid-template-areas:"rec info view clear"}
+    .ropts{grid-template-columns:1.6fr 1fr 1fr 1fr 1fr} .ropts .wide{grid-column:auto}
+    .tport{grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center}
+    .tr1 #pbTime{margin-left:8px}
+  }
 
   /* ---------- touch devices ---------- */
   @media (pointer:coarse){
@@ -433,49 +452,57 @@
 </section>
 
 <!-- ============ RECORDER ============ -->
-<section id="tab-rec" class="panel hide stack">
-  <div class="row">
+<section id="tab-rec" class="panel hide stack" data-view="sheet">
+  <div class="rbar">
     <button id="rec" disabled>● Record</button>
+    <span id="recInfo">Start listening, then press Record.</span>
+    <div class="segc" role="group" aria-label="Chart style">
+      <button id="vwSheet" class="on" aria-pressed="true">Sheet</button>
+      <button id="vwFall" aria-pressed="false">Falling</button>
+    </div>
     <button id="clear" class="sec">Clear</button>
-    <span class="mut" id="recInfo">Start listening, then press Record.</span>
   </div>
 
-  <canvas id="roll" aria-label="Recorded notes on a music staff"></canvas>
-  <div class="rv-bar row">
-    <button id="rvStart" class="sec" title="Jump to start" aria-label="Jump to start">⏮</button>
-    <button id="rvOut" class="sec" title="Zoom out" aria-label="Zoom out">－</button>
-    <button id="rvIn" class="sec" title="Zoom in" aria-label="Zoom in">＋</button>
-    <button id="rvFit" class="sec">Fit all</button>
-    <button id="rvLive" class="sec on" title="Keep the chart on the newest note or the playhead">Follow</button>
-  </div>
-  <input id="rvPos" type="range" min="0" max="1000" value="0" aria-label="Scroll through the recording">
+  <canvas id="roll" aria-label="Recorded notes"></canvas>
+  <div id="noteInfo" class="mut"></div>
 
-  <div class="pbar" id="pbBar">
-    <div class="row">
+  <div class="tport">
+    <div class="tr1">
+      <button id="rvStart" class="sec ic" title="Jump to start" aria-label="Jump to start">⏮</button>
       <button id="pbPlay" disabled>▶ Replay</button>
-      <label>Play as <select id="pbMode"><option value="audio">Recorded sound</option><option value="notes">Detected notes</option></select></label>
-      <label>Speed <select id="pbSpeed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option></select></label>
       <span id="pbTime">0:00.0 / 0:00.0</span>
+    </div>
+    <div class="tr2">
+      <input id="rvPos" type="range" min="0" max="1000" value="0" aria-label="Position in the recording">
+      <div class="zm">
+        <button id="rvOut" class="sec ic" title="Zoom out" aria-label="Zoom out">－</button>
+        <button id="rvIn" class="sec ic" title="Zoom in" aria-label="Zoom in">＋</button>
+        <button id="rvFit" class="sec ic" title="Fit the whole recording" aria-label="Fit all">⤢</button>
+        <button id="rvLive" class="sec ic on" title="Keep the chart on the newest note or the playhead" aria-label="Follow">◎</button>
+      </div>
     </div>
   </div>
 
-  <div id="noteInfo" class="mut">Tap a note on the chart for details.</div>
-  <div class="rlegend" id="rLegend"></div>
-  <div class="hint2">Drag the chart left/right to move through time, pinch or use ＋/－ to zoom, tap a note to hear it, tap the time ruler to jump there.</div>
-
-  <div class="rstat" id="recStats"></div>
-
-  <div class="rec-opts">
-    <label class="field"><span>Listening</span><select id="recMode"><option value="relaxed">Relaxed (picks up everything)</option><option value="normal" selected>Normal</option><option value="strict">Strict (noisy room)</option></select></label>
-    <label class="field"><span>Note colours</span><select id="recColor"><option value="acc" selected>By tuning accuracy</option><option value="note">By note name</option></select></label>
-    <label class="field"><span>Tempo (BPM, 0 = off)</span><input id="recBpm" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
+  <div class="ropts">
+    <label class="field wide"><span>Listening</span><select id="recMode"><option value="fast" selected>Fast passages (violin, runs)</option><option value="normal">Balanced</option><option value="relaxed">Relaxed (picks up everything)</option><option value="strict">Strict (noisy room)</option></select></label>
+    <label class="field"><span>Colours</span><select id="recColor"><option value="acc" selected>By accuracy</option><option value="note">By note name</option></select></label>
+    <label class="field"><span>Tempo (0 = off)</span><input id="recBpm" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
+    <label class="field"><span>Replay sound</span><select id="pbMode"><option value="audio">Recorded sound</option><option value="notes">Detected notes</option></select></label>
+    <label class="field"><span>Speed</span><select id="pbSpeed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option></select></label>
   </div>
-  <div class="hint2" id="recHint">Only the current recording is kept (nothing is saved on this device). Press Record again to start a new one, or Clear to wipe it. Picking up wrong notes or noise? Switch Listening to Strict.</div>
 
-  <div class="row"><button id="csv" class="sec">Export CSV</button><button id="json" class="sec">Export JSON</button></div>
-  <div class="scroll"><table>
-    <thead><tr><th>#</th><th>Note</th><th>Avg Hz</th><th>Cents</th><th>Start (s)</th><th>Duration (ms)</th></tr></thead>
-    <tbody id="rows"></tbody></table></div>
+  <details class="more">
+    <summary>Stats, note list &amp; export</summary>
+    <div class="stack">
+      <div class="rstat" id="recStats"></div>
+      <div class="rlegend" id="rLegend"></div>
+      <div class="row"><button id="csv" class="sec">Export CSV</button><button id="json" class="sec">Export JSON</button></div>
+      <div class="scroll"><table>
+        <thead><tr><th>#</th><th>Note</th><th>Avg Hz</th><th>Cents</th><th>Start (s)</th><th>Duration (ms)</th></tr></thead>
+        <tbody id="rows"></tbody></table></div>
+      <div class="hint2" id="recHint">Only this recording is kept, in memory. Record again or press Clear to discard it. Wrong notes from noise? Set Listening to Strict.</div>
+    </div>
+  </details>
 </section>
 
 <!-- ============ SETTINGS ============ -->
@@ -640,12 +667,13 @@ function pickTarget(f, a4, strings, lockIdx) {
 }
 
 class Segmenter {
-  constructor(onNote) { this.onNote = onNote; this.cur = null; this.cand = null; this.miss = 0; this.minDur = 60; this.a4 = 440; this.confirm = 4; }
-  reset() { this.cur = null; this.cand = null; this.miss = 0; }
+  constructor(onNote) { this.onNote = onNote; this.cur = null; this.cand = null; this.miss = 0; this.minDur = 60; this.a4 = 440; this.confirm = 4; this.maxMiss = 5; this.gap = 0; this.candGap = 0; }
+  reset() { this.cur = null; this.cand = null; this.miss = 0; this.candGap = 0; }
   // t = seconds, f = Hz (or null when nothing reliable was heard), lv = signal level (RMS) for the volume lane
   frame(t, f, lv = 0) {
-    const MISS = 5;
+    const MISS = this.maxMiss;
     if (f) {
+      this.candGap = 0;
       const m = freqToNote(f, this.a4).midi, c = this.cur;
       // Stay on the current note while the pitch is within 65¢ of it: no flicker at semitone borders, vibrato is fine.
       if (c && (m === c.midi || Math.abs(centsBetween(f, noteToFreq(c.midi, this.a4))) < 65)) {
@@ -660,7 +688,7 @@ class Segmenter {
       if (this.cand.f.length >= need) { if (c) this.end(); this.cur = this.cand; this.cand = null; this.miss = 0; }
       else if (c && this.miss >= MISS) this.end();   // lost the old note; the candidate keeps building
     } else {
-      this.cand = null;
+      if (this.cand && this.candGap < this.gap) this.candGap++; else this.cand = null;   // fast mode forgives one unclear frame inside a building note
       if (this.cur && ++this.miss >= MISS) this.end();
     }
   }
@@ -1529,7 +1557,7 @@ $('scStop').onclick = stopScale;
 // Only the CURRENT recording is kept, in memory. Nothing is written to storage; Clear (or a new recording) discards it.
 const REC_MAX_S = 600;                                   // safety cap: 10 minutes per recording
 let events = [], recording = false, recT0 = 0, recEnd = 0, recSel = -1;
-const view = { vs: 0, pps: 0, follow: true };            // vs = time (s) at the left edge, pps = pixels per second
+const view = { vs: 0, pps: 0, follow: true, mode: 'sheet', fps: 120 };            // vs = time (s) at the left edge, pps = pixels per second
 const pb = { playing: false, pos: 0, startCtx: 0, startPos: 0, rate: 1, nodes: [], abuf: null };
 const cap = { chunks: [], n: 0, k: 1, rate: 16000, acc: 0, cnt: 0 };   // recorded sound (16-bit, low sample rate to save memory)
 let capNode = null, capSink = null;
@@ -1538,15 +1566,17 @@ const seg = new Segmenter(ev => { if (recording) addEvent(ev); });
 // How strict the note listener is. onset/sustain = pitch clarity needed to start / keep a note,
 // p2 = "the pitch must repeat" check that rejects noise, confirm = frames before a note counts.
 const REC_MODES = {
-  relaxed: { onset: 0,    sustain: 0,    p2: 0,   confirm: 3, minDur: 0,   gateX: 1 },
-  normal:  { onset: 0.90, sustain: 0,    p2: 0.5, confirm: 4, minDur: 0,   gateX: 1 },
-  strict:  { onset: 0.92, sustain: 0.88, p2: 0.65, confirm: 4, minDur: 100, gateX: 1.6 },
+  fast:    { onset: 0.86, sustain: 0,    p2: 0.4, confirm: 2, minDur: 30,  gateX: 1, miss: 3, gap: 1, win: 2048, own: true },   // quick runs: short analysis window, 2-frame onset
+  relaxed: { onset: 0,    sustain: 0,    p2: 0,   confirm: 3, minDur: 0,   gateX: 1, miss: 5 },
+  normal:  { onset: 0.90, sustain: 0,    p2: 0.5, confirm: 4, minDur: 0,   gateX: 1, miss: 5 },
+  strict:  { onset: 0.92, sustain: 0.88, p2: 0.65, confirm: 4, minDur: 100, gateX: 1.6, miss: 5 },
 };
-const recModeCfg = () => REC_MODES[$('recMode').value] || REC_MODES.normal;
+const recModeCfg = () => REC_MODES[$('recMode').value] || REC_MODES.fast;
 function recPitch(r, rms, pk, conf) {                    // Hz to feed the segmenter, or null for "not a clean note"
   if (!r) return null;
   const m = recModeCfg();
   if (m === REC_MODES.relaxed) return r.clarity > conf ? r.freq : null;
+  if (m.own) conf = Math.min(conf, 0.82);                // fast mode: a short window gives slightly lower clarity on real notes
   if (pk >= 0.98) return null;                           // clipping: the waveform is distorted, pitch unreliable
   const same = seg.cur && Math.abs(centsBetween(r.freq, noteToFreq(seg.cur.midi, a4()))) < 65;
   if (r.clarity < Math.max(conf, same ? m.sustain : m.onset)) return null;
@@ -1555,6 +1585,7 @@ function recPitch(r, rms, pk, conf) {                    // Hz to feed the segme
   return r.freq;
 }
 
+const infoHint = () => view.mode === 'fall' ? 'Drag up/down to scrub · pinch to zoom · tap a note to hear it' : 'Drag to scroll · pinch to zoom · tap a note to hear it · tap the ruler to jump';
 const FLN = { C: 'D♭', D: 'E♭', F: 'G♭', G: 'A♭', A: 'B♭' };
 const nm = s => useFlats ? s.replace(/([CDFGA])#/g, (_, l) => FLN[l]) : s.replace('#', '♯');
 const fmtT = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
@@ -1568,7 +1599,7 @@ const hasRec = () => events.length > 0 || cap.n > 0;
 function newRecording() {
   events = []; $('rows').innerHTML = ''; recSel = -1; recEnd = 0;
   cap.chunks = []; cap.n = 0; cap.acc = 0; cap.cnt = 0; pb.abuf = null; pb.pos = 0; view.vs = 0;
-  $('noteInfo').textContent = 'Tap a note on the chart for details.';
+  $('noteInfo').textContent = infoHint(); $('noteInfo').className = 'mut';
   updateStats();
 }
 function capPush(x) {
@@ -1596,7 +1627,7 @@ function setRecording(on) {
     seg.end(); recEnd = Math.max(0, ctx.currentTime - t0 - recT0);
     const Wc = cv.clientWidth || 360; view.follow = false; view.vs = 0; view.pps = Math.min(Math.max(8, (Wc - GUT) / 8), Math.max(20, (Wc - GUT - 24) / Math.max(2, recEnd)));
   }
-  recording = on; $('rec').textContent = on ? '■ Stop recording' : '● Record'; $('rec').className = on ? 'rec' : '';
+  recording = on; $('rec').textContent = on ? '■ Stop' : '● Record'; $('rec').className = on ? 'rec' : '';
   recUi(); requestDraw();
 }
 function clearRec() {
@@ -1640,7 +1671,7 @@ function recUi() {
   $('pbPlay').disabled = !has || recording; $('pbPlay').textContent = pb.playing ? '⏸ Pause' : '▶ Replay'; $('pbPlay').classList.toggle('playing', pb.playing);
   $('pbMode').disabled = !has; $('pbSpeed').disabled = !has || $('pbMode').value !== 'notes';
   $('pbTime').textContent = `${fmtT(recording ? len : pbPos())} / ${fmtT(len)}`;
-  $('recInfo').textContent = recording ? `● REC ${fmtT(len)} · ${events.length} ${events.length === 1 ? 'note' : 'notes'}`
+  $('recInfo').textContent = recording ? `REC ${fmtT(len)} · ${events.length} ${events.length === 1 ? 'note' : 'notes'}`
     : has ? `${events.length} ${events.length === 1 ? 'note' : 'notes'} recorded` : listening ? 'Press Record.' : 'Start listening, then press Record.';
 }
 
@@ -1688,7 +1719,7 @@ $('pbMode').onchange = () => { recUi(); if (pb.playing) pbSeek(pbPos()); };
 $('pbSpeed').onchange = () => { if (pb.playing) pbSeek(pbPos()); };
 
 // ----- the chart: a music staff with time running left → right -----
-const cv = $('roll'), g2 = cv.getContext('2d'), GUT = 46;   // GUT = left gutter (clef)
+const cv = $('roll'), g2 = cv.getContext('2d'), GUT = 34;   // GUT = left gutter (clef)
 const DIA = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6], SHARPPC = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
 const dia = m => Math.floor(m / 12) * 7 + DIA[((m % 12) + 12) % 12];   // diatonic step: C4 = 35, treble lines 37…45, bass lines 25…33
 let drawReq = 0, lay = { rulerTop: 1e9 }, clefOK = null;
@@ -1717,11 +1748,32 @@ const fmtTick = (t, s) => s < 1 ? t.toFixed(1) + 's' : `${Math.floor(t / 60)}:${
 function rrect(x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); g2.beginPath(); g2.moveTo(x + r, y); g2.arcTo(x + w, y, x + w, y + h, r); g2.arcTo(x + w, y + h, x, y + h, r); g2.arcTo(x, y + h, x, y, r); g2.arcTo(x, y, x + w, y, r); g2.closePath(); }
 function haloText(s, x, y, col, bg) { g2.lineWidth = 3.5; g2.strokeStyle = bg; g2.lineJoin = 'round'; g2.strokeText(s, x, y); g2.fillStyle = col; g2.fillText(s, x, y); }
 
+const durText = (e, bpm) => {
+  const s = e.dur / 1000;
+  if (bpm > 0) { const d = durName(s * bpm / 60); if (d) return d; }
+  return s < 1 ? Math.round(s * 1000) + ' ms' : s.toFixed(2) + ' s';
+};
+function sizeCanvas(Wc, H) {
+  const dpr = Math.min(3, window.devicePixelRatio || 1), pw = Math.round(Wc * dpr), ph = Math.round(H * dpr);
+  if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
+  if (cv._h !== H) { cv.style.height = H + 'px'; cv._h = H; }
+  g2.setTransform(dpr, 0, 0, dpr, 0, 0); g2.textBaseline = 'alphabetic';
+}
+function syncCtl(pos, max) {      // slider + follow button
+  const sl = $('rvPos'); sl.disabled = max <= 0 || (view.mode === 'fall' && recording);
+  sl.value = max > 0 ? Math.round(Math.max(0, Math.min(1, pos / max)) * 1000) : 0;
+  $('rvLive').classList.toggle('on', view.follow);
+}
 function drawRoll() {
   drawReq = 0;
-  if (tab !== 'rec') return;
-  const Wc = cv.clientWidth; if (!Wc) return;
-  const BG = '#0c0f15', INK = '#d5dbea', TXT = '#f1f4fb', MUT = '#a3acc2';
+  if (tab !== 'rec' || !cv.clientWidth) return;
+  if (view.mode === 'fall') drawFall(); else drawSheet();
+}
+
+// ----- view 1: the music sheet (time runs left → right) -----
+function drawSheet() {
+  const Wc = cv.clientWidth;
+  const BG = '#0c0f15', INK = '#cfd6e6', TXT = '#f1f4fb', MUT = '#8e98b0';
   if (!view.pps) view.pps = Math.max(8, (Wc - GUT) / 8);
   const live = liveEvent(), all = live ? events.concat([live]) : events, len = recLen(), bpm = bpmVal();
   const vw = (Wc - GUT) / view.pps;
@@ -1732,104 +1784,165 @@ function drawRoll() {
   let minD = 1e9, maxD = -1e9; for (const e of all) { const d = dia(e.midi); if (d < minD) minD = d; if (d > maxD) maxD = d; }
   const none = !all.length; let showT = none || maxD >= 35; const showB = none || minD <= 33; if (!showT && !showB) showT = true;
   const topLine = showT ? 45 : 33, botLine = showB ? 25 : 37;
-  const dTop = Math.max(topLine, none ? 0 : maxD + 2), dBot = Math.min(botLine, none ? 99 : minD - 2);
-  const sp = Wc < 560 ? 12 : 14, st = sp / 2, padTop = 24, labBot = 20, laneH = 36, rulerH = bpm > 0 ? 46 : 28;
-  const staffH = (dTop - dBot) * st, laneTop = padTop + staffH + labBot + 8, rulerTop = laneTop + laneH + 8, H = rulerTop + rulerH;
+  const dTop = Math.max(topLine, none ? 0 : maxD + 4), dBot = Math.min(botLine, none ? 99 : minD - 3);
+  const sp = Wc < 560 ? 11 : 13, st = sp / 2, padTop = 14, labBot = 14, laneH = 26, rulerH = bpm > 0 ? 44 : 26;
+  const staffH = (dTop - dBot) * st, laneTop = padTop + staffH + labBot, rulerTop = laneTop + laneH + 6, H = rulerTop + rulerH;
   lay = { rulerTop };
   const Y = d => padTop + (dTop - d) * st, tx = t => GUT + (t - view.vs) * view.pps;
-  const dpr = Math.min(3, window.devicePixelRatio || 1), pw = Math.round(Wc * dpr), ph = Math.round(H * dpr);
-  if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
-  if (cv._h !== H) { cv.style.height = H + 'px'; cv._h = H; }
-  g2.setTransform(dpr, 0, 0, dpr, 0, 0); g2.fillStyle = BG; g2.fillRect(0, 0, Wc, H); g2.textBaseline = 'alphabetic';
+  sizeCanvas(Wc, H); g2.fillStyle = BG; g2.fillRect(0, 0, Wc, H);
 
   // time grid + ruler
   const step = niceStep(view.pps), tA = Math.max(0, Math.floor(view.vs / step) * step);
-  g2.font = '600 12px system-ui,sans-serif'; g2.textAlign = 'left';
+  g2.font = '500 11px system-ui,sans-serif'; g2.textAlign = 'left';
   for (let t = tA; t <= view.vs + vw + step; t += step) {
     const x = tx(t); if (x < GUT - 1 || x > Wc) continue;
-    g2.strokeStyle = 'rgba(255,255,255,.07)'; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(x, padTop - 6); g2.lineTo(x, laneTop + laneH); g2.stroke();
-    g2.strokeStyle = MUT; g2.beginPath(); g2.moveTo(x, rulerTop); g2.lineTo(x, rulerTop + 6); g2.stroke();
-    g2.fillStyle = MUT; g2.fillText(fmtTick(t, step), x + 3, rulerTop + 18);
+    g2.strokeStyle = 'rgba(255,255,255,.05)'; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(x, padTop - 6); g2.lineTo(x, laneTop + laneH); g2.stroke();
+    g2.strokeStyle = MUT; g2.beginPath(); g2.moveTo(x, rulerTop); g2.lineTo(x, rulerTop + 5); g2.stroke();
+    g2.fillStyle = MUT; g2.fillText(fmtTick(t, step), x + 3, rulerTop + 17);
   }
-  g2.strokeStyle = MUT; g2.beginPath(); g2.moveTo(GUT, rulerTop); g2.lineTo(Wc, rulerTop); g2.stroke();
+  g2.strokeStyle = 'rgba(255,255,255,.18)'; g2.beginPath(); g2.moveTo(GUT, rulerTop + 0.5); g2.lineTo(Wc, rulerTop + 0.5); g2.stroke();
   if (bpm > 0) {
     const beat = 60 / bpm, bar = beat * 4;
     for (let b = Math.floor(view.vs / beat); b <= (view.vs + vw) / beat + 1; b++) {
       const x = tx(b * beat), isBar = b % 4 === 0; if (x < GUT || x > Wc || (!isBar && beat * view.pps < 14)) continue;
-      g2.strokeStyle = isBar ? 'rgba(160,185,255,.55)' : 'rgba(160,185,255,.16)'; g2.lineWidth = isBar ? 1.5 : 1;
+      g2.strokeStyle = isBar ? 'rgba(160,185,255,.5)' : 'rgba(160,185,255,.14)'; g2.lineWidth = isBar ? 1.3 : 1;
       g2.beginPath(); g2.moveTo(x, padTop - 6); g2.lineTo(x, laneTop + laneH); g2.stroke();
-      if (isBar && bar * view.pps >= 46) { g2.fillStyle = '#9db4ff'; g2.font = '600 11px system-ui,sans-serif'; g2.fillText('bar ' + (b / 4 + 1), x + 3, rulerTop + 38); }
+      if (isBar && bar * view.pps >= 46) { g2.fillStyle = '#9db4ff'; g2.font = '600 10px system-ui,sans-serif'; g2.fillText('bar ' + (b / 4 + 1), x + 3, rulerTop + 36); }
     }
   }
 
-  // staff lines
-  const staff = bot => { g2.strokeStyle = INK; g2.lineWidth = 1.2; for (let k = 0; k < 5; k++) { const y = Math.round(Y(bot + 2 * k)) + 0.5; g2.beginPath(); g2.moveTo(4, y); g2.lineTo(Wc - 4, y); g2.stroke(); } };
+  // staff lines (thin, quiet) + a bracket at the left
+  const staff = bot => { g2.strokeStyle = 'rgba(207,214,230,.55)'; g2.lineWidth = 1; for (let k = 0; k < 5; k++) { const y = Math.round(Y(bot + 2 * k)) + 0.5; g2.beginPath(); g2.moveTo(2, y); g2.lineTo(Wc - 2, y); g2.stroke(); } };
   if (showT) staff(37); if (showB) staff(25);
-  g2.strokeStyle = INK; g2.lineWidth = 1.6; g2.beginPath(); g2.moveTo(4.5, Y(topLine)); g2.lineTo(4.5, Y(botLine)); g2.stroke();
+  g2.strokeStyle = 'rgba(207,214,230,.55)'; g2.lineWidth = 1.2; g2.beginPath(); g2.moveTo(2.5, Y(topLine)); g2.lineTo(2.5, Y(botLine)); g2.stroke();
 
   // notes (clipped so they slide under the clef gutter)
   g2.save(); g2.beginPath(); g2.rect(GUT, 0, Wc - GUT, H); g2.clip();
-  let lastA = -1e9, lastB = -1e9;
+  const endA = [-1e9, -1e9]; let lastB = -1e9;       // right edge of the last name label in each of two rows / of the last cents label
   g2.lineCap = 'round';
   for (let i = 0; i < all.length; i++) {
     const e = all[i], xs = tx(e.start), w = e.dur / 1000 * view.pps, d = dia(e.midi), y = Y(d), col = recColorOf(e), sel = i === recSel && !e.live;
     if (xs + w < GUT - 40 || xs > Wc + 40) continue;
     // ledger lines
-    g2.strokeStyle = INK; g2.lineWidth = 1.4;
-    const led = v => { const yy = Math.round(Y(v)) + 0.5; g2.beginPath(); g2.moveTo(xs - sp, yy); g2.lineTo(xs + sp, yy); g2.stroke(); };
+    g2.strokeStyle = 'rgba(207,214,230,.7)'; g2.lineWidth = 1.2;
+    const led = v => { const yy = Math.round(Y(v)) + 0.5; g2.beginPath(); g2.moveTo(xs - sp * 0.9, yy); g2.lineTo(xs + sp * 0.9, yy); g2.stroke(); };
     for (let v = topLine + 2; v <= d; v += 2) led(v);
     for (let v = botLine - 2; v >= d; v -= 2) led(v);
     if (showT && showB && d === 35) led(35);
-    // duration bar (how long the note sounded) with the pitch drift drawn inside it
-    const bh = sp * 0.7;
-    if (w > 2) {
-      rrect(xs, y - bh / 2, w, bh, bh / 2); g2.globalAlpha = 0.5; g2.fillStyle = col; g2.fill(); g2.globalAlpha = 1; g2.lineWidth = 1.3; g2.strokeStyle = col; g2.stroke();
-      if (e.pts && e.pts.length > 2 && w > 20) {
-        g2.beginPath(); e.pts.forEach((p, k) => { const px = xs + p[0] / 1000 * view.pps, py = y - Math.max(-1.1, Math.min(1.1, p[1] / 50)) * sp * 0.8; k ? g2.lineTo(px, py) : g2.moveTo(px, py); });
-        g2.strokeStyle = 'rgba(255,255,255,.95)'; g2.lineWidth = 1.5; g2.stroke();
+    // duration bar (thin, translucent) with the pitch drift inside it
+    const bh = sp * 0.42;
+    if (w > 3) {
+      rrect(xs, y - bh / 2, w, bh, bh / 2); g2.globalAlpha = 0.32; g2.fillStyle = col; g2.fill(); g2.globalAlpha = 1;
+      if (e.pts && e.pts.length > 2 && w > 40) {
+        g2.beginPath(); e.pts.forEach((p, k) => { const px = xs + p[0] / 1000 * view.pps, py = y - Math.max(-1.1, Math.min(1.1, p[1] / 50)) * sp * 0.6; k ? g2.lineTo(px, py) : g2.moveTo(px, py); });
+        g2.strokeStyle = 'rgba(255,255,255,.7)'; g2.lineWidth = 1.1; g2.stroke();
       }
     }
     // notehead (+ sharp)
-    g2.save(); g2.translate(xs, y); g2.rotate(-0.35); g2.beginPath(); g2.ellipse(0, 0, sp * 0.72, sp * 0.5, 0, 0, 7); g2.restore();
-    g2.fillStyle = col; g2.fill(); g2.lineWidth = sel || e.live ? 2.5 : 1.5; g2.strokeStyle = sel || e.live ? '#fff' : '#0c0f15'; g2.stroke();
-    if (SHARPPC[((e.midi % 12) + 12) % 12]) { g2.font = `700 ${Math.round(sp * 1.5)}px system-ui,sans-serif`; g2.textAlign = 'right'; haloText('♯', xs - sp * 0.95, y + sp * 0.5, TXT, BG); }
-    // labels (skipped when they would collide)
-    g2.textAlign = 'center';
-    g2.font = `700 ${sp + 2}px system-ui,sans-serif`; const t1 = nm(e.note), w1 = g2.measureText(t1).width;
-    if (sel || xs - w1 / 2 > lastA + 4) { haloText(t1, xs, y - sp * 0.95, TXT, BG); lastA = xs + w1 / 2; }
-    g2.font = `600 ${sp}px system-ui,sans-serif`;
+    g2.save(); g2.translate(xs, y); g2.rotate(-0.35); g2.beginPath(); g2.ellipse(0, 0, sp * 0.62, sp * 0.44, 0, 0, 7); g2.restore();
+    g2.fillStyle = col; g2.fill(); g2.lineWidth = sel || e.live ? 2 : 1; g2.strokeStyle = sel || e.live ? '#fff' : BG; g2.stroke();
+    if (SHARPPC[((e.midi % 12) + 12) % 12]) { g2.font = `700 ${Math.round(sp * 1.3)}px system-ui,sans-serif`; g2.textAlign = 'right'; haloText('♯', xs - sp * 0.8, y + sp * 0.45, TXT, BG); }
+    // note name: two rows so close notes do not hide each other
+    g2.textAlign = 'center'; g2.font = `700 ${sp + 1}px system-ui,sans-serif`;
+    const t1 = nm(e.note), w1 = g2.measureText(t1).width; let row = -1;
+    for (let r = 0; r < 2; r++) if (sel || xs - w1 / 2 > endA[r] + 3) { row = r; break; }
+    if (row >= 0) { haloText(t1, xs, y - sp * 0.85 - row * (sp + 2), TXT, BG); endA[row] = Math.max(endA[row], xs + w1 / 2); }
+    // cents + length (only when there is room)
+    g2.font = `600 ${sp - 1}px system-ui,sans-serif`;
     let t2 = fmtC(e.cents); if (bpm > 0) { const dn = durName(e.dur / 1000 * bpm / 60); if (dn) t2 += ' · ' + dn; }
     const w2 = g2.measureText(t2).width;
-    if (sel || xs - w2 / 2 > lastB + 4) { haloText(t2, xs, y + sp * 1.7, accColor(e), BG); lastB = xs + w2 / 2; }
+    if (sel || xs - w2 / 2 > lastB + 6) { haloText(t2, xs, y + sp * 1.55, accColor(e), BG); lastB = xs + w2 / 2; }
     // volume lane
     const lh = Math.max(0.1, Math.min(1, ((e.lvl ?? -40) + 55) / 50)) * (laneH - 6);
-    g2.globalAlpha = 0.85; g2.fillStyle = col; g2.fillRect(xs, laneTop + laneH - 2 - lh, Math.max(3, w), lh); g2.globalAlpha = 1;
+    g2.globalAlpha = 0.75; g2.fillStyle = col; g2.fillRect(xs, laneTop + laneH - 2 - lh, Math.max(2, w), lh); g2.globalAlpha = 1;
   }
   g2.restore();
 
-  // lane frame + left gutter (clefs, labels)
-  g2.strokeStyle = 'rgba(255,255,255,.12)'; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(GUT, laneTop + laneH - 1.5); g2.lineTo(Wc, laneTop + laneH - 1.5); g2.stroke();
-  g2.fillStyle = MUT; g2.font = '600 11px system-ui,sans-serif'; g2.textAlign = 'left'; g2.fillText('Volume', 4, laneTop + laneH / 2 + 4);
-  g2.fillStyle = INK; g2.textAlign = 'left';
-  const cg = clefGlyphs(), fs = Math.round(sp * 4.6), FF = "'Segoe UI Symbol','Noto Music','Noto Sans Symbols 2','Apple Symbols',serif";
-  if (showT) { if (cg) { g2.font = `${fs}px ${FF}`; g2.fillText('\u{1D11E}', 6, Y(37) + 0.2 * sp); } else { g2.font = `700 ${sp * 3}px Georgia,serif`; g2.fillText('G', 8, Y(39) + sp * 1.0); } }
-  if (showB) { if (cg) { g2.font = `${fs}px ${FF}`; g2.fillText('\u{1D122}', 6, Y(31) + 0.6 * sp); } else { g2.font = `700 ${sp * 3}px Georgia,serif`; g2.fillText('F', 8, Y(29) + sp * 0.9); } }
+  // lane frame + left gutter (clefs)
+  g2.strokeStyle = 'rgba(255,255,255,.1)'; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(GUT, laneTop + laneH - 1.5); g2.lineTo(Wc, laneTop + laneH - 1.5); g2.stroke();
+  g2.fillStyle = MUT; g2.font = '500 10px system-ui,sans-serif'; g2.textAlign = 'left'; g2.fillText('vol', 5, laneTop + laneH - 5);
+  g2.fillStyle = 'rgba(207,214,230,.85)'; g2.textAlign = 'left';
+  const cg = clefGlyphs(), FF = "'Segoe UI Symbol','Noto Music','Noto Sans Symbols 2','Apple Symbols',serif";
+  if (showT) { if (cg) { g2.font = `${Math.round(sp * 3.1)}px ${FF}`; g2.fillText('\u{1D11E}', 5, Y(37) + 0.1 * sp); } else { g2.font = `700 ${sp * 2.4}px Georgia,serif`; g2.fillText('G', 8, Y(39) + sp * 0.8); } }
+  if (showB) { if (cg) { g2.font = `${Math.round(sp * 2.5)}px ${FF}`; g2.fillText('\u{1D122}', 5, Y(31) + 0.5 * sp); } else { g2.font = `700 ${sp * 2.4}px Georgia,serif`; g2.fillText('F', 8, Y(29) + sp * 0.7); } }
 
   // playhead / live edge
-  if (recording) { const x = tx(len); if (x >= GUT && x <= Wc) { g2.strokeStyle = '#ef4444'; g2.lineWidth = 2; g2.beginPath(); g2.moveTo(x, padTop - 8); g2.lineTo(x, rulerTop + 8); g2.stroke(); g2.fillStyle = '#ef4444'; g2.beginPath(); g2.arc(x, rulerTop + 10, 4, 0, 7); g2.fill(); } }
+  if (recording) { const x = tx(len); if (x >= GUT && x <= Wc) { g2.strokeStyle = '#ef4444'; g2.lineWidth = 2; g2.beginPath(); g2.moveTo(x, padTop - 6); g2.lineTo(x, rulerTop + 6); g2.stroke(); g2.fillStyle = '#ef4444'; g2.beginPath(); g2.arc(x, rulerTop + 9, 3.5, 0, 7); g2.fill(); } }
   else if (hasRec()) {
     const x = tx(pbPos());
-    if (x >= GUT && x <= Wc) { g2.strokeStyle = '#22d3ee'; g2.lineWidth = 2; g2.beginPath(); g2.moveTo(x, padTop - 8); g2.lineTo(x, rulerTop); g2.stroke(); g2.fillStyle = '#22d3ee'; g2.beginPath(); g2.moveTo(x - 6, rulerTop); g2.lineTo(x + 6, rulerTop); g2.lineTo(x, rulerTop + 9); g2.fill(); }
+    if (x >= GUT && x <= Wc) { g2.strokeStyle = '#22d3ee'; g2.lineWidth = 2; g2.beginPath(); g2.moveTo(x, padTop - 6); g2.lineTo(x, rulerTop); g2.stroke(); g2.fillStyle = '#22d3ee'; g2.beginPath(); g2.moveTo(x - 6, rulerTop); g2.lineTo(x + 6, rulerTop); g2.lineTo(x, rulerTop + 9); g2.fill(); }
   }
-  if (none) { g2.textAlign = 'center'; g2.fillStyle = MUT; g2.font = '600 14px system-ui,sans-serif'; g2.fillText(recording ? 'Listening… play a note' : 'Notes will appear on the staff while recording', GUT + (Wc - GUT) / 2, Y(41) - 2); }
+  syncCtl(view.vs, vsMax);
+}
 
-  // scrollbar + buttons
-  const sl = $('rvPos'); sl.disabled = vsMax <= 0; sl.value = vsMax > 0 ? Math.round(view.vs / vsMax * 1000) : 0;
-  $('rvLive').classList.toggle('on', view.follow);
+// ----- view 2: falling notes (one lane per note that was played; time runs top → bottom) -----
+function drawFall() {
+  const Wc = cv.clientWidth, BG = '#0c0f15', TXT = '#f1f4fb', MUT = '#8e98b0', hdr = 32;
+  const live = liveEvent(), all = live ? events.concat([live]) : events, len = recLen(), bpm = bpmVal();
+  const H = Math.round(Math.min(540, Math.max(320, Wc * 0.9)));
+  sizeCanvas(Wc, H); g2.fillStyle = BG; g2.fillRect(0, 0, Wc, H);
+  const now = recording ? len : pbPos(), fps = view.fps;
+  const nowY = hdr + (recording ? 20 : Math.round((H - hdr) * 0.4));       // while recording the newest notes sit at the top and drop away
+  const Y = t => nowY - (t - now) * fps;                                    // later = higher up, earlier = lower
+  const used = [...new Set(all.map(e => e.midi))].sort((a, b) => a - b), n = Math.max(1, used.length), laneW = Wc / n;
+  const laneOf = new Map(used.map((m, i) => [m, i]));
+  lay = { rulerTop: 1e9, fall: { used, laneW, hdr, nowY, now, fps } };
+
+  // lanes + time grid
+  for (let i = 0; i < used.length; i++) {
+    if (i % 2) { g2.fillStyle = 'rgba(255,255,255,.025)'; g2.fillRect(i * laneW, hdr, laneW, H - hdr); }
+    if (i) { g2.fillStyle = 'rgba(255,255,255,.06)'; g2.fillRect(Math.round(i * laneW), hdr, 1, H - hdr); }
+  }
+  let step = 0.1; for (const s of [0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60, 120]) { step = s; if (s * fps >= 46) break; }
+  const tTop = now + (nowY - hdr) / fps, tBot = now - (H - nowY) / fps;
+  g2.font = '500 10px system-ui,sans-serif'; g2.textAlign = 'left';
+  for (let t = Math.max(0, Math.ceil(tBot / step) * step); t <= tTop; t += step) {
+    const y = Math.round(Y(t)) + 0.5; if (y < hdr || y > H) continue;
+    g2.fillStyle = 'rgba(255,255,255,.06)'; g2.fillRect(0, y, Wc, 1);
+    g2.fillStyle = MUT; g2.fillText(fmtTick(t, step), 4, y - 3);
+  }
+
+  // notes
+  g2.save(); g2.beginPath(); g2.rect(0, hdr, Wc, H - hdr); g2.clip();
+  const bw = Math.min(laneW - 6, 76), act = new Set(); g2.textAlign = 'center';
+  for (let i = 0; i < all.length; i++) {
+    const e = all[i], lane = laneOf.get(e.midi), end = e.start + e.dur / 1000, yTop = Y(end), yBot = Y(e.start);
+    if (yBot < hdr - 4 || yTop > H + 4) continue;
+    const h = Math.max(5, yBot - yTop), top = yBot - h, x = lane * laneW + (laneW - bw) / 2, past = end < now - 0.001;
+    const isAct = e.start <= now && end >= now - 0.001, sel = i === recSel && !e.live, col = recColorOf(e);
+    if (isAct) act.add(lane);
+    g2.globalAlpha = past ? 0.5 : 1; rrect(x, top, bw, h, Math.min(7, h / 2)); g2.fillStyle = col; g2.fill();
+    if (isAct || sel) { g2.lineWidth = 2; g2.strokeStyle = '#fff'; g2.stroke(); } else { g2.lineWidth = 1; g2.strokeStyle = 'rgba(255,255,255,.28)'; g2.stroke(); }
+    g2.globalAlpha = past ? 0.75 : 1; g2.fillStyle = '#0b0d12';
+    const fs = Math.max(9, Math.min(15, Math.round(bw * 0.26)));
+    if (h >= 34) {
+      g2.font = `700 ${fs}px system-ui,sans-serif`; g2.fillText(nm(e.note), x + bw / 2, top + h / 2 + 1, bw - 6);
+      g2.font = `600 ${Math.max(9, fs - 3)}px system-ui,sans-serif`; g2.fillText(durText(e, bpm), x + bw / 2, top + h / 2 + fs + 2, bw - 6);
+    } else if (h >= 15) { g2.font = `700 ${fs}px system-ui,sans-serif`; g2.fillText(nm(e.note), x + bw / 2, top + h / 2 + fs * 0.35, bw - 6); }
+    else if (h >= 10) { g2.font = '700 9px system-ui,sans-serif'; g2.fillText(nm(e.note), x + bw / 2, top + h / 2 + 3, bw - 4); }
+    g2.globalAlpha = 1;
+  }
+  g2.restore();
+
+  // lane header: the note names, lit while that note sounds
+  g2.fillStyle = '#111620'; g2.fillRect(0, 0, Wc, hdr); g2.fillStyle = 'rgba(255,255,255,.08)'; g2.fillRect(0, hdr - 1, Wc, 1);
+  const hf = Math.max(10, Math.min(15, Math.round(laneW * 0.32)));
+  for (let i = 0; i < used.length; i++) {
+    const lit = act.has(i), cx = i * laneW + laneW / 2, c = $('recColor').value === 'note' ? `hsl(${(((used[i] % 12) + 12) % 12) * 30},85%,62%)` : '#6c8dff';
+    if (lit) { rrect(i * laneW + 3, 4, laneW - 6, hdr - 9, 7); g2.fillStyle = c; g2.fill(); }
+    g2.font = `700 ${hf}px system-ui,sans-serif`; g2.fillStyle = lit ? '#0b0d12' : TXT; g2.fillText(nm(midiName(used[i])), cx, hdr / 2 + hf * 0.35, laneW - 4);
+  }
+
+  // the "now" line
+  const ncol = recording ? '#ef4444' : '#22d3ee';
+  g2.fillStyle = ncol; g2.fillRect(0, nowY - 1, Wc, 2);
+  g2.beginPath(); g2.moveTo(0, nowY - 6); g2.lineTo(8, nowY); g2.lineTo(0, nowY + 6); g2.fill();
+  syncCtl(now, len);
 }
 
 // ----- moving around the chart: drag, pinch, wheel, slider, buttons -----
 function zoomBy(f, cx) {
+  if (view.mode === 'fall') { view.fps = Math.max(25, Math.min(600, view.fps * f)); requestDraw(); return; }
   const Wc = cv.clientWidth, c = cx == null ? GUT + (Wc - GUT) / 2 : cx, t = view.vs + (c - GUT) / view.pps;
   view.pps = Math.max(4, Math.min(700, view.pps * f)); view.vs = t - (c - GUT) / view.pps; requestDraw();
 }
@@ -1842,9 +1955,11 @@ cv.addEventListener('pointermove', e => {
   const p = ptrs.get(e.pointerId); if (!p) return;
   const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
   if (ptrs.size === 2) {
-    const o = [...ptrs.entries()].find(([id]) => id !== e.pointerId)[1], d0 = Math.abs(p.x - o.x), d1 = Math.abs(x - o.x);
+    const o = [...ptrs.entries()].find(([id]) => id !== e.pointerId)[1], fl = view.mode === 'fall', d0 = Math.abs(fl ? p.y - o.y : p.x - o.x), d1 = Math.abs(fl ? y - o.y : x - o.x);
     if (d0 > 20 && d1 > 20) zoomBy(d1 / d0, (x + o.x) / 2);
     p.moved = o.moved = true;
+  } else if (ptrs.size === 1 && view.mode === 'fall') {
+    if (!recording && (Math.abs(y - p.y0) > 6 || p.moved)) { p.moved = true; if (pb.playing) pbStop(); pb.pos = Math.max(0, Math.min(recLen(), pb.pos + (y - p.y) / view.fps)); cv.classList.add('drag'); recUi(); requestDraw(); }
   } else if (ptrs.size === 1) {
     if (Math.abs(x - p.x0) > 6 || p.moved) { p.moved = true; view.follow = false; view.vs -= (x - p.x) / view.pps; cv.classList.add('drag'); requestDraw(); }
   }
@@ -1857,9 +1972,17 @@ function ptrEnd(e) {
 cv.addEventListener('pointerup', ptrEnd); cv.addEventListener('pointercancel', ptrEnd);
 cv.addEventListener('wheel', e => {
   if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - cv.getBoundingClientRect().left); }
+  else if (view.mode === 'fall') { if (recording) return; e.preventDefault(); if (pb.playing) pbStop(); pb.pos = Math.max(0, Math.min(recLen(), pb.pos - e.deltaY / view.fps)); recUi(); requestDraw(); }
   else if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey) { e.preventDefault(); view.follow = false; view.vs += (e.deltaX || e.deltaY) / view.pps; requestDraw(); }
 }, { passive: false });
 function tapChart(x, y) {
+  const F = lay.fall;
+  if (F && view.mode === 'fall') {
+    if (y < F.hdr || !F.used.length) return;
+    const midi = F.used[Math.min(F.used.length - 1, Math.floor(x / F.laneW))], t = F.now + (F.nowY - y) / F.fps; let bi = -1, bd = 1e9;
+    events.forEach((e, i) => { if (e.midi !== midi) return; const d = t < e.start ? e.start - t : t > e.start + e.dur / 1000 ? t - e.start - e.dur / 1000 : 0; if (d * F.fps < 14 && d < bd) { bd = d; bi = i; } });
+    selectNote(bi, true); return;
+  }
   if (y >= lay.rulerTop - 4) { if (hasRec() && !recording) { view.follow = false; pbSeek(view.vs + (x - GUT) / view.pps); } return; }
   let bi = -1, bd = 1e9;
   events.forEach((e, i) => {
@@ -1872,7 +1995,8 @@ function selectNote(i, hear) {
   recSel = i;
   document.querySelectorAll('#rows tr.sel').forEach(r => r.classList.remove('sel'));
   const info = $('noteInfo');
-  if (i < 0 || !events[i]) { recSel = -1; info.textContent = 'Tap a note on the chart for details.'; requestDraw(); return; }
+  if (i < 0 || !events[i]) { recSel = -1; info.textContent = infoHint(); info.className = 'mut'; requestDraw(); return; }
+  info.className = '';
   const e = events[i], row = document.querySelector(`#rows tr[data-i="${i}"]`); if (row) row.classList.add('sel');
   const verdict = Math.abs(e.cents) <= tol() ? 'in tune' : e.cents > 0 ? 'sharp' : 'flat', bpm = bpmVal(), dn = bpm > 0 ? durName(e.dur / 1000 * bpm / 60) : '';
   info.innerHTML = `<b>${nm(e.note)}</b> · ${e.hz.toFixed(1)} Hz · <span class="${centsCls(e.cents)}">${fmtC(e.cents)} (${verdict})</span> · at ${e.start.toFixed(2)} s · held ${(e.dur / 1000).toFixed(2)} s${dn ? ' (' + dn + ' note)' : ''} · volume ${Math.round(e.lvl)} dB`;
@@ -1885,10 +2009,19 @@ $('rows').addEventListener('click', e => {
 });
 $('rvStart').onclick = () => { view.follow = false; view.vs = 0; if (hasRec() && !recording) pbSeek(0); else requestDraw(); };
 $('rvIn').onclick = () => zoomBy(1.5); $('rvOut').onclick = () => zoomBy(1 / 1.5);
-$('rvFit').onclick = () => { view.follow = false; view.vs = 0; view.pps = Math.max(4, (cv.clientWidth - GUT - 24) / Math.max(2, recLen())); requestDraw(); };
+$('rvFit').onclick = () => { if (view.mode === 'fall') { if (hasRec()) { const A = cv.clientHeight - 32; view.fps = Math.max(25, Math.min(600, A / Math.max(1, recLen()))); pbSeek(recLen() * 0.6); } return; } view.follow = false; view.vs = 0; view.pps = Math.max(4, (cv.clientWidth - GUT - 24) / Math.max(2, recLen())); requestDraw(); };
 $('rvLive').onclick = () => { view.follow = !view.follow; requestDraw(); };
-$('rvPos').oninput = () => { const Wc = cv.clientWidth, vsMax = Math.max(0, recLen() - (Wc - GUT) / view.pps * 0.2); view.follow = false; view.vs = +$('rvPos').value / 1000 * vsMax; requestDraw(); };
+$('rvPos').oninput = () => { if (view.mode === 'fall') { if (!recording) pbSeek(+$('rvPos').value / 1000 * recLen()); return; } const Wc = cv.clientWidth, vsMax = Math.max(0, recLen() - (Wc - GUT) / view.pps * 0.2); view.follow = false; view.vs = +$('rvPos').value / 1000 * vsMax; requestDraw(); };
 window.addEventListener('resize', requestDraw);
+function setView(m) {
+  view.mode = m; $('tab-rec').dataset.view = m; cv.classList.toggle('fall', m === 'fall');
+  for (const [id, k] of [['vwSheet', 'sheet'], ['vwFall', 'fall']]) { $(id).classList.toggle('on', m === k); $(id).setAttribute('aria-pressed', m === k); }
+  if (recSel < 0) $('noteInfo').textContent = infoHint();
+  try { localStorage.setItem('tuner-recview', m); } catch {}
+  requestDraw();
+}
+$('vwSheet').onclick = () => setView('sheet'); $('vwFall').onclick = () => setView('fall');
+try { if (localStorage.getItem('tuner-recview') === 'fall') setView('fall'); else $('noteInfo').textContent = infoHint(); } catch { $('noteInfo').textContent = infoHint(); }
 ['recColor', 'recBpm'].forEach(id => $(id).addEventListener('input', () => { renderLegend(); requestDraw(); }));
 $('tol').addEventListener('input', () => { renderLegend(); updateStats(); requestDraw(); });
 const RP_KEY = 'tuner-recprefs-v1', RP_IDS = ['recMode', 'recColor', 'recBpm'];   // only these three options are remembered, never any recording
@@ -2074,13 +2207,14 @@ function loop() {
     const hp = lo < 50 ? Math.max(20, lo * 0.7) : 70;   // only low instruments (bass) need a lower cut-off if (Math.abs(hp - hpCut) > 3) { hpCut = hp; hpNode.frequency.value = hp; }
     const cut = Math.min(6000, Math.max(1000, hi * 3));
     if (lpA && Math.abs(cut - lpCut) > lpCut * 0.1) { lpCut = cut; lpA.frequency.value = lpB.frequency.value = cut; }
-    const r = yin(buf, ctx.sampleRate, lo, hi), conf = +$('conf').value;
+    const rm = recording ? recModeCfg() : null, yb = rm && rm.win && lo >= 80 ? buf.subarray(buf.length - rm.win) : buf;   // fast mode: only the newest 2048 samples, so a quick note change is not smeared
+    const r = yin(yb, ctx.sampleRate, lo, hi), conf = +$('conf').value;
     const near = r && track && Math.abs(centsBetween(r.freq, trkF)) < 45;
     if (r && (gateOn ? r.clarity > conf : near && r.clarity > 0.5) || (near && r.clarity > 0.5)) f = r.freq;
     if (recording && gateOn) fR = recPitch(r, rms, pk, conf);   // the recorder is stricter than the tuner: fewer wrong notes from noise
   }
   if (f) { trkF = f; trkT = t; }
-  if (recording) { const m = recModeCfg(); seg.a4 = a4(); seg.minDur = Math.max(+$('mindur').value, m.minDur); seg.confirm = m.confirm; seg.frame(t, fR, rms); }
+  if (recording) { const m = recModeCfg(); seg.a4 = a4(); seg.minDur = m.own ? m.minDur : Math.max(+$('mindur').value, m.minDur); seg.confirm = m.confirm; seg.maxMiss = m.miss || 5; seg.gap = m.gap || 0; seg.frame(t, fR, rms); }
   liveFrame(f, gateOn);
   if (tab === 'tuner') tunerFrame(t, f);
   if (demoIdx < 0) collectHold(f);                   // keep scoring the note that is still sounding
