@@ -16,7 +16,7 @@
 <style>
   :root{
     --bg:#0b0d12;--surface:#141821;--surface2:#1a1f2b;--raise:#222938;--line:#262c3a;
-    --fg:#eceff6;--mut:#8d95a8;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--acc:#6c8dff;
+    --fg:#eceff6;--mut:#b9c1d5;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--acc:#6c8dff;
     --r:14px;--sab:env(safe-area-inset-bottom,0px);
   }
   *{box-sizing:border-box}
@@ -42,12 +42,12 @@
   .bar{display:grid;grid-template-columns:minmax(0,1fr) auto;row-gap:2px}
   .bar-r{display:contents}
   #start{white-space:nowrap;grid-column:2;grid-row:1}
-  #status{grid-column:1/-1;grid-row:2;color:var(--mut);font-size:11.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #status{grid-column:1/-1;grid-row:2;color:var(--mut);font-size:12.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   @media (min-width:560px){
     .bar{display:flex} .bar-r{display:flex;align-items:center;gap:12px;min-width:0}
     #status{font-size:12.5px;max-width:40vw}
   }
-  .level{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.5px;color:var(--mut)}
+  .level{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;color:var(--mut)}
   .lvl-track{position:relative;flex:1;height:6px;background:var(--raise);border-radius:3px;overflow:hidden}
   #lvlDb{min-width:60px;text-align:right;font-variant-numeric:tabular-nums}
 
@@ -62,7 +62,7 @@
   select,input[type=number]{background:var(--raise);border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-width:0;width:100%}
   input[type=range]{width:100%;accent-color:var(--acc);height:24px;margin:0}
   input[type=checkbox]{width:18px;height:18px;accent-color:var(--acc);flex:none}
-  .field{display:grid;gap:5px;font-size:12px;color:var(--mut)}
+  .field{display:grid;gap:5px;font-size:13px;color:var(--mut)}
   .field>span{display:flex;justify-content:space-between;gap:6px}
   .check{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--fg);padding:4px 0}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -73,7 +73,7 @@
   .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);
         background:rgba(20,24,33,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
         border-top:1px solid var(--line);padding:6px 6px calc(6px + var(--sab))}
-  .tabs button{background:none;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:12px;font-size:11px;font-weight:550}
+  .tabs button{background:none;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:12px;font-size:12px;font-weight:550}
   .tabs button svg{width:22px;height:22px}
   .tabs button.on{color:var(--fg);background:var(--surface2)}
   .tabs button.on svg{color:var(--acc)}
@@ -82,7 +82,7 @@
   /* ---------- panels ---------- */
   .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
   .stack>*+*{margin-top:14px}
-  .sub{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600;margin:0 0 10px}
+  .sub{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600;margin:0 0 10px}
 
   .chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--raise);color:var(--fg);border:1.5px solid transparent;border-radius:999px;padding:7px 14px;min-width:48px;font-weight:550;white-space:nowrap}
   button.chip{cursor:pointer}
@@ -91,7 +91,7 @@
   .chip.ok{background:#17402f;color:#b8f5d9} .chip.close{background:#52410f;color:#fde8a6} .chip.bad{background:#552222;color:#fecaca}
   .chip.cur{border-color:var(--acc);background:#26325a} .chip.pend{color:var(--mut)}
   .chip.mini{min-width:42px;padding:5px 10px;font-size:13px}
-  .chip .play{background:#2f3850;color:var(--fg);padding:2px 8px;border-radius:999px;font-size:11px;min-height:0}
+  .chip .play{background:#2f3850;color:var(--fg);padding:2px 8px;border-radius:999px;font-size:12.5px;min-height:0}
 
   /* tuner */
   .tuner{display:flex;flex-direction:column;gap:16px}
@@ -102,23 +102,21 @@
   #strChips>.mut{grid-column:1/-1;align-self:center}
   #strChips .chip{padding:8px 10px}
   .readout{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 2px}
-  .hint{color:var(--acc);min-height:20px;font-size:14px;font-weight:550}
+  .hint{color:#a9bcff;min-height:22px;font-size:15px;font-weight:550}
   .big{font-size:clamp(76px,24vw,132px);font-weight:700;line-height:1;text-align:center;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
   .big small{font-size:.36em;color:var(--mut);font-weight:600;letter-spacing:0}
-  #tTarget,#scTarget{font-size:14px}
+  #tTarget,#scTarget{font-size:15px}
   #tHeard,#scHeard{font-size:17px;font-weight:550;font-variant-numeric:tabular-nums;min-height:26px}
-  .verdict{font-size:22px;font-weight:650;text-align:center;min-height:32px}
-  .nbr{display:flex;justify-content:center;gap:clamp(18px,8vw,44px);margin:4px 0 2px;font-size:19px;color:var(--mut);font-variant-numeric:tabular-nums}
-  .nbr b{color:var(--fg);border-bottom:3px solid var(--acc);padding-bottom:2px}
-  #meter{position:relative;height:46px;border-radius:23px;overflow:hidden;background:var(--raise);
-         background-image:repeating-linear-gradient(90deg,transparent 0 calc(10% - 1px),rgba(255,255,255,.08) calc(10% - 1px) 10%)}
-  #zone{position:absolute;top:0;bottom:0;background:rgba(52,211,153,.2)}
-  #meter .mid{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.35)}
-  #needle{position:absolute;top:5px;bottom:5px;width:8px;border-radius:4px;background:var(--mut);left:50%;transform:translateX(-50%);transition:left .08s,opacity .1s,background .1s}
-  .scalelab{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-top:6px;padding:0 4px;font-variant-numeric:tabular-nums}
+  .verdict{font-size:24px;font-weight:650;text-align:center;min-height:32px}
+  #tMeter{aspect-ratio:auto;height:228px;background:#10141c;border:1px solid var(--line);border-radius:14px}
+  .advice{font-size:19px;font-weight:650;text-align:center;min-height:28px;line-height:1.25}
+  .advice.ok-t{color:var(--ok)} .advice.warn-t{color:var(--warn)} .advice.bad-t{color:var(--bad)}
+  .sub-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+  .sub-row .sub{margin:0}
+  #retune{font-size:14.5px;padding:6px 14px;min-height:38px}
   .pulse{animation:pulse .5s}
   @keyframes pulse{0%{text-shadow:0 0 0 rgba(52,211,153,.9)}100%{text-shadow:0 0 36px rgba(52,211,153,0)}}
-  .foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:var(--mut);font-size:12.5px}
+  .foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:var(--mut);font-size:14px}
 
   /* scale */
   .sc-grid{display:grid;gap:14px}
@@ -138,7 +136,7 @@
   .dev-mid{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.4);z-index:1}
   .dev-marker{position:absolute;top:3px;bottom:3px;width:9px;border-radius:5px;background:#fff;left:50%;transform:translateX(-50%);transition:left .06s;box-shadow:0 0 0 2px rgba(0,0,0,.35);z-index:2}
   .dev-marker.ok{box-shadow:0 0 0 3px var(--ok)} .dev-marker.warn{box-shadow:0 0 0 3px var(--warn)} .dev-marker.bad{box-shadow:0 0 0 3px var(--bad)}
-  .dev-labels{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--mut);margin-top:6px;gap:6px}
+  .dev-labels{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--mut);margin-top:6px;gap:6px}
   #devRead{font-size:19px;font-weight:650;color:var(--fg);font-variant-numeric:tabular-nums}
   #scAcc{font-size:14px;font-weight:550;min-height:22px}
   #cardTiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:8px;margin-top:10px}
@@ -154,7 +152,7 @@
   .cb-row button{flex:none}
 
   /* scorecard table, profile, analysis, settings */
-  .who-wrap{display:flex;align-items:center;gap:8px;min-width:0;font-size:12px;color:var(--mut)}
+  .who-wrap{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;color:var(--mut)}
   .who{width:auto;min-width:128px;max-width:100%;padding:10px 12px;font-size:16px;font-weight:650;border:1.5px solid var(--acc);background:var(--surface2);border-radius:10px;min-height:44px}
   #status:empty{display:none}
   th.srt{cursor:pointer;user-select:none;white-space:nowrap}
@@ -169,20 +167,20 @@
   .an-head{display:grid;gap:12px;grid-template-columns:1fr 1fr;align-items:end}
   .an-head .seg{grid-column:1/-1;justify-self:start} .an-head .scope{grid-column:1/-1}
   .card2{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:14px}
-  .card2 h3{margin:0 0 4px;font-size:15px} .card2 p.mut{margin:0 0 10px;font-size:12.5px}
+  .card2 h3{margin:0 0 4px;font-size:15px} .card2 p.mut{margin:0 0 10px;font-size:13.5px}
   .tiles2{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
   .tiles2 .t{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
-  .tiles2 .t b{display:block;font-size:22px;font-variant-numeric:tabular-nums} .tiles2 .t span{font-size:12px;color:var(--mut)}
+  .tiles2 .t b{display:block;font-size:22px;font-variant-numeric:tabular-nums} .tiles2 .t span{font-size:13px;color:var(--mut)}
   .legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
   .legend button{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--raise);color:var(--fg);font-size:12.5px;min-height:0}
   .legend button.off{opacity:.38} .legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
   svg.ch{width:100%;height:auto;display:block}
-  svg.ch text{fill:var(--mut);font-size:11px}
+  svg.ch text{fill:var(--mut);font-size:12px}
   .two{display:grid;gap:14px}
   .set-group{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:14px}
-  .set-group h3{margin:0 0 2px;font-size:15px} .set-group>p{margin:0 0 12px;font-size:12.5px;color:var(--mut)}
-  .hint2{font-size:11.5px;color:var(--mut);font-weight:400}
-  .opt-h{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600;margin:14px 0 8px}
+  .set-group h3{margin:0 0 2px;font-size:15px} .set-group>p{margin:0 0 12px;font-size:13.5px;color:var(--mut)}
+  .hint2{font-size:13px;color:var(--mut);font-weight:400}
+  .opt-h{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600;margin:14px 0 8px}
   @media (min-width:720px){ .two{grid-template-columns:1fr 1fr} .an-head{grid-template-columns:auto 1.6fr 1fr 1fr} .an-head .seg,.an-head .scope{grid-column:auto} }
 
   .tempo{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,.9fr) auto;gap:8px;align-items:end}
@@ -200,7 +198,7 @@
   canvas{width:100%;height:auto;aspect-ratio:900/400;background:#0f1218;border-radius:10px;display:block}
   table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
   th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
-  th{color:var(--mut);font-weight:550;font-size:12px}
+  th{color:var(--mut);font-weight:550;font-size:13px}
   .scroll{max-height:300px;overflow:auto}
   #scSum .scroll{max-height:none;overflow-x:auto}
 
@@ -212,7 +210,7 @@
   .rstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
   .rstat div{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
   .rstat b{display:block;font-size:17px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rstat span{font-size:11.5px;color:var(--mut)}
+  .rstat span{font-size:12.5px;color:var(--mut)}
   .rv-bar button{padding:9px 14px;font-size:15px}
   .rv-bar button.on{background:var(--acc);color:#fff}
   #rvPos{margin:2px 0}
@@ -297,7 +295,7 @@
 <section id="tab-tuner" class="panel tuner">
   <div class="t-side stack">
     <div><p class="sub">Instrument</p><div id="instChips"></div></div>
-    <div><p class="sub">Strings</p><div id="strChips"></div></div>
+    <div><div class="sub-row"><p class="sub">Strings</p><button id="retune" class="sec" title="Clear the ✓ marks and start tuning again">↻ Retune</button></div><div id="strChips"></div></div>
   </div>
   <div class="t-main">
     <div class="readout">
@@ -307,11 +305,9 @@
       <div class="center" id="tHeard">heard –</div>
       <div class="verdict" id="tVerdict"></div>
     </div>
-    <div class="nbr" id="nbr"><span>–</span><span>–</span><span>–</span></div>
-    <div id="meter"><div id="zone"></div><div class="mid"></div><div id="needle"></div></div>
-    <div class="scalelab"><span>♭ −50¢</span><span>0</span><span>+50¢ ♯</span></div>
+    <div class="advice" id="tAdvice"></div>
+    <canvas id="tMeter" aria-label="Tuning meter: how far the pitch is from the target note"></canvas>
     <div class="foot" style="margin-top:14px">
-      <span>Strings are detected automatically — just play. Tap ▶ to hear a string.</span>
       <label class="check"><input type="checkbox" id="beep"> Beep when in tune</label>
     </div>
   </div>
@@ -658,6 +654,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   if (tab !== 'scale') { stopDemo(); stopMetro(); finalizeHold(); if (sc.running) { sc.running = false; $('scStart').textContent = 'Start practice'; $('scMsg').textContent = 'Paused — press Start practice'; renderScale(); } }
   if (tab === 'analysis') renderAnalysis();
   if (tab !== 'rec') pbStop(); else { recUi(); requestDraw(); }
+  if (tab === 'tuner') drawTMeter();
 });
 
 // ----- TUNER -----
@@ -666,8 +663,9 @@ const hist = []; let lastVoiced = -9, inTuneSince = null, confirmed = false, sho
 const strMidis = () => PRESETS[inst].strings.map(nameToMidi);
 
 function resetTuner() {
-  tuned.clear(); hist.length = 0; lastVoiced = -9; inTuneSince = null; confirmed = false; shownActive = -2;
-  $('tHint').textContent = ''; buildStrChips(-1);
+  tuned.clear(); hist.length = 0; lastVoiced = -9; inTuneSince = null; confirmed = false; shownActive = -2; offSince = null;
+  trail.length = 0; tTgMidi = null; tm = { idle: true };
+  $('tHint').textContent = ''; $('tAdvice').textContent = ''; buildStrChips(-1);
 }
 function buildInstChips() {
   $('instChips').innerHTML = '';
@@ -689,32 +687,53 @@ function buildStrChips(activeIdx = -1) {
     c.appendChild(p); box.appendChild(c);
   });
 }
+// Pitch history + smoothing: the raw reading jumps around too fast to follow, so the needle is smoothed,
+// a band shows how far it is wobbling, and a 3-second trail shows which way it is drifting.
+const trail = [], TRAIL_S = 3, SC = { ok: '#34d399', warn: '#fbbf24', bad: '#fb7185' };
+let tDisp = 0, tLastT = 0, tTgMidi = null, tShown = 0, offSince = null, tm = { idle: true };
+const tState = c => { const a = Math.abs(c); return a <= tol() ? 'ok' : a <= 25 ? 'warn' : 'bad'; };
+const tcv = $('tMeter'), tg2 = tcv.getContext('2d');
+
 function tunerIdle() {
-  $('tNote').innerHTML = '–'; $('tTarget').textContent = 'target –'; $('tHeard').textContent = 'heard –'; $('tHint').textContent = '';
-  $('tVerdict').textContent = ''; $('needle').style.left = '50%'; $('needle').style.background = 'var(--mut)'; $('needle').style.opacity = 1;
-  $('nbr').innerHTML = '<span>–</span><span>–</span><span>–</span>';
+  const was = tm.idle;
+  $('tNote').innerHTML = '–'; $('tTarget').textContent = 'play a note…'; $('tHeard').textContent = ''; $('tHint').textContent = '';
+  $('tVerdict').textContent = ''; $('tAdvice').textContent = ''; $('tAdvice').className = 'advice';
+  trail.length = 0; tTgMidi = null; tm = { idle: true };
   if (shownActive !== -1) { shownActive = -1; buildStrChips(-1); }
+  if (!was) drawTMeter();
 }
 function tunerFrame(t, f) {
   if (f) { if (t - lastVoiced > 0.25) hist.length = 0; hist.push(f); if (hist.length > 5) hist.shift(); lastVoiced = t; }
-  if (!hist.length || t - lastVoiced > 1.0) { tunerIdle(); inTuneSince = null; confirmed = false; return; }
+  if (!hist.length || t - lastVoiced > 1.0) { tunerIdle(); inTuneSince = null; confirmed = false; offSince = null; return; }
   const fm = median(hist), A = a4(), T = tol();
   const tg = pickTarget(fm, A, strMidis(), null);
-  const c = tg.cents, a = Math.abs(c), tn = midiName(tg.midi), m = tn.match(/^([A-G]#?)(-?\d+)$/);
-  $('tHint').textContent = tg.idx >= 0 ? `Tuning the ${tn} string` : '';
-  $('tNote').innerHTML = `${m[1]}<small>${m[2]}</small>`;
-  $('tTarget').textContent = `target ${tn} · ${tg.hz.toFixed(2)} Hz`;
-  $('tHeard').textContent = `heard ${fm.toFixed(2)} Hz   ${c >= 0 ? '+' : '−'}${Math.abs(c).toFixed(0)}¢`;
-  const cls = a <= T ? 'ok' : a <= 25 ? 'warn' : 'bad';
-  $('tVerdict').textContent = (a <= T ? 'In tune' : c > 0 ? 'Sharp ♯' : 'Flat ♭') + (a > 50 ? (c > 0 ? ' ≫' : ' ≪') : '');
-  $('tVerdict').className = 'verdict ' + cls + '-t';
-  $('nbr').innerHTML = [-1, 0, 1].map(d => d === 0 ? `<b>${midiName(tg.midi)}</b>` : `<span>${midiName(tg.midi + d)}</span>`).join('');
-  $('needle').style.left = (50 + Math.max(-50, Math.min(50, c))) + '%';
-  $('needle').style.opacity = a > 50 ? 0.4 : 1;
-  $('needle').style.background = `var(--${cls})`;
+  const c = tg.cents, tn = midiName(tg.midi), m = tn.match(/^([A-G]#?)(-?\d+)$/);
+  if (tg.midi !== tTgMidi) { tTgMidi = tg.midi; trail.length = 0; tDisp = c; tLastT = t; tShown = 0; }
+  const dt = Math.max(0, Math.min(0.2, t - tLastT)); tLastT = t;
+  tDisp += (c - tDisp) * (1 - Math.exp(-dt / (Math.abs(c - tDisp) > 25 ? 0.03 : 0.09)));   // quick on big moves, calm when close
+  if (f) trail.push({ t, c }); while (trail.length && t - trail[0].t > TRAIL_S) trail.shift();
+  const a = Math.abs(tDisp), st = tState(tDisp);
+  tm = { idle: false, t, midi: tg.midi, disp: tDisp, state: st, lo: nm(midiName(tg.midi - 1)), hi: nm(midiName(tg.midi + 1)), name: nm(tn), T };
+  if (t - tShown > 0.12) {                               // numbers update ~8×/s so they are readable
+    tShown = t;
+    const stringy = inst !== 'chromatic';
+    $('tHint').textContent = tg.idx >= 0 ? `Tuning the ${tn} string` : '';
+    $('tNote').innerHTML = `${m[1]}<small>${m[2]}</small>`;
+    $('tTarget').textContent = `target ${tn} · ${tg.hz.toFixed(2)} Hz`;
+    $('tHeard').textContent = `heard ${fm.toFixed(1)} Hz`;
+    $('tVerdict').textContent = (a <= T ? 'In tune' : tDisp > 0 ? 'Sharp ♯' : 'Flat ♭') + `  ${tDisp >= 0 ? '+' : '−'}${a.toFixed(0)}¢`;
+    $('tVerdict').className = 'verdict ' + st + '-t';
+    $('tAdvice').textContent = a <= T ? '✓ In tune — hold it steady'
+      : a > 50 ? (tg.idx >= 0 ? 'Far off — is this the right string?' : 'Far from this note')
+      : tDisp < 0 ? `▲ ${stringy ? 'Tighten the string' : 'Raise the pitch'} · ${a.toFixed(0)}¢ to go`
+      : `▼ ${stringy ? 'Loosen the string' : 'Lower the pitch'} · ${a.toFixed(0)}¢ to go`;
+    $('tAdvice').className = 'advice ' + st + '-t';
+  }
+  drawTMeter();
   if (tg.idx !== shownActive) { shownActive = tg.idx; buildStrChips(tg.idx); }
-  
+
   if (a <= T) {
+    offSince = null;
     if (inTuneSince == null) inTuneSince = t;
     if (!confirmed && t - inTuneSince >= 0.3) {
       confirmed = true;
@@ -722,8 +741,67 @@ function tunerFrame(t, f) {
       $('tNote').classList.remove('pulse'); void $('tNote').offsetWidth; $('tNote').classList.add('pulse');
       if ($('beep').checked) playTone(1318, 0.12, 'sine', 0.12);
     }
-  } else { inTuneSince = null; confirmed = false; }
+  } else {
+    inTuneSince = null; confirmed = false;
+    // a ticked string that has clearly drifted out again loses its tick
+    if (tg.idx >= 0 && tuned.has(tg.idx) && a > 25) { if (offSince == null) offSince = t; else if (t - offSince > 0.8) { tuned.delete(tg.idx); buildStrChips(tg.idx); offSince = null; } } else offSince = null;
+  }
 }
+function drawTMeter() {
+  if (tab !== 'tuner') return;
+  const W = tcv.clientWidth; if (!W) return;
+  const H = 228, dpr = Math.min(3, window.devicePixelRatio || 1);
+  if (tcv.width !== Math.round(W * dpr) || tcv.height !== Math.round(H * dpr)) { tcv.width = Math.round(W * dpr); tcv.height = Math.round(H * dpr); }
+  const g = tg2; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H); g.lineCap = 'round'; g.textBaseline = 'alphabetic';
+  const INK = '#f1f4fb', MUT = '#b9c1d5', T = tol(), X0 = 18, X1 = W - 18, X = c => X0 + (Math.max(-50, Math.min(50, c)) + 50) / 100 * (X1 - X0);
+  const idle = tm.idle, col = idle ? MUT : SC[tm.state];
+  // ---- upper block: the meter ----
+  const by = 8, bh = 124;
+  g.fillStyle = '#171d29'; rr(g, 6, by, W - 12, bh, 14); g.fill();
+  g.fillStyle = 'rgba(52,211,153,.24)'; g.fillRect(X(-T), by + 30, X(T) - X(-T), 52);             // in-tune zone
+  g.strokeStyle = 'rgba(52,211,153,.85)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(-T), by + 30); g.lineTo(X(-T), by + 82); g.moveTo(X(T), by + 30); g.lineTo(X(T), by + 82); g.stroke();
+  for (let c = -50; c <= 50; c += 5) {                                                            // cents scale
+    const big = c % 25 === 0, mid = c % 10 === 0, x = X(c);
+    g.strokeStyle = c === 0 ? INK : big ? '#dfe5f3' : mid ? '#9aa4bb' : '#6b7690'; g.lineWidth = c === 0 ? 3 : big ? 2 : 1.3;
+    g.beginPath(); g.moveTo(x, by + 82); g.lineTo(x, by + 82 + (big ? 16 : mid ? 11 : 7)); g.stroke();
+  }
+  g.font = '700 14px system-ui,sans-serif'; g.textAlign = 'center'; g.fillStyle = INK;
+  for (const c of [-50, -25, 0, 25, 50]) { g.textAlign = c === -50 ? 'left' : c === 50 ? 'right' : 'center'; g.fillText((c > 0 ? '+' : c < 0 ? '−' : '') + Math.abs(c) + (c ? '¢' : ''), X(c) + (c === -50 ? -8 : c === 50 ? 8 : 0), by + 118); }
+  // neighbouring notes: left = lower (flat side), right = higher (sharp side)
+  g.font = '700 16px system-ui,sans-serif';
+  g.textAlign = 'left'; g.fillStyle = idle ? '#7f8aa3' : '#dfe5f3'; g.fillText(idle ? '◂ lower note' : '◂ ' + tm.lo, 16, by + 24);
+  g.textAlign = 'right'; g.fillText(idle ? 'higher note ▸' : tm.hi + ' ▸', W - 16, by + 24);
+  g.textAlign = 'center'; g.font = '800 20px system-ui,sans-serif'; g.fillStyle = idle ? '#7f8aa3' : INK; g.fillText(idle ? 'Play a note' : tm.name, W / 2, by + 24);
+  if (!idle) {
+    // wobble band: where the pitch has been in the last 0.4 s
+    const rec = trail.filter(p => tm.t - p.t < 0.4);
+    if (rec.length > 1) { let lo = 1e9, hi = -1e9; for (const p of rec) { lo = Math.min(lo, p.c); hi = Math.max(hi, p.c); } const x0 = X(lo), x1 = Math.max(X(hi), x0 + 6); g.fillStyle = 'rgba(255,255,255,.2)'; rr(g, x0 - 3, by + 36, x1 - x0 + 6, 40, 8); g.fill(); }
+    // needle (smoothed)
+    const nx = X(tm.disp), off = Math.abs(tm.disp) > 50;
+    g.save(); g.shadowColor = col; g.shadowBlur = 14; g.strokeStyle = col; g.lineWidth = 6; g.beginPath(); g.moveTo(nx, by + 34); g.lineTo(nx, by + 80); g.stroke();
+    g.fillStyle = col; g.beginPath(); g.moveTo(nx - 10, by + 28); g.lineTo(nx + 10, by + 28); g.lineTo(nx, by + 42); g.closePath(); g.fill(); g.restore();
+    if (off) { g.fillStyle = col; g.font = '800 22px system-ui,sans-serif'; g.textAlign = tm.disp < 0 ? 'left' : 'right'; g.fillText(tm.disp < 0 ? '◂◂' : '▸▸', tm.disp < 0 ? 14 : W - 14, by + 66); }
+  }
+  // ---- lower block: pitch trail (newest at the top, 3 s of history running down) ----
+  const ty = by + bh + 8, th = H - ty - 6;
+  g.fillStyle = '#131822'; rr(g, 6, ty, W - 12, th, 12); g.fill();
+  g.fillStyle = 'rgba(52,211,153,.16)'; g.fillRect(X(-T), ty + 4, X(T) - X(-T), th - 8);
+  g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(0), ty + 4); g.lineTo(X(0), ty + th - 4); g.stroke();
+  g.font = '600 12.5px system-ui,sans-serif'; g.textAlign = 'left'; g.fillStyle = MUT; g.fillText('last 3 s ↓', 14, ty + 16);
+  g.textAlign = 'right'; g.fillText('flat ◂   ▸ sharp', W - 14, ty + 16);
+  if (!idle && trail.length > 1) {
+    const Y = p => ty + 22 + (tm.t - p.t) / TRAIL_S * (th - 30);
+    for (let i = 1; i < trail.length; i++) {
+      const p0 = trail[i - 1], p1 = trail[i], age = (tm.t - p1.t) / TRAIL_S;
+      g.globalAlpha = Math.max(0.15, 1 - age * 0.85); g.strokeStyle = SC[tState(p1.c)]; g.lineWidth = 3.2;
+      g.beginPath(); g.moveTo(X(p0.c), Y(p0)); g.lineTo(X(p1.c), Y(p1)); g.stroke();
+    }
+    g.globalAlpha = 1; const last = trail[trail.length - 1]; g.fillStyle = col; g.beginPath(); g.arc(X(last.c), Y(last), 5, 0, 7); g.fill();
+  }
+}
+function rr(g, x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+$('retune').onclick = () => { resetTuner(); drawTMeter(); };
+window.addEventListener('resize', drawTMeter);
 
 // ----- SCALE -----
 const sc = { seq: [], pos: 0, grades: [], attempts: [], running: false, wrong: 0, pass: 1, passes: [] };
@@ -1820,7 +1898,7 @@ $('start').onclick = async () => { try { listening ? stopListening() : await sta
 
 function applyTol() {
   const T = tol();
-  $('zone').style.left = (50 - T) + '%'; $('zone').style.width = (2 * T) + '%';
+  drawTMeter();
   
   // Gradient for the deviation bar (Red -> Yellow -> Green -> Yellow -> Red)
   // 1 cent = 0.5% of the bar width.
@@ -1839,7 +1917,7 @@ function applyTol() {
 $('tol').oninput = () => { applyTol(); };
 $('a4').onchange = () => { resetTuner(); renderScale(); applyTol(); };
 
-loadPrefs(); applyLimits(); buildInstChips(); resetTuner(); resetPractice(); renderCard(); renderScale(); renderAnalysis(); renderLegend(); recUi(); applyTol(); $('scOpts').open = innerWidth >= 720;
+loadPrefs(); applyLimits(); buildInstChips(); resetTuner(); resetPractice(); renderCard(); renderScale(); renderAnalysis(); renderLegend(); recUi(); applyTol(); drawTMeter(); $('scOpts').open = innerWidth >= 720;
 try { const o = JSON.parse(localStorage.getItem(SET_KEY)); if (o) applySettings(o); } catch {}
 })();
 
