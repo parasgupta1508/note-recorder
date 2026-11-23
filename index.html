@@ -756,7 +756,7 @@ const tcv = $('tMeter'), tg2 = tcv.getContext('2d');
 
 function tunerIdle() {
   const was = tm.idle;
-  $('tNote').innerHTML = '–'; $('tTarget').textContent = 'play a note…'; $('tHeard').textContent = ''; $('tHint').textContent = '';
+  $('tNote').innerHTML = '–'; $('tHeard').textContent = ''; $('tHint').textContent = '';
   $('tVerdict').textContent = ''; $('tAdvice').textContent = ''; $('tAdvice').className = 'advice';
   trail.length = 0; tTgMidi = null; tm = { idle: true };
   if (shownActive !== -1) { shownActive = -1; buildStrChips(-1); }
@@ -1888,7 +1888,9 @@ async function openMic() {
   hpNode = c.createBiquadFilter(); hpNode.type = 'highpass'; hpNode.frequency.value = 70;
   analyser = c.createAnalyser(); analyser.fftSize = 4096; analyser.smoothingTimeConstant = 0;
   boostNode = c.createGain(); boostNode.gain.value = +$('boost').value;   // input boost for quiet mics (AGC is off)
-  srcNode.connect(hpNode); hpNode.connect(boostNode); boostNode.connect(analyser);
+  lpA = c.createBiquadFilter(); lpB = c.createBiquadFilter(); lpA.type = lpB.type = 'lowpass'; lpA.Q.value = 0.5412; lpB.Q.value = 1.3066;   // 4th-order Butterworth: removes high harmonics and hiss that cause octave errors
+  lpA.frequency.value = lpB.frequency.value = 6000; lpCut = 6000;
+  srcNode.connect(hpNode); hpNode.connect(boostNode); boostNode.connect(lpA); lpA.connect(lpB); lpB.connect(analyser);
   // tap the (boosted) mic signal so a recording can be replayed as real sound
   cap.k = Math.max(1, Math.floor(c.sampleRate / 16000)); cap.rate = c.sampleRate / cap.k;
   capNode = c.createScriptProcessor(4096, 1, 1); capSink = c.createGain(); capSink.gain.value = 0;
@@ -1908,7 +1910,7 @@ function stopListening() {
   $('start').textContent = '▶ Start listening'; $('rec').disabled = true; $('status').textContent = '';
   hist.length = 0; lastVoiced = -9; tunerIdle(); renderScale();
 }
-let boostNode = null;
+let boostNode = null, lpA = null, lpB = null, lpCut = 6000;
 const dbPos = r => Math.max(0, Math.min(100, (20 * Math.log10(Math.max(r, 1e-6)) + 60) / 60 * 100));   // −60…0 dBFS → 0…100 %
 function updateGateMark() { $('lvlGate').style.left = dbPos(+$('gate').value) + '%'; }
 function updateLevel(rms, pk = 0) {
@@ -2023,8 +2025,12 @@ function loop() {
   let rms = 0, pk = 0; for (let i = 0; i < buf.length; i++) { rms += buf[i] * buf[i]; const a = Math.abs(buf[i]); if (a > pk) pk = a; } rms = Math.sqrt(rms / buf.length);
   updateLevel(rms, pk); calibFrame(rms, pk);
   let f = null, fR = null;
-  gateOn = rms > +$('gate').value || (gateOn && rms > +$('gate').value * 0.6);   // hysteresis: a fading note does not chatter the gate
-  if (gateOn) {
+  const G = +$('gate').value;
+  gateOn = rms > G || (gateOn && rms > G * 0.6);   // hysteresis: a fading note does not chatter the gate
+  // Sustain tracking: once the tuner has a note, a decaying string keeps reading (down to about -14 dB under the gate)
+  // as long as it stays within 45 cents of that note. A new note still has to pass the normal gate and confidence.
+  const track = tab === 'tuner' && !recording && !sc.running && hist.length > 0 && t - lastVoiced < 0.4;
+  if (gateOn || (track && rms > G * 0.2)) {
     let lo = +$('fmin').value, hi = +$('fmax').value;
     if (tab === 'tuner' && !recording && !sc.running) {          // the tuner only needs the instrument's own range: fewer octave errors, less CPU
       const S = strMidis(); if (S.length) {
@@ -2032,9 +2038,12 @@ function loop() {
         lo = noteToFreq((one ? S[lock] : Math.min(...S)) - (one ? 5 : 4), A); hi = noteToFreq((one ? S[lock] : Math.max(...S)) + (one ? 5 : 4), A);
       }
     }
+    const cut = Math.min(6000, Math.max(1000, hi * 3));
+    if (lpA && Math.abs(cut - lpCut) > lpCut * 0.1) { lpCut = cut; lpA.frequency.value = lpB.frequency.value = cut; }
     const r = yin(buf, ctx.sampleRate, lo, hi), conf = +$('conf').value;
-    if (r && r.clarity > conf) f = r.freq;
-    if (recording) fR = recPitch(r, rms, pk, conf);   // the recorder is stricter than the tuner: fewer wrong notes from noise
+    const near = r && track && Math.abs(centsBetween(r.freq, median(hist))) < 45;
+    if (r && (gateOn ? r.clarity > conf : near && r.clarity > 0.5) || (near && r.clarity > 0.5)) f = r.freq;
+    if (recording && gateOn) fR = recPitch(r, rms, pk, conf);   // the recorder is stricter than the tuner: fewer wrong notes from noise
   }
   if (recording) { const m = recModeCfg(); seg.a4 = a4(); seg.minDur = Math.max(+$('mindur').value, m.minDur); seg.confirm = m.confirm; seg.frame(t, fR, rms); }
   liveFrame(f, gateOn);
