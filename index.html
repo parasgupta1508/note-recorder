@@ -204,6 +204,31 @@
   .scroll{max-height:300px;overflow:auto}
   #scSum .scroll{max-height:none;overflow-x:auto}
 
+  /* ---------- recorder ---------- */
+  #roll{aspect-ratio:auto;height:320px;background:#0c0f15;border:1px solid var(--line);touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
+  #roll.drag{cursor:grabbing}
+  button.rec{background:#ef4444;color:#fff}
+  .rec-opts{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+  .rstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
+  .rstat div{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+  .rstat b{display:block;font-size:17px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rstat span{font-size:11.5px;color:var(--mut)}
+  .rv-bar button{padding:9px 14px;font-size:15px}
+  .rv-bar button.on{background:var(--acc);color:#fff}
+  #rvPos{margin:2px 0}
+  .pbar{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:10px}
+  .pbar .row label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mut)}
+  .pbar select{width:auto;font-size:14px}
+  #pbPlay{min-width:116px;font-size:16px}
+  #pbPlay.playing{background:var(--warn);color:#1a1405}
+  #pbTime{font-variant-numeric:tabular-nums;font-size:15px;color:var(--fg);margin-left:auto}
+  .rlegend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--fg)}
+  .rlegend i{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:5px}
+  #noteInfo{min-height:20px;font-size:14px;color:var(--fg)}
+  #rows tr{cursor:pointer} #rows tr.sel td{background:rgba(108,141,255,.22)}
+  .cg{color:#34d399} .cy{color:#fbbf24} .cr{color:#fb7185}
+  @media (min-width:700px){#roll{height:380px}}
+
   /* ---------- touch devices ---------- */
   @media (pointer:coarse){
     button{min-height:44px}
@@ -379,15 +404,46 @@
 <!-- ============ RECORDER ============ -->
 <section id="tab-rec" class="panel hide stack">
   <div class="row">
-    <button id="rec" class="sec" disabled>● Record</button>
+    <button id="rec" disabled>● Record</button>
     <button id="clear" class="sec">Clear</button>
-    <button id="csv" class="sec">Export CSV</button>
-    <button id="json" class="sec">Export JSON</button>
-    <span class="mut" id="recInfo">Session 0.0 s</span>
+    <span class="mut" id="recInfo">Start listening, then press Record.</span>
   </div>
-  <canvas id="roll" width="900" height="400"></canvas>
+
+  <canvas id="roll" aria-label="Recorded notes on a music staff"></canvas>
+  <div class="rv-bar row">
+    <button id="rvStart" class="sec" title="Jump to start" aria-label="Jump to start">⏮</button>
+    <button id="rvOut" class="sec" title="Zoom out" aria-label="Zoom out">－</button>
+    <button id="rvIn" class="sec" title="Zoom in" aria-label="Zoom in">＋</button>
+    <button id="rvFit" class="sec">Fit all</button>
+    <button id="rvLive" class="sec on" title="Keep the chart on the newest note or the playhead">Follow</button>
+  </div>
+  <input id="rvPos" type="range" min="0" max="1000" value="0" aria-label="Scroll through the recording">
+
+  <div class="pbar" id="pbBar">
+    <div class="row">
+      <button id="pbPlay" disabled>▶ Replay</button>
+      <label>Play as <select id="pbMode"><option value="audio">Recorded sound</option><option value="notes">Detected notes</option></select></label>
+      <label>Speed <select id="pbSpeed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option></select></label>
+      <span id="pbTime">0:00.0 / 0:00.0</span>
+    </div>
+  </div>
+
+  <div id="noteInfo" class="mut">Tap a note on the chart for details.</div>
+  <div class="rlegend" id="rLegend"></div>
+  <div class="hint2">Drag the chart left/right to move through time, pinch or use ＋/－ to zoom, tap a note to hear it, tap the time ruler to jump there.</div>
+
+  <div class="rstat" id="recStats"></div>
+
+  <div class="rec-opts">
+    <label class="field"><span>Listening</span><select id="recMode"><option value="relaxed">Relaxed (picks up everything)</option><option value="normal" selected>Normal</option><option value="strict">Strict (noisy room)</option></select></label>
+    <label class="field"><span>Note colours</span><select id="recColor"><option value="acc" selected>By tuning accuracy</option><option value="note">By note name</option></select></label>
+    <label class="field"><span>Tempo (BPM, 0 = off)</span><input id="recBpm" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
+  </div>
+  <div class="hint2" id="recHint">Only the current recording is kept (nothing is saved on this device). Press Record again to start a new one, or Clear to wipe it. Picking up wrong notes or noise? Switch Listening to Strict.</div>
+
+  <div class="row"><button id="csv" class="sec">Export CSV</button><button id="json" class="sec">Export JSON</button></div>
   <div class="scroll"><table>
-    <thead><tr><th>#</th><th>Note</th><th>Avg Hz</th><th>Avg cents</th><th>Start (s)</th><th>Duration (ms)</th></tr></thead>
+    <thead><tr><th>#</th><th>Note</th><th>Avg Hz</th><th>Cents</th><th>Start (s)</th><th>Duration (ms)</th></tr></thead>
     <tbody id="rows"></tbody></table></div>
 </section>
 
@@ -452,7 +508,15 @@ function yin(buf, sr, fmin, fmax, threshold = 0.15) {
     const a = d[tau - 1], b = d[tau], c = d[tau + 1], den = a + c - 2 * b;
     if (den !== 0) better = tau + (a - c) / (2 * den);
   }
-  return { freq: sr / better, clarity: 1 - d[tau] };
+  // Second opinion: a real pitch repeats, so the signal two periods later must still match.
+  // Noise, breath and rustle can dip below the threshold once but rarely twice (p2 ≈ 1 = periodic, ≈ 0 = noise).
+  let p2 = null;
+  if (2 * tau <= N - W) {
+    let s = 0, e = 0;
+    for (let i = 0; i < W; i++) { const a = buf[i], b = buf[i + 2 * tau]; s += (a - b) * (a - b); e += a * a + b * b; }
+    p2 = e > 0 ? 1 - s / e : 0;
+  }
+  return { freq: sr / better, clarity: 1 - d[tau], p2 };
 }
 
 const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -502,18 +566,25 @@ function pickTarget(f, a4, strings, lockIdx) {
 }
 
 class Segmenter {
-  constructor(onNote) { this.onNote = onNote; this.cur = null; this.cand = null; this.miss = 0; this.minDur = 60; this.a4 = 440; }
-  frame(t, f) {
-    const MISS = 5, CONFIRM = 3;
+  constructor(onNote) { this.onNote = onNote; this.cur = null; this.cand = null; this.miss = 0; this.minDur = 60; this.a4 = 440; this.confirm = 4; }
+  reset() { this.cur = null; this.cand = null; this.miss = 0; }
+  // t = seconds, f = Hz (or null when nothing reliable was heard), lv = signal level (RMS) for the volume lane
+  frame(t, f, lv = 0) {
+    const MISS = 5;
     if (f) {
-      const m = freqToNote(f, this.a4).midi;
-      if (this.cur) {
-        if (m === this.cur.midi) { this.cur.f.push(f); this.cur.last = t; this.miss = 0; return; }
-        if (++this.miss >= MISS) this.end(); else return;
+      const m = freqToNote(f, this.a4).midi, c = this.cur;
+      // Stay on the current note while the pitch is within 65¢ of it: no flicker at semitone borders, vibrato is fine.
+      if (c && (m === c.midi || Math.abs(centsBetween(f, noteToFreq(c.midi, this.a4))) < 65)) {
+        c.f.push(f); c.t.push(t); c.l.push(lv); c.last = t; this.miss = 0; this.cand = null; return;
       }
-      if (this.cand && this.cand.midi === m) { this.cand.f.push(f); this.cand.last = t; }
-      else this.cand = { midi: m, start: t, last: t, f: [f] };
-      if (this.cand.f.length >= CONFIRM) { this.cur = this.cand; this.cand = null; this.miss = 0; }
+      if (this.cand && Math.abs(centsBetween(f, noteToFreq(this.cand.midi, this.a4))) < 65) { const k = this.cand; k.f.push(f); k.t.push(t); k.l.push(lv); k.last = t; }
+      else this.cand = { midi: m, start: t, last: t, f: [f], t: [t], l: [lv] };
+      // A jump of exactly an octave / twelfth is the classic wrong-harmonic mistake, so ask for more proof.
+      const jump = c ? Math.abs(this.cand.midi - c.midi) : 0;
+      const need = this.confirm + (jump === 12 || jump === 19 || jump === 24 ? 4 : 0);
+      if (c) this.miss++;
+      if (this.cand.f.length >= need) { if (c) this.end(); this.cur = this.cand; this.cand = null; this.miss = 0; }
+      else if (c && this.miss >= MISS) this.end();   // lost the old note; the candidate keeps building
     } else {
       this.cand = null;
       if (this.cur && ++this.miss >= MISS) this.end();
@@ -524,8 +595,11 @@ class Segmenter {
     if (!c) return;
     const dur = (c.last - c.start) * 1000;
     if (dur < this.minDur) return;
-    const hz = median(c.f), n = freqToNote(hz, this.a4);
-    this.onNote({ midi: c.midi, note: midiName(c.midi), hz, cents: n.cents, start: c.start, dur });
+    const hz = median(c.f), ref = noteToFreq(c.midi, this.a4);
+    const step = Math.max(1, Math.ceil(c.f.length / 120)), pts = [];   // pitch contour: [ms from start, cents from the note centre]
+    for (let i = 0; i < c.f.length; i += step) pts.push([Math.round((c.t[i] - c.start) * 1000), +centsBetween(c.f[i], ref).toFixed(1)]);
+    const lvl = 20 * Math.log10(Math.max(1e-6, median(c.l)));
+    this.onNote({ midi: c.midi, note: midiName(c.midi), hz, cents: centsBetween(hz, ref), start: c.start, dur, lvl: +lvl.toFixed(1), pts });
   }
 }
 
@@ -583,6 +657,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   for (const t of ['tuner', 'scale', 'analysis', 'rec', 'settings']) $('tab-' + t).classList.toggle('hide', t !== tab);
   if (tab !== 'scale') { stopDemo(); stopMetro(); finalizeHold(); if (sc.running) { sc.running = false; $('scStart').textContent = 'Start practice'; $('scMsg').textContent = 'Paused — press Start practice'; renderScale(); } }
   if (tab === 'analysis') renderAnalysis();
+  if (tab !== 'rec') pbStop(); else { recUi(); requestDraw(); }
 });
 
 // ----- TUNER -----
@@ -1258,34 +1333,373 @@ $('scStop').onclick = stopScale;
 ['scInst', 'scRoot', 'scOct', 'scType', 'scSpan', 'scDir'].forEach(id => $(id).onchange = () => { applyLimits(); stopDemo(); resetPractice(); renderScale(); renderCard(); renderAnalysis(); });
 
 // ----- RECORDER -----
-let events = [], recording = false, recT0 = 0;
+// Only the CURRENT recording is kept, in memory. Nothing is written to storage; Clear (or a new recording) discards it.
+const REC_MAX_S = 600;                                   // safety cap: 10 minutes per recording
+let events = [], recording = false, recT0 = 0, recEnd = 0, recSel = -1;
+const view = { vs: 0, pps: 0, follow: true };            // vs = time (s) at the left edge, pps = pixels per second
+const pb = { playing: false, pos: 0, startCtx: 0, startPos: 0, rate: 1, nodes: [], abuf: null };
+const cap = { chunks: [], n: 0, k: 1, rate: 16000, acc: 0, cnt: 0 };   // recorded sound (16-bit, low sample rate to save memory)
+let capNode = null, capSink = null;
 const seg = new Segmenter(ev => { if (recording) addEvent(ev); });
+
+// How strict the note listener is. onset/sustain = pitch clarity needed to start / keep a note,
+// p2 = "the pitch must repeat" check that rejects noise, confirm = frames before a note counts.
+const REC_MODES = {
+  relaxed: { onset: 0,    sustain: 0,    p2: 0,   confirm: 3, minDur: 0,   gateX: 1 },
+  normal:  { onset: 0.90, sustain: 0,    p2: 0.5, confirm: 4, minDur: 0,   gateX: 1 },
+  strict:  { onset: 0.92, sustain: 0.88, p2: 0.65, confirm: 4, minDur: 100, gateX: 1.6 },
+};
+const recModeCfg = () => REC_MODES[$('recMode').value] || REC_MODES.normal;
+function recPitch(r, rms, pk, conf) {                    // Hz to feed the segmenter, or null for "not a clean note"
+  if (!r) return null;
+  const m = recModeCfg();
+  if (m === REC_MODES.relaxed) return r.clarity > conf ? r.freq : null;
+  if (pk >= 0.98) return null;                           // clipping: the waveform is distorted, pitch unreliable
+  const same = seg.cur && Math.abs(centsBetween(r.freq, noteToFreq(seg.cur.midi, a4()))) < 65;
+  if (r.clarity < Math.max(conf, same ? m.sustain : m.onset)) return null;
+  if (r.p2 != null && r.p2 < (same ? m.p2 * 0.8 : m.p2)) return null;
+  if (!same && rms < +$('gate').value * m.gateX) return null;
+  return r.freq;
+}
+
+const nm = s => s.replace('#', '♯');
+const fmtT = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
+const centsCls = c => { const a = Math.abs(c); return a <= tol() ? 'cg' : a <= 25 ? 'cy' : 'cr'; };
+const fmtC = c => (c >= 0 ? '+' : '') + Math.round(c) + '¢';
+const bpmVal = () => Math.max(0, Math.min(300, +$('recBpm').value || 0));
+const recLen = () => recording ? Math.max(0, ctx.currentTime - t0 - recT0)
+  : Math.max(recEnd, cap.n / cap.rate, events.reduce((m, e) => Math.max(m, e.start + e.dur / 1000), 0));
+const hasRec = () => events.length > 0 || cap.n > 0;
+
+function newRecording() {
+  events = []; $('rows').innerHTML = ''; recSel = -1; recEnd = 0;
+  cap.chunks = []; cap.n = 0; cap.acc = 0; cap.cnt = 0; pb.abuf = null; pb.pos = 0; view.vs = 0;
+  $('noteInfo').textContent = 'Tap a note on the chart for details.';
+  updateStats();
+}
+function capPush(x) {
+  const k = cap.k, out = new Int16Array(Math.ceil((x.length + cap.cnt) / k)); let o = 0;
+  for (let i = 0; i < x.length; i++) {
+    cap.acc += x[i];
+    if (++cap.cnt === k) { out[o++] = Math.max(-32768, Math.min(32767, Math.round(cap.acc / k * 32767))); cap.acc = 0; cap.cnt = 0; }
+  }
+  if (o) { cap.chunks.push(o === out.length ? out : out.subarray(0, o)); cap.n += o; }
+  if (cap.n / cap.rate > REC_MAX_S) setTimeout(() => { if (recording) { setRecording(false); $('recInfo').textContent = 'Stopped: 10 minute limit reached.'; } }, 0);
+}
 function addEvent(ev) {
   ev.start -= recT0; events.push(ev);
-  const tr = document.createElement('tr');
-  tr.innerHTML = `<td>${events.length}</td><td><b>${ev.note}</b></td><td>${ev.hz.toFixed(2)}</td><td>${ev.cents >= 0 ? '+' : ''}${ev.cents.toFixed(1)}</td><td>${ev.start.toFixed(3)}</td><td>${ev.dur.toFixed(0)}</td>`;
+  const tr = document.createElement('tr'); tr.dataset.i = events.length - 1;
+  tr.innerHTML = `<td>${events.length}</td><td><b>${nm(ev.note)}</b></td><td>${ev.hz.toFixed(2)}</td><td class="${centsCls(ev.cents)}">${ev.cents >= 0 ? '+' : ''}${ev.cents.toFixed(1)}</td><td>${ev.start.toFixed(3)}</td><td>${ev.dur.toFixed(0)}</td>`;
   $('rows').prepend(tr);
+  updateStats();
 }
 function setRecording(on) {
-  if (on && !recording) recT0 = ctx.currentTime - t0;
-  if (!on && recording) seg.end();
-  recording = on; $('rec').textContent = on ? '■ Stop recording' : '● Record'; $('rec').className = on ? 'rec' : 'sec';
-}
-const cv = $('roll'), g2 = cv.getContext('2d'), WIN = 15;
-function drawRoll(t) {
-  const W = cv.width, H = cv.height; g2.clearRect(0, 0, W, H);
-  const tNow = recording ? t - recT0 : t, tL = tNow - WIN;
-  const all = events.slice(-60).map(e => ({ s: e.start, d: e.dur / 1000, m: e.midi }));
-  if (recording && seg.cur) all.push({ s: seg.cur.start - recT0, d: seg.cur.last - seg.cur.start, m: seg.cur.midi, live: true });
-  if (!all.length) { g2.fillStyle = '#4a5064'; g2.fillText('Notes will appear here while recording', 12, 20); return; }
-  const lo = Math.min(...all.map(e => e.m)) - 2, hi = Math.max(...all.map(e => e.m)) + 2, rows = Math.max(hi - lo, 8), rh = H / rows;
-  g2.strokeStyle = '#1f2330'; g2.fillStyle = '#4a5064'; g2.font = '10px sans-serif';
-  for (let m = lo; m <= lo + rows; m++) { const y = H - (m - lo) * rh; g2.beginPath(); g2.moveTo(0, y); g2.lineTo(W, y); g2.stroke(); if (m % 12 === 0 || rows < 16) g2.fillText(midiName(m), 2, y - 2); }
-  for (const e of all) {
-    const x = (e.s - tL) / WIN * W, w = Math.max(3, e.d / WIN * W); if (x + w < 0) continue;
-    g2.fillStyle = e.live ? '#ffb020' : '#5b8cff'; g2.fillRect(x, H - (e.m - lo + 1) * rh + 1, w, rh - 2);
+  if (on && !recording) {
+    pbStop(); newRecording();                            // a new recording replaces the previous one
+    recT0 = ctx.currentTime - t0; seg.reset(); view.follow = true;
   }
+  if (!on && recording) {
+    seg.end(); recEnd = Math.max(0, ctx.currentTime - t0 - recT0);
+    const Wc = cv.clientWidth || 360; view.follow = false; view.vs = 0; view.pps = Math.min(Math.max(8, (Wc - GUT) / 8), Math.max(20, (Wc - GUT - 24) / Math.max(2, recEnd)));
+  }
+  recording = on; $('rec').textContent = on ? '■ Stop recording' : '● Record'; $('rec').className = on ? 'rec' : '';
+  recUi(); requestDraw();
 }
+function clearRec() {
+  pbStop(); if (recording) setRecording(false);
+  newRecording(); recUi(); requestDraw();
+}
+
+// ----- summary chips: key guess + stats -----
+const KRUM_MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88], KRUM_MIN = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+function guessKey(pc) {
+  const corr = (a, b) => { const n = a.length, ma = a.reduce((x, y) => x + y) / n, mb = b.reduce((x, y) => x + y) / n; let s = 0, va = 0, vb = 0; for (let i = 0; i < n; i++) { s += (a[i] - ma) * (b[i] - mb); va += (a[i] - ma) ** 2; vb += (b[i] - mb) ** 2; } return va && vb ? s / Math.sqrt(va * vb) : 0; };
+  let best = null;
+  for (let k = 0; k < 12; k++) for (const [prof, name] of [[KRUM_MAJ, 'major'], [KRUM_MIN, 'minor']]) {
+    const r = corr(pc, prof.map((_, i) => prof[(i - k + 12) % 12]));
+    if (!best || r > best.r) best = { r, s: nm(NOTES[k]) + ' ' + name };
+  }
+  return best && best.r >= 0.55 ? best.s : null;
+}
+function updateStats() {
+  const n = events.length, box = $('recStats');
+  if (!n) { box.innerHTML = ''; return; }
+  let tot = 0, ab = 0, ok = 0, lo = 1e9, hi = -1; const pc = new Array(12).fill(0), by = {};
+  for (const e of events) {
+    const d = e.dur / 1000; tot += d; ab += Math.abs(e.cents); if (Math.abs(e.cents) <= tol()) ok++;
+    lo = Math.min(lo, e.midi); hi = Math.max(hi, e.midi); pc[e.midi % 12] += d; by[e.note] = (by[e.note] || 0) + d;
+  }
+  const key = n >= 4 ? guessKey(pc) : null;
+  box.innerHTML = [[n, n === 1 ? 'note' : 'notes'], [tot.toFixed(1) + ' s', 'time sounding'], [nm(midiName(lo)) + '–' + nm(midiName(hi)), 'range'],
+    [Math.round(100 * ok / n) + '%', `in tune (±${tol()}¢)`], [Math.round(ab / n) + '¢', 'average off-pitch'], [key || '–', 'likely key']]
+    .map(([b, s]) => `<div><b>${b}</b><span>${s}</span></div>`).join('');
+}
+function renderLegend() {
+  const T = tol(), dot = c => `<i style="background:${c}"></i>`;
+  $('rLegend').innerHTML = $('recColor').value === 'note'
+    ? NOTES.map((n, i) => `<span>${dot(`hsl(${i * 30},85%,62%)`)}${nm(n)}</span>`).join('')
+    : `<span>${dot('#34d399')}In tune (±${T}¢)</span><span>${dot('#fbbf24')}Close (≤25¢)</span><span>${dot('#fb7185')}Off (&gt;25¢)</span>`
+      + `<span class="mut">Bar length = how long the note was held · white wiggle = pitch drift · bottom lane = volume</span>`;
+}
+function recUi() {
+  const len = recLen(), has = hasRec();
+  $('pbPlay').disabled = !has || recording; $('pbPlay').textContent = pb.playing ? '⏸ Pause' : '▶ Replay'; $('pbPlay').classList.toggle('playing', pb.playing);
+  $('pbMode').disabled = !has; $('pbSpeed').disabled = !has || $('pbMode').value !== 'notes';
+  $('pbTime').textContent = `${fmtT(recording ? len : pbPos())} / ${fmtT(len)}`;
+  $('recInfo').textContent = recording ? `● REC ${fmtT(len)} · ${events.length} ${events.length === 1 ? 'note' : 'notes'}`
+    : has ? `${events.length} ${events.length === 1 ? 'note' : 'notes'} recorded` : listening ? 'Press Record.' : 'Start listening, then press Record.';
+}
+
+// ----- replay: the recorded sound, or clean tones of the notes the app detected -----
+const pbPos = () => pb.playing ? Math.min(recLen(), pb.startPos + Math.max(0, ctx.currentTime - pb.startCtx) * pb.rate) : pb.pos;
+function pbKill() { for (const n of pb.nodes) { n.onended = null; try { n.stop(); } catch {} try { n.disconnect(); } catch {} } pb.nodes = []; }
+function pbStop() { if (pb.playing) pb.pos = pbPos(); pb.playing = false; pbKill(); recUi(); }
+function audioBuf(c) {
+  if (pb.abuf) return pb.abuf;
+  const ab = c.createBuffer(1, Math.max(1, cap.n), cap.rate), ch = ab.getChannelData(0); let o = 0;
+  for (const ck of cap.chunks) for (let i = 0; i < ck.length; i++) ch[o++] = ck[i] / 32768;
+  return (pb.abuf = ab);
+}
+function pbPlay() {
+  if (!hasRec() || recording) return;
+  const c = getCtx(), len = recLen(); pbKill();
+  if (pb.pos >= len - 0.05) pb.pos = 0;
+  const when = c.currentTime + 0.06, mode = $('pbMode').value === 'audio' && cap.n ? 'audio' : 'notes', rate = mode === 'notes' ? (+$('pbSpeed').value || 1) : 1;
+  if (mode === 'audio') {
+    const s = c.createBufferSource(); s.buffer = audioBuf(c); s.connect(c.destination); s.start(when, pb.pos); pb.nodes.push(s);
+  } else {
+    for (const e of events) {
+      const e1 = e.start + e.dur / 1000; if (e1 <= pb.pos) continue;
+      const s0 = Math.max(e.start, pb.pos), w = when + (s0 - pb.pos) / rate, l = (e1 - s0) / rate;
+      const o = c.createOscillator(), g = c.createGain(); o.type = 'triangle'; o.frequency.value = e.hz;
+      g.gain.setValueAtTime(0, w); g.gain.linearRampToValueAtTime(0.28, w + 0.012); g.gain.setValueAtTime(0.28, Math.max(w + 0.012, w + l - 0.03)); g.gain.linearRampToValueAtTime(0, w + l);
+      o.connect(g); g.connect(c.destination); o.start(w); o.stop(w + l + 0.02); pb.nodes.push(o);
+    }
+  }
+  pb.startCtx = when; pb.startPos = pb.pos; pb.rate = rate; pb.playing = true; view.follow = true;
+  recUi(); pbTick();
+}
+function pbTick() {
+  if (!pb.playing) return;
+  const p = pbPos(), len = recLen();
+  if (p >= len) { pb.playing = false; pb.pos = len; pbKill(); recUi(); requestDraw(); return; }
+  recUi(); drawRoll(); requestAnimationFrame(pbTick);
+}
+function pbSeek(t) {
+  const was = pb.playing; pbKill(); pb.playing = false; pb.pos = Math.max(0, Math.min(recLen(), t));
+  if (was) pbPlay(); else { recUi(); requestDraw(); }
+}
+$('pbPlay').onclick = () => { if (pb.playing) pbStop(); else pbPlay(); requestDraw(); };
+$('pbMode').onchange = () => { recUi(); if (pb.playing) pbSeek(pbPos()); };
+$('pbSpeed').onchange = () => { if (pb.playing) pbSeek(pbPos()); };
+
+// ----- the chart: a music staff with time running left → right -----
+const cv = $('roll'), g2 = cv.getContext('2d'), GUT = 46;   // GUT = left gutter (clef)
+const DIA = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6], SHARPPC = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0];
+const dia = m => Math.floor(m / 12) * 7 + DIA[((m % 12) + 12) % 12];   // diatonic step: C4 = 35, treble lines 37…45, bass lines 25…33
+let drawReq = 0, lay = { rulerTop: 1e9 }, clefOK = null;
+const requestDraw = () => { if (!drawReq) drawReq = requestAnimationFrame(drawRoll); };
+function clefGlyphs() {
+  if (clefOK == null) {
+    try { const c = document.createElement('canvas').getContext('2d'); c.font = '40px serif'; const a = c.measureText('\u{1D11E}').width, b = c.measureText('\u{10FFFF}').width, d = c.measureText('\u{1D122}').width; clefOK = Math.abs(a - b) > 0.5 && Math.abs(d - b) > 0.5; } catch { clefOK = false; }
+  }
+  return clefOK;
+}
+const DUR_NAMES = [[4, 'whole'], [3, '1/2.'], [2, '1/2'], [1.5, '1/4.'], [1, '1/4'], [0.75, '1/8.'], [0.5, '1/8'], [0.25, '1/16'], [0.125, '1/32']];
+function durName(beats) {
+  if (beats < 0.09) return '';
+  let best = DUR_NAMES[0], bd = 1e9; for (const d of DUR_NAMES) { const e = Math.abs(Math.log(beats / d[0])); if (e < bd) { bd = e; best = d; } }
+  return best[1];
+}
+function accColor(e) { const a = Math.abs(e.cents), T = tol(); return a <= T ? '#34d399' : a <= 25 ? '#fbbf24' : '#fb7185'; }
+function recColorOf(e) { return $('recColor').value === 'note' ? `hsl(${(((e.midi % 12) + 12) % 12) * 30},85%,62%)` : accColor(e); }
+function liveEvent() {
+  const c = seg.cur; if (!recording || !c) return null;
+  const hz = median(c.f), ref = noteToFreq(c.midi, a4());
+  return { midi: c.midi, note: midiName(c.midi), hz, cents: centsBetween(hz, ref), start: c.start - recT0, dur: (c.last - c.start) * 1000, lvl: 20 * Math.log10(Math.max(1e-6, median(c.l))), live: true };
+}
+function niceStep(pps) { for (const s of [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600]) if (s * pps >= 76) return s; return 600; }
+const fmtTick = (t, s) => s < 1 ? t.toFixed(1) + 's' : `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}`;
+function rrect(x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); g2.beginPath(); g2.moveTo(x + r, y); g2.arcTo(x + w, y, x + w, y + h, r); g2.arcTo(x + w, y + h, x, y + h, r); g2.arcTo(x, y + h, x, y, r); g2.arcTo(x, y, x + w, y, r); g2.closePath(); }
+function haloText(s, x, y, col, bg) { g2.lineWidth = 3.5; g2.strokeStyle = bg; g2.lineJoin = 'round'; g2.strokeText(s, x, y); g2.fillStyle = col; g2.fillText(s, x, y); }
+
+function drawRoll() {
+  drawReq = 0;
+  if (tab !== 'rec') return;
+  const Wc = cv.clientWidth; if (!Wc) return;
+  const BG = '#0c0f15', INK = '#d5dbea', TXT = '#f1f4fb', MUT = '#a3acc2';
+  if (!view.pps) view.pps = Math.max(8, (Wc - GUT) / 8);
+  const live = liveEvent(), all = live ? events.concat([live]) : events, len = recLen(), bpm = bpmVal();
+  const vw = (Wc - GUT) / view.pps;
+  if (view.follow && (recording || pb.playing)) view.vs = (recording ? len : pbPos()) - vw * 0.78;
+  const vsMax = Math.max(0, len - vw * 0.2); view.vs = Math.max(0, Math.min(vsMax, view.vs));
+
+  // staff layout from the range of notes (adds a bass staff / ledger room only when needed)
+  let minD = 1e9, maxD = -1e9; for (const e of all) { const d = dia(e.midi); if (d < minD) minD = d; if (d > maxD) maxD = d; }
+  const none = !all.length; let showT = none || maxD >= 35; const showB = none || minD <= 33; if (!showT && !showB) showT = true;
+  const topLine = showT ? 45 : 33, botLine = showB ? 25 : 37;
+  const dTop = Math.max(topLine, none ? 0 : maxD + 2), dBot = Math.min(botLine, none ? 99 : minD - 2);
+  const sp = Wc < 560 ? 12 : 14, st = sp / 2, padTop = 24, labBot = 20, laneH = 36, rulerH = bpm > 0 ? 46 : 28;
+  const staffH = (dTop - dBot) * st, laneTop = padTop + staffH + labBot + 8, rulerTop = laneTop + laneH + 8, H = rulerTop + rulerH;
+  lay = { rulerTop };
+  const Y = d => padTop + (dTop - d) * st, tx = t => GUT + (t - view.vs) * view.pps;
+  const dpr = Math.min(3, window.devicePixelRatio || 1), pw = Math.round(Wc * dpr), ph = Math.round(H * dpr);
+  if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
+  if (cv._h !== H) { cv.style.height = H + 'px'; cv._h = H; }
+  g2.setTransform(dpr, 0, 0, dpr, 0, 0); g2.fillStyle = BG; g2.fillRect(0, 0, Wc, H); g2.textBaseline = 'alphabetic';
+
+  // time grid + ruler
+  const step = niceStep(view.pps), tA = Math.max(0, Math.floor(view.vs / step) * step);
+  g2.font = '600 12px system-ui,sans-serif'; g2.textAlign = 'left';
+  for (let t = tA; t <= view.vs + vw + step; t += step) {
+    const x = tx(t); if (x < GUT - 1 || x > Wc) continue;
+    g2.strokeStyle = 'rgba(255,255,255,.07)'; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(x, padTop - 6); g2.lineTo(x, laneTop + laneH); g2.stroke();
+    g2.strokeStyle = MUT; g2.beginPath(); g2.moveTo(x, rulerTop); g2.lineTo(x, rulerTop + 6); g2.stroke();
+    g2.fillStyle = MUT; g2.fillText(fmtTick(t, step), x + 3, rulerTop + 18);
+  }
+  g2.strokeStyle = MUT; g2.beginPath(); g2.moveTo(GUT, rulerTop); g2.lineTo(Wc, rulerTop); g2.stroke();
+  if (bpm > 0) {
+    const beat = 60 / bpm, bar = beat * 4;
+    for (let b = Math.floor(view.vs / beat); b <= (view.vs + vw) / beat + 1; b++) {
+      const x = tx(b * beat), isBar = b % 4 === 0; if (x < GUT || x > Wc || (!isBar && beat * view.pps < 14)) continue;
+      g2.strokeStyle = isBar ? 'rgba(160,185,255,.55)' : 'rgba(160,185,255,.16)'; g2.lineWidth = isBar ? 1.5 : 1;
+      g2.beginPath(); g2.moveTo(x, padTop - 6); g2.lineTo(x, laneTop + laneH); g2.stroke();
+      if (isBar && bar * view.pps >= 46) { g2.fillStyle = '#9db4ff'; g2.font = '600 11px system-ui,sans-serif'; g2.fillText('bar ' + (b / 4 + 1), x + 3, rulerTop + 38); }
+    }
+  }
+
+  // staff lines
+  const staff = bot => { g2.strokeStyle = INK; g2.lineWidth = 1.2; for (let k = 0; k < 5; k++) { const y = Math.round(Y(bot + 2 * k)) + 0.5; g2.beginPath(); g2.moveTo(4, y); g2.lineTo(Wc - 4, y); g2.stroke(); } };
+  if (showT) staff(37); if (showB) staff(25);
+  g2.strokeStyle = INK; g2.lineWidth = 1.6; g2.beginPath(); g2.moveTo(4.5, Y(topLine)); g2.lineTo(4.5, Y(botLine)); g2.stroke();
+
+  // notes (clipped so they slide under the clef gutter)
+  g2.save(); g2.beginPath(); g2.rect(GUT, 0, Wc - GUT, H); g2.clip();
+  let lastA = -1e9, lastB = -1e9;
+  g2.lineCap = 'round';
+  for (let i = 0; i < all.length; i++) {
+    const e = all[i], xs = tx(e.start), w = e.dur / 1000 * view.pps, d = dia(e.midi), y = Y(d), col = recColorOf(e), sel = i === recSel && !e.live;
+    if (xs + w < GUT - 40 || xs > Wc + 40) continue;
+    // ledger lines
+    g2.strokeStyle = INK; g2.lineWidth = 1.4;
+    const led = v => { const yy = Math.round(Y(v)) + 0.5; g2.beginPath(); g2.moveTo(xs - sp, yy); g2.lineTo(xs + sp, yy); g2.stroke(); };
+    for (let v = topLine + 2; v <= d; v += 2) led(v);
+    for (let v = botLine - 2; v >= d; v -= 2) led(v);
+    if (showT && showB && d === 35) led(35);
+    // duration bar (how long the note sounded) with the pitch drift drawn inside it
+    const bh = sp * 0.7;
+    if (w > 2) {
+      rrect(xs, y - bh / 2, w, bh, bh / 2); g2.globalAlpha = 0.5; g2.fillStyle = col; g2.fill(); g2.globalAlpha = 1; g2.lineWidth = 1.3; g2.strokeStyle = col; g2.stroke();
+      if (e.pts && e.pts.length > 2 && w > 20) {
+        g2.beginPath(); e.pts.forEach((p, k) => { const px = xs + p[0] / 1000 * view.pps, py = y - Math.max(-1.1, Math.min(1.1, p[1] / 50)) * sp * 0.8; k ? g2.lineTo(px, py) : g2.moveTo(px, py); });
+        g2.strokeStyle = 'rgba(255,255,255,.95)'; g2.lineWidth = 1.5; g2.stroke();
+      }
+    }
+    // notehead (+ sharp)
+    g2.save(); g2.translate(xs, y); g2.rotate(-0.35); g2.beginPath(); g2.ellipse(0, 0, sp * 0.72, sp * 0.5, 0, 0, 7); g2.restore();
+    g2.fillStyle = col; g2.fill(); g2.lineWidth = sel || e.live ? 2.5 : 1.5; g2.strokeStyle = sel || e.live ? '#fff' : '#0c0f15'; g2.stroke();
+    if (SHARPPC[((e.midi % 12) + 12) % 12]) { g2.font = `700 ${Math.round(sp * 1.5)}px system-ui,sans-serif`; g2.textAlign = 'right'; haloText('♯', xs - sp * 0.95, y + sp * 0.5, TXT, BG); }
+    // labels (skipped when they would collide)
+    g2.textAlign = 'center';
+    g2.font = `700 ${sp + 2}px system-ui,sans-serif`; const t1 = nm(e.note), w1 = g2.measureText(t1).width;
+    if (sel || xs - w1 / 2 > lastA + 4) { haloText(t1, xs, y - sp * 0.95, TXT, BG); lastA = xs + w1 / 2; }
+    g2.font = `600 ${sp}px system-ui,sans-serif`;
+    let t2 = fmtC(e.cents); if (bpm > 0) { const dn = durName(e.dur / 1000 * bpm / 60); if (dn) t2 += ' · ' + dn; }
+    const w2 = g2.measureText(t2).width;
+    if (sel || xs - w2 / 2 > lastB + 4) { haloText(t2, xs, y + sp * 1.7, accColor(e), BG); lastB = xs + w2 / 2; }
+    // volume lane
+    const lh = Math.max(0.1, Math.min(1, ((e.lvl ?? -40) + 55) / 50)) * (laneH - 6);
+    g2.globalAlpha = 0.85; g2.fillStyle = col; g2.fillRect(xs, laneTop + laneH - 2 - lh, Math.max(3, w), lh); g2.globalAlpha = 1;
+  }
+  g2.restore();
+
+  // lane frame + left gutter (clefs, labels)
+  g2.strokeStyle = 'rgba(255,255,255,.12)'; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(GUT, laneTop + laneH - 1.5); g2.lineTo(Wc, laneTop + laneH - 1.5); g2.stroke();
+  g2.fillStyle = MUT; g2.font = '600 11px system-ui,sans-serif'; g2.textAlign = 'left'; g2.fillText('Volume', 4, laneTop + laneH / 2 + 4);
+  g2.fillStyle = INK; g2.textAlign = 'left';
+  const cg = clefGlyphs(), fs = Math.round(sp * 4.6), FF = "'Segoe UI Symbol','Noto Music','Noto Sans Symbols 2','Apple Symbols',serif";
+  if (showT) { if (cg) { g2.font = `${fs}px ${FF}`; g2.fillText('\u{1D11E}', 6, Y(37) + 0.2 * sp); } else { g2.font = `700 ${sp * 3}px Georgia,serif`; g2.fillText('G', 8, Y(39) + sp * 1.0); } }
+  if (showB) { if (cg) { g2.font = `${fs}px ${FF}`; g2.fillText('\u{1D122}', 6, Y(31) + 0.6 * sp); } else { g2.font = `700 ${sp * 3}px Georgia,serif`; g2.fillText('F', 8, Y(29) + sp * 0.9); } }
+
+  // playhead / live edge
+  if (recording) { const x = tx(len); if (x >= GUT && x <= Wc) { g2.strokeStyle = '#ef4444'; g2.lineWidth = 2; g2.beginPath(); g2.moveTo(x, padTop - 8); g2.lineTo(x, rulerTop + 8); g2.stroke(); g2.fillStyle = '#ef4444'; g2.beginPath(); g2.arc(x, rulerTop + 10, 4, 0, 7); g2.fill(); } }
+  else if (hasRec()) {
+    const x = tx(pbPos());
+    if (x >= GUT && x <= Wc) { g2.strokeStyle = '#22d3ee'; g2.lineWidth = 2; g2.beginPath(); g2.moveTo(x, padTop - 8); g2.lineTo(x, rulerTop); g2.stroke(); g2.fillStyle = '#22d3ee'; g2.beginPath(); g2.moveTo(x - 6, rulerTop); g2.lineTo(x + 6, rulerTop); g2.lineTo(x, rulerTop + 9); g2.fill(); }
+  }
+  if (none) { g2.textAlign = 'center'; g2.fillStyle = MUT; g2.font = '600 14px system-ui,sans-serif'; g2.fillText(recording ? 'Listening… play a note' : 'Notes will appear on the staff while recording', GUT + (Wc - GUT) / 2, Y(41) - 2); }
+
+  // scrollbar + buttons
+  const sl = $('rvPos'); sl.disabled = vsMax <= 0; sl.value = vsMax > 0 ? Math.round(view.vs / vsMax * 1000) : 0;
+  $('rvLive').classList.toggle('on', view.follow);
+}
+
+// ----- moving around the chart: drag, pinch, wheel, slider, buttons -----
+function zoomBy(f, cx) {
+  const Wc = cv.clientWidth, c = cx == null ? GUT + (Wc - GUT) / 2 : cx, t = view.vs + (c - GUT) / view.pps;
+  view.pps = Math.max(4, Math.min(700, view.pps * f)); view.vs = t - (c - GUT) / view.pps; requestDraw();
+}
+const ptrs = new Map();
+cv.addEventListener('pointerdown', e => {
+  const r = cv.getBoundingClientRect(), p = { x: e.clientX - r.left, y: e.clientY - r.top, t: performance.now(), moved: false }; p.x0 = p.x; p.y0 = p.y;
+  ptrs.set(e.pointerId, p); try { cv.setPointerCapture(e.pointerId); } catch {}
+});
+cv.addEventListener('pointermove', e => {
+  const p = ptrs.get(e.pointerId); if (!p) return;
+  const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  if (ptrs.size === 2) {
+    const o = [...ptrs.entries()].find(([id]) => id !== e.pointerId)[1], d0 = Math.abs(p.x - o.x), d1 = Math.abs(x - o.x);
+    if (d0 > 20 && d1 > 20) zoomBy(d1 / d0, (x + o.x) / 2);
+    p.moved = o.moved = true;
+  } else if (ptrs.size === 1) {
+    if (Math.abs(x - p.x0) > 6 || p.moved) { p.moved = true; view.follow = false; view.vs -= (x - p.x) / view.pps; cv.classList.add('drag'); requestDraw(); }
+  }
+  p.x = x; p.y = y;
+});
+function ptrEnd(e) {
+  const p = ptrs.get(e.pointerId); ptrs.delete(e.pointerId); cv.classList.remove('drag');
+  if (p && !p.moved && ptrs.size === 0 && e.type === 'pointerup' && performance.now() - p.t < 700) tapChart(p.x, p.y);
+}
+cv.addEventListener('pointerup', ptrEnd); cv.addEventListener('pointercancel', ptrEnd);
+cv.addEventListener('wheel', e => {
+  if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - cv.getBoundingClientRect().left); }
+  else if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey) { e.preventDefault(); view.follow = false; view.vs += (e.deltaX || e.deltaY) / view.pps; requestDraw(); }
+}, { passive: false });
+function tapChart(x, y) {
+  if (y >= lay.rulerTop - 4) { if (hasRec() && !recording) { view.follow = false; pbSeek(view.vs + (x - GUT) / view.pps); } return; }
+  let bi = -1, bd = 1e9;
+  events.forEach((e, i) => {
+    const xs = GUT + (e.start - view.vs) * view.pps, xe = xs + e.dur / 1000 * view.pps;
+    if (x >= xs - 12 && x <= xe + 12) { const d = Math.abs(x - Math.min(Math.max(x, xs), xe)) + Math.abs(x - xs) * 0.001; if (d < bd) { bd = d; bi = i; } }
+  });
+  selectNote(bi, true);
+}
+function selectNote(i, hear) {
+  recSel = i;
+  document.querySelectorAll('#rows tr.sel').forEach(r => r.classList.remove('sel'));
+  const info = $('noteInfo');
+  if (i < 0 || !events[i]) { recSel = -1; info.textContent = 'Tap a note on the chart for details.'; requestDraw(); return; }
+  const e = events[i], row = document.querySelector(`#rows tr[data-i="${i}"]`); if (row) row.classList.add('sel');
+  const verdict = Math.abs(e.cents) <= tol() ? 'in tune' : e.cents > 0 ? 'sharp' : 'flat', bpm = bpmVal(), dn = bpm > 0 ? durName(e.dur / 1000 * bpm / 60) : '';
+  info.innerHTML = `<b>${nm(e.note)}</b> · ${e.hz.toFixed(1)} Hz · <span class="${centsCls(e.cents)}">${fmtC(e.cents)} (${verdict})</span> · at ${e.start.toFixed(2)} s · held ${(e.dur / 1000).toFixed(2)} s${dn ? ' (' + dn + ' note)' : ''} · volume ${Math.round(e.lvl)} dB`;
+  if (!recording) { if (pb.playing) pbSeek(e.start); else { pb.pos = e.start; recUi(); if (hear) playTone(e.hz, Math.min(1.5, e.dur / 1000 + 0.15), 'triangle', 0.25); } }
+  requestDraw();
+}
+$('rows').addEventListener('click', e => {
+  const tr = e.target.closest('tr'); if (!tr) return; const i = +tr.dataset.i, ev = events[i]; if (!ev) return;
+  view.follow = false; view.vs = ev.start - (cv.clientWidth - GUT) / view.pps / 2; selectNote(i, true);
+});
+$('rvStart').onclick = () => { view.follow = false; view.vs = 0; if (hasRec() && !recording) pbSeek(0); else requestDraw(); };
+$('rvIn').onclick = () => zoomBy(1.5); $('rvOut').onclick = () => zoomBy(1 / 1.5);
+$('rvFit').onclick = () => { view.follow = false; view.vs = 0; view.pps = Math.max(4, (cv.clientWidth - GUT - 24) / Math.max(2, recLen())); requestDraw(); };
+$('rvLive').onclick = () => { view.follow = !view.follow; requestDraw(); };
+$('rvPos').oninput = () => { const Wc = cv.clientWidth, vsMax = Math.max(0, recLen() - (Wc - GUT) / view.pps * 0.2); view.follow = false; view.vs = +$('rvPos').value / 1000 * vsMax; requestDraw(); };
+window.addEventListener('resize', requestDraw);
+['recColor', 'recBpm'].forEach(id => $(id).addEventListener('input', () => { renderLegend(); requestDraw(); }));
+$('tol').addEventListener('input', () => { renderLegend(); updateStats(); requestDraw(); });
+const RP_KEY = 'tuner-recprefs-v1', RP_IDS = ['recMode', 'recColor', 'recBpm'];   // only these three options are remembered, never any recording
+try { const o = JSON.parse(localStorage.getItem(RP_KEY)); if (o) RP_IDS.forEach(id => { if (o[id] != null) $(id).value = o[id]; }); } catch {}
+RP_IDS.forEach(id => $(id).addEventListener('change', () => { const o = {}; RP_IDS.forEach(k => o[k] = $(k).value); try { localStorage.setItem(RP_KEY, JSON.stringify(o)); } catch {} }));
 
 // ----- audio engine -----
 // Keep the screen on while listening (phones otherwise dim/lock, which suspends the mic). Silently skipped if unsupported.
@@ -1307,6 +1721,11 @@ async function openMic() {
   analyser = c.createAnalyser(); analyser.fftSize = 4096; analyser.smoothingTimeConstant = 0;
   boostNode = c.createGain(); boostNode.gain.value = +$('boost').value;   // input boost for quiet mics (AGC is off)
   srcNode.connect(hpNode); hpNode.connect(boostNode); boostNode.connect(analyser);
+  // tap the (boosted) mic signal so a recording can be replayed as real sound
+  cap.k = Math.max(1, Math.floor(c.sampleRate / 16000)); cap.rate = c.sampleRate / cap.k;
+  capNode = c.createScriptProcessor(4096, 1, 1); capSink = c.createGain(); capSink.gain.value = 0;
+  capNode.onaudioprocess = ev => { if (recording) capPush(ev.inputBuffer.getChannelData(0)); };
+  boostNode.connect(capNode); capNode.connect(capSink); capSink.connect(c.destination);
   buf = new Float32Array(analyser.fftSize); t0 = c.currentTime; listening = true; keepAwake();
   showMicProc(); $('start').textContent = '■ Stop listening'; $('rec').disabled = false; $('status').textContent = '';
   loop();
@@ -1314,6 +1733,8 @@ async function openMic() {
 function stopListening() {
   listening = false; releaseAwake(); cancelAnimationFrame(rafId); finalizeHold(); seg.end(); setRecording(false);
   stream.getTracks().forEach(t => t.stop()); srcNode.disconnect(); hpNode.disconnect(); boostNode.disconnect(); analyser = null;
+  if (capNode) { capNode.onaudioprocess = null; capNode.disconnect(); capSink.disconnect(); capNode = capSink = null; }
+  recUi();
   $('lvlBar').style.width = '0'; $('lvlDb').textContent = '–';
   sc.running = false; $('scStart').textContent = 'Start practice'; liveBuf = [];
   $('start').textContent = '▶ Start listening'; $('rec').disabled = true; $('status').textContent = '';
@@ -1371,29 +1792,29 @@ function loop() {
   const t = ctx.currentTime - t0;
   let rms = 0, pk = 0; for (let i = 0; i < buf.length; i++) { rms += buf[i] * buf[i]; const a = Math.abs(buf[i]); if (a > pk) pk = a; } rms = Math.sqrt(rms / buf.length);
   updateLevel(rms, pk); calibFrame(rms);
-  let f = null;
+  let f = null, fR = null;
   if (rms > +$('gate').value) {
-    const r = yin(buf, ctx.sampleRate, +$('fmin').value, +$('fmax').value);
-    if (r && r.clarity > +$('conf').value) f = r.freq;
+    const r = yin(buf, ctx.sampleRate, +$('fmin').value, +$('fmax').value), conf = +$('conf').value;
+    if (r && r.clarity > conf) f = r.freq;
+    if (recording) fR = recPitch(r, rms, pk, conf);   // the recorder is stricter than the tuner: fewer wrong notes from noise
   }
-  seg.a4 = a4(); seg.minDur = +$('mindur').value;
-  seg.frame(t, f);
+  if (recording) { const m = recModeCfg(); seg.a4 = a4(); seg.minDur = Math.max(+$('mindur').value, m.minDur); seg.confirm = m.confirm; seg.frame(t, fR, rms); }
   if (tab === 'tuner') tunerFrame(t, f);
   if (demoIdx < 0) collectHold(f);                   // keep scoring the note that is still sounding
   if (sc.running && demoIdx < 0) { det.frame(t, f, a4()); liveScaleFrame(f); }
-  if (tab === 'rec') { drawRoll(t); $('recInfo').textContent = `Session ${(recording ? t - recT0 : t).toFixed(1)} s`; }
+  if (tab === 'rec' && recording) { drawRoll(); recUi(); }
 }
 
 // ----- export / wiring -----
 function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); }
 const stamp = () => new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-$('csv').onclick = () => download(`notes-${stamp()}.csv`, ['index,note,midi,avg_hz,avg_cents,start_s,duration_ms',
-  ...events.map((e, i) => [i + 1, e.note, e.midi, e.hz.toFixed(3), e.cents.toFixed(2), e.start.toFixed(3), e.dur.toFixed(0)].join(','))].join('\n'), 'text/csv');
-$('json').onclick = () => download(`notes-${stamp()}.json`, JSON.stringify(events, null, 2), 'application/json');
+$('csv').onclick = () => download(`notes-${stamp()}.csv`, ['index,note,midi,avg_hz,avg_cents,start_s,duration_ms,level_db',
+  ...events.map((e, i) => [i + 1, e.note, e.midi, e.hz.toFixed(3), e.cents.toFixed(2), e.start.toFixed(3), e.dur.toFixed(0), e.lvl].join(','))].join('\n'), 'text/csv');
+$('json').onclick = () => download(`notes-${stamp()}.json`, JSON.stringify(events.map(({ pts, ...r }) => r), null, 2), 'application/json');
 $('scCsv').onclick = () => download(`scale-${stamp()}.csv`, ['pass,index,expected,played,grade,hz,cents,time_s',
   ...sc.attempts.map(a => [a.pass, a.index, a.expected, a.played, a.grade, a.hz == null ? '' : a.hz.toFixed(2), a.cents == null ? '' : a.cents.toFixed(1), a.time_s.toFixed(3)].join(','))].join('\n'), 'text/csv');
 $('scJson').onclick = () => download(`scale-${stamp()}.json`, JSON.stringify({ scale: $('scType').value, notes: sc.seq.map(midiName), attempts: sc.attempts }, null, 2), 'application/json');
-$('clear').onclick = () => { events = []; $('rows').innerHTML = ''; };
+$('clear').onclick = clearRec;
 $('rec').onclick = () => setRecording(!recording);
 $('start').onclick = async () => { try { listening ? stopListening() : await startListening(); } catch (e) { $('status').textContent = 'Mic error: ' + e.message; } };
 
@@ -1418,7 +1839,7 @@ function applyTol() {
 $('tol').oninput = () => { applyTol(); };
 $('a4').onchange = () => { resetTuner(); renderScale(); applyTol(); };
 
-loadPrefs(); applyLimits(); buildInstChips(); resetTuner(); resetPractice(); renderCard(); renderScale(); renderAnalysis(); drawRoll(0); applyTol(); $('scOpts').open = innerWidth >= 720;
+loadPrefs(); applyLimits(); buildInstChips(); resetTuner(); resetPractice(); renderCard(); renderScale(); renderAnalysis(); renderLegend(); recUi(); applyTol(); $('scOpts').open = innerWidth >= 720;
 try { const o = JSON.parse(localStorage.getItem(SET_KEY)); if (o) applySettings(o); } catch {}
 })();
 
