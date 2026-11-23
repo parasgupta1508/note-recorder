@@ -2017,7 +2017,7 @@ document.querySelectorAll('#detSeg button').forEach(b => b.onclick = () => { con
 ['a4', 'tol', 'conf', 'mindur', 'fmin', 'fmax'].forEach(id => $(id).addEventListener('input', syncQuick));
 syncQuick();
 $('defaults').onclick = () => { applySettings(SET_DEFAULTS); saveSettings(); calMsg('Defaults restored.'); $('calibOut').classList.add('hide'); };
-let gateOn = false;
+let gateOn = false, trkF = 0, trkT = -9;
 function loop() {
   rafId = requestAnimationFrame(loop);
   analyser.getFloatTimeDomainData(buf);
@@ -2029,7 +2029,7 @@ function loop() {
   gateOn = rms > G || (gateOn && rms > G * 0.6);   // hysteresis: a fading note does not chatter the gate
   // Sustain tracking: once the tuner has a note, a decaying string keeps reading (down to about -14 dB under the gate)
   // as long as it stays within 45 cents of that note. A new note still has to pass the normal gate and confidence.
-  const track = tab === 'tuner' && !recording && !sc.running && hist.length > 0 && t - lastVoiced < 0.4;
+  const track = (tab === 'tuner' || sc.running) && !recording && trkF > 0 && t - trkT < 0.4;   // same for the tuner and for Practice
   if (gateOn || (track && rms > G * 0.2)) {
     let lo = +$('fmin').value, hi = +$('fmax').value;
     if (tab === 'tuner' && !recording && !sc.running) {          // the tuner only needs the instrument's own range: fewer octave errors, less CPU
@@ -2038,13 +2038,17 @@ function loop() {
         lo = noteToFreq((one ? S[lock] : Math.min(...S)) - (one ? 5 : 4), A); hi = noteToFreq((one ? S[lock] : Math.max(...S)) + (one ? 5 : 4), A);
       }
     }
+    if (sc.running && !recording && tab !== 'tuner' && sc.seq.length) {   // Practice knows its scale: search only around it (plus room for wrong notes)
+      lo = Math.max(25, noteToFreq(Math.min(...sc.seq) - 5, a4())); hi = noteToFreq(Math.max(...sc.seq) + 5, a4());
+    }
     const cut = Math.min(6000, Math.max(1000, hi * 3));
     if (lpA && Math.abs(cut - lpCut) > lpCut * 0.1) { lpCut = cut; lpA.frequency.value = lpB.frequency.value = cut; }
     const r = yin(buf, ctx.sampleRate, lo, hi), conf = +$('conf').value;
-    const near = r && track && Math.abs(centsBetween(r.freq, median(hist))) < 45;
+    const near = r && track && Math.abs(centsBetween(r.freq, trkF)) < 45;
     if (r && (gateOn ? r.clarity > conf : near && r.clarity > 0.5) || (near && r.clarity > 0.5)) f = r.freq;
     if (recording && gateOn) fR = recPitch(r, rms, pk, conf);   // the recorder is stricter than the tuner: fewer wrong notes from noise
   }
+  if (f) { trkF = f; trkT = t; }
   if (recording) { const m = recModeCfg(); seg.a4 = a4(); seg.minDur = Math.max(+$('mindur').value, m.minDur); seg.confirm = m.confirm; seg.frame(t, fR, rms); }
   liveFrame(f, gateOn);
   if (tab === 'tuner') tunerFrame(t, f);
