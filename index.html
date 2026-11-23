@@ -112,6 +112,7 @@
   /* headstock with tuning pegs */
   #instChips .chip{background:transparent;border:1px solid var(--line);color:var(--mut);font-size:14px;padding:6px 14px;font-weight:500}
   #instChips .chip.on{color:#f4f6fb;border-color:#aeb8d0;background:#1a2030}
+  #tuningSel{margin-top:10px}
   #strRow{justify-content:flex-end;margin-bottom:8px}
   #strRow button{font-size:13.5px;min-height:34px;padding:4px 14px;background:transparent;border:1px solid var(--line);color:var(--mut)}
   #autoBtn.on{color:#f4f6fb;border-color:#aeb8d0;background:#1a2030;box-shadow:none}
@@ -330,7 +331,7 @@
 <!-- ============ TUNER ============ -->
 <section id="tab-tuner" class="panel tuner">
   <div class="t-side stack">
-    <div id="instBox"><div id="instChips"></div></div>
+    <div id="instBox"><div id="instChips"></div><select id="tuningSel" class="hide" aria-label="Tuning"></select></div>
     <div id="strBox">
       <div class="sub-row" id="strRow"><div class="row"><button id="autoBtn" class="sec on">Auto</button><button id="retune" class="sec" title="Clear the marks and start again">Reset</button></div></div>
       <div id="strChips"></div>
@@ -488,7 +489,11 @@
     <div class="qk" data-for="a4"><button data-v="415">415</button><button data-v="432">432</button><button data-v="440">440</button><button data-v="442">442</button></div>
     <p class="hint2" style="margin:8px 0 0">A4 is the pitch of the A above middle C. 440 is standard, 442 is common in orchestras, 415 is baroque.</p>
     <div class="qk" data-for="tol"><button data-v="3">Pro 3¢</button><button data-v="5">Standard 5¢</button><button data-v="10">Learner 10¢</button></div>
-    <p class="hint2" style="margin:8px 0 0">Most people cannot hear less than 3–5¢. 100¢ is one semitone.</p></div>
+    <p class="hint2" style="margin:8px 0 0">Most people cannot hear less than 3–5¢. 100¢ is one semitone.</p>
+    <div class="grid" style="margin-top:14px">
+      <label class="field"><span>Note names</span><select id="names"><option value="sharp">C♯ D♯ F♯</option><option value="flat">D♭ E♭ G♭</option></select></label>
+      <label class="field"><span>Keep screen on</span><select id="awake"><option value="1">While listening</option><option value="0">Never</option></select></label>
+    </div></div>
 
   <div class="set-group" data-g="mic"><h3>Microphone</h3><p>Watch the Input bar at the top while you play: it turns green when your sound is loud enough to be analysed.</p>
     <label class="field"><span>Input device</span><select id="micDev"><option value="">Default microphone</option></select></label>
@@ -572,7 +577,8 @@ function yin(buf, sr, fmin, fmax, threshold = 0.15) {
 }
 
 const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-const midiName = m => NOTES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+const FLATS = ['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B']; let useFlats = false;
+const midiName = m => (useFlats ? FLATS : NOTES)[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
 function nameToMidi(n) { const m = n.match(/^([A-G]#?)(-?\d+)$/); return NOTES.indexOf(m[1]) + 12 * (+m[2] + 1); }
 const noteToFreq = (midi, a4 = 440) => a4 * Math.pow(2, (midi - 69) / 12);
 function freqToNote(f, a4) {
@@ -584,11 +590,27 @@ const median = a => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1;
 
 const PRESETS = {
   chromatic:  { label: 'Chromatic', strings: [] },
-  guitar:     { label: 'Guitar',    strings: ['E2','A2','D3','G3','B3','E4'] },
+  guitar:     { label: 'Guitar – Standard',   strings: ['E2','A2','D3','G3','B3','E4'] },
+  guitarDropD:{ label: 'Guitar – Drop D',     strings: ['D2','A2','D3','G3','B3','E4'] },
+  guitarHalf: { label: 'Guitar – Half step down', strings: ['D#2','G#2','C#3','F#3','A#3','D#4'] },
+  guitarFull: { label: 'Guitar – Full step down', strings: ['D2','G2','C3','F3','A3','D4'] },
+  guitarDadgad:{ label: 'Guitar – DADGAD',    strings: ['D2','A2','D3','G3','A3','D4'] },
+  guitarOpenG:{ label: 'Guitar – Open G',     strings: ['D2','G2','D3','G3','B3','D4'] },
+  guitarOpenD:{ label: 'Guitar – Open D',     strings: ['D2','A2','D3','F#3','A3','D4'] },
+  bass:       { label: 'Bass – 4 string',     strings: ['E1','A1','D2','G2'] },
+  bass5:      { label: 'Bass – 5 string',     strings: ['B0','E1','A1','D2','G2'] },
   violin:     { label: 'Violin',    strings: ['G3','D4','A4','E5'] },
+  viola:      { label: 'Viola',     strings: ['C3','G3','D4','A4'] },
+  cello:      { label: 'Cello',     strings: ['C2','G2','D3','A3'] },
+  mandolin:   { label: 'Mandolin',  strings: ['G3','D4','A4','E5'] },
   ukulele:    { label: 'Ukulele (GCEA)',  strings: ['G4','C4','E4','A4'] },
   ukuleleLow: { label: 'Ukulele (Low-G)', strings: ['G3','C4','E4','A4'] },
+  ukuleleBar: { label: 'Ukulele (Baritone)', strings: ['D3','G3','B3','E4'] },
 };
+// the tuner shows one chip per instrument; tunings of the same instrument are chosen in a menu
+const FAMILIES = [['chromatic', 'Chromatic', ['chromatic']], ['guitar', 'Guitar', ['guitar', 'guitarDropD', 'guitarHalf', 'guitarFull', 'guitarDadgad', 'guitarOpenG', 'guitarOpenD']],
+  ['bass', 'Bass', ['bass', 'bass5']], ['violin', 'Violin', ['violin']], ['viola', 'Viola', ['viola']], ['cello', 'Cello', ['cello']],
+  ['ukulele', 'Ukulele', ['ukulele', 'ukuleleLow', 'ukuleleBar']], ['mandolin', 'Mandolin', ['mandolin']]];
 const SCALES = {
   major:['Major',[0,2,4,5,7,9,11]], naturalMinor:['Natural minor',[0,2,3,5,7,8,10]],
   harmonicMinor:['Harmonic minor',[0,2,3,5,7,8,11]], majorPent:['Major pentatonic',[0,2,4,7,9]],
@@ -725,13 +747,18 @@ function resetTuner() {
   $('tHint').textContent = ''; $('tAdvice').textContent = ''; buildStrChips(-1);
 }
 function buildInstChips() {
+  const fam = FAMILIES.find(f => f[2].includes(inst)) || FAMILIES[0];
   $('instChips').innerHTML = '';
-  for (const k in PRESETS) {
-    const b = document.createElement('button'); b.className = 'chip' + (k === inst ? ' on' : ''); b.textContent = PRESETS[k].label;
-    b.onclick = () => { inst = k; resetTuner(); buildInstChips(); };
+  for (const f of FAMILIES) {
+    const b = document.createElement('button'); b.className = 'chip' + (f === fam ? ' on' : ''); b.textContent = f[1];
+    b.onclick = () => { if (f === fam) return; inst = f[2][0]; resetTuner(); buildInstChips(); };
     $('instChips').appendChild(b);
   }
+  const sel = $('tuningSel'); sel.classList.toggle('hide', fam[2].length < 2);
+  sel.innerHTML = fam[2].map(k => '<option value="' + k + '">' + PRESETS[k].label.replace(/^[^–(]*[–(]\s*/, '').replace(/\)$/, '') + '  ·  ' + PRESETS[k].strings.map(n => nm(n.replace(/\d+/, ''))).join(' ') + '</option>').join('');
+  sel.value = inst;
 }
+$('tuningSel').onchange = () => { inst = $('tuningSel').value; resetTuner(); buildInstChips(); };
 let lock = null;                                       // null = Auto (detect the string), number = locked to that string
 function updateAuto() { $('autoBtn').classList.toggle('on', lock == null); }
 function buildStrChips(activeIdx = -1) {
@@ -756,7 +783,7 @@ const tcv = $('tMeter'), tg2 = tcv.getContext('2d');
 
 function tunerIdle() {
   const was = tm.idle;
-  $('tNote').innerHTML = '–'; $('tHeard').textContent = ''; $('tHint').textContent = '';
+  $('tNote').innerHTML = '–'; $('tTarget').textContent = ''; $('tHeard').textContent = ''; $('tHint').textContent = '';
   $('tVerdict').textContent = ''; $('tAdvice').textContent = ''; $('tAdvice').className = 'advice';
   trail.length = 0; tTgMidi = null; tm = { idle: true };
   if (shownActive !== -1) { shownActive = -1; buildStrChips(-1); }
@@ -775,7 +802,7 @@ function tunerFrame(t, f) {
   if (!hist.length || t - lastVoiced > 1.0) { tunerIdle(); inTuneSince = null; confirmed = false; offSince = null; return; }
   const fm = median(hist), A = a4(), T = tol();   // median of the last 7 good readings
   const tg = pickTarget(fm, A, strMidis(), lock);
-  const c = tg.cents, tn = midiName(tg.midi), m = tn.match(/^([A-G]#?)(-?\d+)$/);
+  const c = tg.cents, tn = midiName(tg.midi), m = tn.match(/^([A-G][#♭]?)(-?\d+)$/);
   if (tg.midi !== tTgMidi) { tTgMidi = tg.midi; trail.length = 0; tDisp = c; tLastT = t; tShown = 0; nPos = c; nVel = 0; }
   const dt = Math.max(0, Math.min(0.2, t - tLastT)); tLastT = t;
   tDisp += (c - tDisp) * (1 - Math.exp(-dt / (Math.abs(c - tDisp) > 25 ? 0.03 : 0.09)));   // quick on big moves, calm when close
@@ -871,7 +898,7 @@ $('scRoot').value = 0;
 for (const k in PRESETS) $('scInst').add(new Option(PRESETS[k].label, k));
 
 const scaleSeq = () => buildScale(+$('scRoot').value, +$('scOct').value, $('scType').value, +$('scSpan').value, $('scDir').value);
-const noteHtml = m => { const n = midiName(m).match(/^([A-G]#?)(-?\d+)$/); return `${n[1]}<small>${n[2]}</small>`; };
+const noteHtml = m => { const n = midiName(m).match(/^([A-G][#♭]?)(-?\d+)$/); return `${n[1]}<small>${n[2]}</small>`; };
 const complete = () => sc.attempts.length > 0 && sc.pos >= sc.seq.length && !sc.running;
 
 function neutralLive(msg = 'Waiting for note…') {
@@ -942,7 +969,7 @@ function savePass(pct) { passAll.push({ t: Date.now(), pct, s: scaleLabel() }); 
 const clamp01 = x => Math.max(0, Math.min(1, x));
 // Instrument-specific steadiness: how much pitch wobble (¢, std-dev) earns zero steadiness credit.
 // Bowed/vibrato instruments forgive more; fretted instruments (fixed pitch) are held to a tighter standard.
-const INST_WOBBLE = { chromatic: 25, guitar: 20, ukulele: 20, ukuleleLow: 20, violin: 40 };
+const INST_WOBBLE = { chromatic: 25, guitar: 20, ukulele: 20, ukuleleLow: 20, ukuleleBar: 20, bass: 20, bass5: 20, violin: 40, viola: 40, cello: 40, mandolin: 25 };
 const wobbleCap = e => INST_WOBBLE[e.i] || 25;
 function noteScore(evs) {
   const n = evs.length; if (n < 3) return null;                 // not enough data yet
@@ -1528,7 +1555,8 @@ function recPitch(r, rms, pk, conf) {                    // Hz to feed the segme
   return r.freq;
 }
 
-const nm = s => s.replace('#', '♯');
+const FLN = { C: 'D♭', D: 'E♭', F: 'G♭', G: 'A♭', A: 'B♭' };
+const nm = s => useFlats ? s.replace(/([CDFGA])#/g, (_, l) => FLN[l]) : s.replace('#', '♯');
 const fmtT = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
 const centsCls = c => { const a = Math.abs(c); return a <= tol() ? 'cg' : a <= 25 ? 'cy' : 'cr'; };
 const fmtC = c => (c >= 0 ? '+' : '') + Math.round(c) + '¢';
@@ -1870,7 +1898,7 @@ RP_IDS.forEach(id => $(id).addEventListener('change', () => { const o = {}; RP_I
 // ----- audio engine -----
 // Keep the screen on while listening (phones otherwise dim/lock, which suspends the mic). Silently skipped if unsupported.
 let wakeLock = null;
-async function keepAwake() { try { if (navigator.wakeLock && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.onrelease = () => { wakeLock = null; }; } } catch {} }
+async function keepAwake() { try { if ($('awake').value === '1' && navigator.wakeLock && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.onrelease = () => { wakeLock = null; }; } } catch {} }
 function releaseAwake() { try { if (wakeLock) wakeLock.release(); } catch {} wakeLock = null; }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && listening) keepAwake(); });
 let starting = false;
@@ -1992,17 +2020,19 @@ function liveFrame(f, open) {
   $('lcMsg').textContent = sd > 8 ? 'Unsteady readings: try Strict detection, a quieter room, or a steadier note (vibrato counts as movement).' : jumps > 2 ? 'A few octave glitches: set the pitch range to your instrument.' : det < 70 ? 'The note was often missed: raise the boost or move closer.' : 'Tuning is your instrument against the reference pitch; steadiness is the measurement noise. Under ±3¢ is excellent.';
 };
 // Settings: saved on this device, restorable to the recommended values.
-const SET_IDS = ['a4', 'tol', 'gate', 'boost', 'conf', 'mindur', 'fmin', 'fmax', 'smooth'], SET_KEY = 'tuner-settings-v1';
-const SET_DEFAULTS = { a4: 440, tol: 10, gate: 0.004, boost: 1, conf: 0.85, mindur: 60, fmin: 60, fmax: 1500, smooth: 'normal' };
+const SET_IDS = ['a4', 'tol', 'gate', 'boost', 'conf', 'mindur', 'fmin', 'fmax', 'smooth', 'names', 'awake'], SET_KEY = 'tuner-settings-v1';
+const SET_DEFAULTS = { a4: 440, tol: 10, gate: 0.004, boost: 1, conf: 0.85, mindur: 60, fmin: 60, fmax: 1500, smooth: 'normal', names: 'sharp', awake: '1' };
 function saveSettings() { const o = {}; SET_IDS.forEach(id => o[id] = $(id).value); try { localStorage.setItem(SET_KEY, JSON.stringify(o)); } catch {} }
 function applySettings(o) {
   SET_IDS.forEach(id => { if (o[id] != null) $(id).value = o[id]; });
   $('boostVal').textContent = $('boost').value + '×'; $('confVal').textContent = (+$('conf').value).toFixed(2);
   if (boostNode) boostNode.gain.value = +$('boost').value;
-  updateGateMark(); applyTol(); resetTuner(); renderScale(); syncQuick(); renderSet();
+  updateGateMark(); applyTol(); resetTuner(); renderScale(); syncQuick(); syncNames(); renderSet();
 }
 SET_IDS.forEach(id => $(id).addEventListener('input', saveSettings));
 $('conf').addEventListener('input', () => { $('confVal').textContent = (+$('conf').value).toFixed(2); });
+function syncNames() { useFlats = $('names').value === 'flat'; buildInstChips(); buildStrChips(shownActive); renderScale(); drawTMeter(); }
+$('names').addEventListener('change', () => { syncNames(); saveSettings(); });
 const DET = { sens: [0.8, 40, 'Shows notes quickly, even quiet or rough ones. Best in a quiet room; may show an occasional wrong note.'], bal: [0.85, 60, 'Recommended. A good mix of speed and reliability for most instruments and rooms.'], strict: [0.9, 100, 'Only clear, steady notes. Best in noisy rooms or with a weak microphone; reacts a little later.'] };
 function syncQuick() {
   document.querySelectorAll('.qk[data-for]').forEach(q => q.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.v === +$(q.dataset.for).value)));
@@ -2017,7 +2047,7 @@ document.querySelectorAll('#detSeg button').forEach(b => b.onclick = () => { con
 ['a4', 'tol', 'conf', 'mindur', 'fmin', 'fmax'].forEach(id => $(id).addEventListener('input', syncQuick));
 syncQuick();
 $('defaults').onclick = () => { applySettings(SET_DEFAULTS); saveSettings(); calMsg('Defaults restored.'); $('calibOut').classList.add('hide'); };
-let gateOn = false, trkF = 0, trkT = -9;
+let gateOn = false, trkF = 0, trkT = -9, hpCut = 70;
 function loop() {
   rafId = requestAnimationFrame(loop);
   analyser.getFloatTimeDomainData(buf);
@@ -2041,6 +2071,7 @@ function loop() {
     if (sc.running && !recording && tab !== 'tuner' && sc.seq.length) {   // Practice knows its scale: search only around it (plus room for wrong notes)
       lo = Math.max(25, noteToFreq(Math.min(...sc.seq) - 5, a4())); hi = noteToFreq(Math.max(...sc.seq) + 5, a4());
     }
+    const hp = lo < 50 ? Math.max(20, lo * 0.7) : 70;   // only low instruments (bass) need a lower cut-off if (Math.abs(hp - hpCut) > 3) { hpCut = hp; hpNode.frequency.value = hp; }
     const cut = Math.min(6000, Math.max(1000, hi * 3));
     if (lpA && Math.abs(cut - lpCut) > lpCut * 0.1) { lpCut = cut; lpA.frequency.value = lpB.frequency.value = cut; }
     const r = yin(buf, ctx.sampleRate, lo, hi), conf = +$('conf').value;
