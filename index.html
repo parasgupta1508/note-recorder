@@ -129,6 +129,15 @@
   @keyframes pulse{0%{text-shadow:0 0 0 rgba(52,211,153,.9)}100%{text-shadow:0 0 36px rgba(52,211,153,0)}}
   .foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:var(--mut);font-size:14px}
 
+  /* settings */
+  .qk{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .qk button,.seg button{background:transparent;border:1px solid var(--line);color:var(--mut);font-size:13.5px;padding:5px 12px;min-height:34px;border-radius:999px}
+  .qk button.on,.seg button.on{color:#f4f6fb;border-color:#aeb8d0;background:#1a2030}
+  .seg{display:flex;gap:6px} .seg button{flex:1;border-radius:10px}
+  details.adv{margin-top:10px}
+  .kv{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px} .kv>div{border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:12.5px;color:var(--mut);min-width:84px} .kv b{display:block;color:#f4f6fb;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+  .kv .ok b{color:var(--ok)} .kv .warn b{color:var(--warn)} .kv .bad b{color:var(--bad)}
+
   /* scale */
   .sc-grid{display:grid;gap:14px}
   .actions{display:grid;grid-template-columns:1.4fr 1.3fr .8fr;gap:8px}
@@ -452,28 +461,47 @@
 
 <!-- ============ SETTINGS ============ -->
 <section id="tab-settings" class="panel hide stack">
-  <div class="set-group"><h3>Tuning</h3><p>How notes are judged.</p>
+  <div class="set-group"><h3>Tuning</h3><p>What counts as “in tune”.</p>
     <div class="grid">
       <label class="field"><span>A4 reference (Hz)</span><input id="a4" type="number" value="440" min="400" max="480"></label>
       <label class="field"><span>In-tune tolerance (±¢)</span><input id="tol" type="number" value="10" min="1" max="30"></label>
     </div>
-    <p class="hint2" style="margin:10px 0 0">±10¢ suits learners. Most tuners use ±5¢; people rarely hear less than 3–5¢. Try 5 when scores are all green.</p></div>
-  <div class="set-group"><h3>Microphone</h3><p>Watch the Input bar at the top while you play. Sound must pass the white tick to be analysed.</p>
-    <div class="grid">
-      <label class="field"><span>Gate (noise floor)</span><input id="gate" type="range" min="0.002" max="0.1" step="0.001" value="0.004"></label>
-      <label class="field"><span>Boost <b id="boostVal">1×</b></span><input id="boost" type="range" min="1" max="8" step="0.5" value="1"></label>
-    </div>
-    <div class="row" style="margin-top:12px"><button id="calib" class="sec">Calibrate noise floor</button><span class="hint2" id="calibMsg">Stay quiet for 2 seconds, then tap.</span></div>
-    <div class="hint2" id="micProc" style="margin-top:10px">Mic processing: start listening to check.</div></div>
-  <div class="set-group"><h3>Detection</h3><p>Advanced. The defaults suit most instruments.</p>
-    <div class="grid">
-      <label class="field"><span>Pitch confidence <b id="confVal">0.85</b></span><input id="conf" type="range" min="0.7" max="0.95" step="0.01" value="0.85"></label>
-      <label class="field"><span>Min note length (ms)</span><input id="mindur" type="number" value="60" min="20" max="1000" step="10"></label>
-      <label class="field"><span>Pitch range (Hz)</span><div class="pair"><input id="fmin" type="number" value="60"><input id="fmax" type="number" value="1500"></div></label>
-    </div>
-    <p class="hint2" style="margin:10px 0 0">Higher confidence = fewer wrong readings but slower to react. Narrow the pitch range to your instrument (for example 150–1200) to avoid octave jumps and save battery.</p></div>
-  <div class="set-group"><h3>Accuracy check</h3><p>Feeds generated tones (clean, noisy and quiet, with random detune) through the detector and shows the worst error for each. Press again for a fresh run.</p>
-    <button id="selftest" class="sec">Run accuracy self-test</button><div id="stOut" style="margin-top:10px"></div></div>
+    <div class="qk" data-for="a4"><button data-v="415">415</button><button data-v="432">432</button><button data-v="440">440</button><button data-v="442">442</button></div>
+    <p class="hint2" style="margin:8px 0 0">A4 is the pitch of the A above middle C. 440 is standard, 442 is common in orchestras, 415 is baroque.</p>
+    <div class="qk" data-for="tol"><button data-v="3">Pro 3¢</button><button data-v="5">Standard 5¢</button><button data-v="10">Learner 10¢</button></div>
+    <p class="hint2" style="margin:8px 0 0">Most people cannot hear less than 3–5¢. 100¢ is one semitone.</p></div>
+
+  <div class="set-group"><h3>Microphone</h3><p>Watch the Input bar at the top while you play: it turns green when your sound is loud enough to be analysed.</p>
+    <label class="field"><span>Input device</span><select id="micDev"><option value="">Default microphone</option></select></label>
+    <div class="row" style="margin-top:12px"><button id="calib" class="sec">Calibrate microphone</button><span class="hint2" id="calibMsg">Takes 7 seconds. Sets the noise gate and input level for your room.</span></div>
+    <div class="kv hide" id="calibOut"></div>
+    <details class="adv"><summary>Manual levels</summary>
+      <div class="grid">
+        <label class="field"><span>Noise gate</span><input id="gate" type="range" min="0.002" max="0.1" step="0.001" value="0.004"></label>
+        <label class="field"><span>Input boost <b id="boostVal">1×</b></span><input id="boost" type="range" min="1" max="8" step="0.5" value="1"></label>
+      </div>
+      <p class="hint2" style="margin:10px 0 0">Gate: sound quieter than the white tick is ignored. Raise it if the tuner reacts to room noise. Boost: raise it if your microphone is quiet; lower it if the bar shows CLIPPING.</p></details>
+    <div class="hint2" id="micProc" style="margin-top:12px">Mic processing: start listening to check.</div>
+    <div class="hint2" id="audioInfo" style="margin-top:4px"></div></div>
+
+  <div class="set-group"><h3>Detection</h3><p>How cautious the app is before it shows a note.</p>
+    <div class="seg" id="detSeg"><button data-d="sens">Sensitive</button><button data-d="bal">Balanced</button><button data-d="strict">Strict</button></div>
+    <p class="hint2" id="detHint" style="margin:8px 0 0"></p>
+    <label class="field" style="margin-top:12px"><span>Tuner needle</span><select id="smooth"><option value="fast">Fast – follows every change</option><option value="normal" selected>Normal</option><option value="calm">Calm – steadier, slower</option></select></label>
+    <details class="adv"><summary>Advanced</summary>
+      <div class="grid">
+        <label class="field"><span>Pitch confidence <b id="confVal">0.85</b></span><input id="conf" type="range" min="0.7" max="0.95" step="0.01" value="0.85"></label>
+        <label class="field"><span>Min note length (ms)</span><input id="mindur" type="number" value="60" min="20" max="1000" step="10"></label>
+        <label class="field"><span>Pitch range (Hz)</span><div class="pair"><input id="fmin" type="number" value="60"><input id="fmax" type="number" value="1500"></div></label>
+      </div>
+      <div class="qk" id="rangeQ"><button data-r="30,400">Bass</button><button data-r="70,1400">Guitar</button><button data-r="180,1800">Violin</button><button data-r="190,1000">Ukulele</button><button data-r="80,1100">Voice</button><button data-r="60,1500">All</button></div>
+      <p class="hint2" style="margin:10px 0 0">A narrower range avoids octave jumps and saves battery. The tuner already narrows it to your instrument's strings; this applies to the recorder and practice.</p></details></div>
+
+  <div class="set-group"><h3>Accuracy check</h3><p>The software test proves the maths. The live check measures your own microphone and instrument.</p>
+    <div class="row"><button id="selftest" class="sec">Software test</button><button id="livetest" class="sec">Live check</button></div>
+    <p class="hint2" id="lcMsg" style="margin:10px 0 0">Live check: tap, then play one steady note for 4 seconds (start listening first).</p>
+    <div class="kv hide" id="lcOut"></div>
+    <div id="stOut" style="margin-top:10px"></div></div>
   <div class="set-group"><h3>Backup &amp; restore</h3><p>Saves both children's scores and history in one file. Send it to yourself by WhatsApp or email, or keep the downloaded copy. A backup can only be imported if its version number is higher than the data on this device.</p>
     <div class="hint2" id="verInfo"></div>
     <div class="row" style="margin-top:10px"><button id="bkShare">Back up &amp; share</button><button id="bkDl" class="sec">Save file only</button><button id="bkImp" class="sec">Import backup…</button><input type="file" id="impFile" class="hide" accept=".json,.txt,application/json,text/plain"></div>
@@ -666,7 +694,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
 
 // ----- TUNER -----
 let inst = 'chromatic'; const tuned = new Set();
-const hist = []; let pend = null, lastVoiced = -9, inTuneSince = null, confirmed = false, shownActive = -2;
+const HN = () => ({ fast: 3, normal: 7, calm: 11 }[$('smooth').value] || 7), hist = []; let pend = null, lastVoiced = -9, inTuneSince = null, confirmed = false, shownActive = -2;
 const strMidis = () => PRESETS[inst].strings.map(nameToMidi);
 
 function resetTuner() {
@@ -720,7 +748,7 @@ function tunerFrame(t, f) {
     if (hist.length >= 3 && Math.abs(centsBetween(f, median(hist))) > 120) {
       if (pend && Math.abs(centsBetween(f, pend)) < 40) { hist.length = 0; hist.push(pend, f); pend = null; lastVoiced = t; }
       else { pend = f; f = null; }
-    } else { pend = null; hist.push(f); if (hist.length > 7) hist.shift(); lastVoiced = t; }
+    } else { pend = null; hist.push(f); while (hist.length > HN()) hist.shift(); lastVoiced = t; }
   }
   if (!hist.length || t - lastVoiced > 1.0) { tunerIdle(); inTuneSince = null; confirmed = false; offSince = null; return; }
   const fm = median(hist), A = a4(), T = tol();   // median of the last 7 good readings
@@ -1213,26 +1241,26 @@ $('selftest').onclick = async () => {
     let seed = (Date.now() ^ Math.imul(run, 2654435761)) >>> 0;
     const rnd = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
     // one randomised trial: random phases and a random detune of up to ±50¢; returns error in cents, or null if not detected
-    const trial = (f0, amp, noiseK) => {
+    const trial = (f0, amp, noiseK, hum = 0, weak = false) => {
       const det = (rnd() - 0.5) * 100, f = f0 * Math.pow(2, det / 1200), p1 = rnd() * 6.283, p2 = rnd() * 6.283, p3 = rnd() * 6.283, b = new Float32Array(N);
-      for (let i = 0; i < N; i++) { const t = i / sr; b[i] = amp * (Math.sin(6.283185 * f * t + p1) + 0.5 * Math.sin(12.56637 * f * t + p2) + 0.27 * Math.sin(18.849556 * f * t + p3)) + noiseK * (rnd() - 0.5); }
+      for (let i = 0; i < N; i++) { const t = i / sr; b[i] = amp * (weak ? 0.45 * Math.sin(6.283185 * f * t + p1) + Math.sin(12.56637 * f * t + p2) + 0.7 * Math.sin(18.849556 * f * t + p3) : Math.sin(6.283185 * f * t + p1) + 0.5 * Math.sin(12.56637 * f * t + p2) + 0.27 * Math.sin(18.849556 * f * t + p3)) + noiseK * (rnd() - 0.5) + hum * Math.sin(6.283185 * 60 * t); }
       const r = yin(b, sr, fmin, fmax); return r && r.clarity > conf ? centsBetween(r.freq, f) : null;
     };
-    const conds = [['clean', 0.3, 0], ['noisy', 0.3, 0.084], ['quiet', 0.03, 0.0084]], lim = { clean: 2, noisy: 5, quiet: 5 };
+    const conds = [['clean', 0.3, 0], ['noisy', 0.3, 0.084], ['quiet', 0.03, 0.0084], ['hum', 0.3, 0.02, 0.05], ['weak', 0.3, 0.02, 0, true]], lim = { clean: 2, noisy: 5, quiet: 5, hum: 5, weak: 5 };
     const rows = []; let bad = 0, soft = 0, total = 0;
     for (let ti = 0; ti < tones.length; ti++) {
       btn.textContent = `Testing ${ti + 1}/${tones.length}…`; await new Promise(r => setTimeout(r, 0));
-      const cells = conds.map(([nm, amp, nk]) => {
-        let worst = 0, miss = 0; for (let k = 0; k < TR; k++) { const e = trial(tones[ti][1], amp, nk); if (e == null) miss++; else worst = Math.max(worst, Math.abs(e)); }
+      const cells = conds.map(([nm, amp, nk, hm, wk]) => {
+        let worst = 0, miss = 0; for (let k = 0; k < TR; k++) { const e = trial(tones[ti][1], amp, nk, hm, wk); if (e == null) miss++; else worst = Math.max(worst, Math.abs(e)); }
         total++; if (miss || worst > 10) bad++; else if (worst > lim[nm]) soft++;
         return `<td class="${miss || worst > 10 ? 'bad-t' : worst <= lim[nm] ? 'ok-t' : 'warn-t'}">${miss ? miss + ' missed' : '±' + worst.toFixed(2) + '¢'}</td>`;
       });
       rows.push(`<tr><td><b>${tones[ti][0]}</b></td><td>${tones[ti][1].toFixed(1)} Hz</td>${cells.join('')}</tr>`);
     }
-    const ok = bad === 0, head = bad ? `⚠ ${bad} of ${total} checks failed (missed or over 10¢ off)` : soft ? `✓ Passed — ${soft} reading(s) between ${'5'}¢ and 10¢ under noise (typical for very low notes)` : '✓ Passed';
+    const ok = bad === 0, head = bad ? `⚠ ${bad} of ${total} checks failed (missed or over 10¢ off)` : soft ? `✓ Passed — ${soft} reading(s) between 5¢ and 10¢ under noise (typical for very low notes)` : '✓ Passed';
     $('stOut').innerHTML = `<p class="${ok ? 'ok-t' : 'warn-t'}" style="margin:0 0 8px"><b>${head}</b> — run ${run}, ${new Date().toLocaleTimeString()}, ${sr} Hz sampling, ${TR} random trials per cell.</p>
-      <details id="stDet"${keepOpen ? ' open' : ''}><summary>Results by tone (worst error)</summary><div class="scroll tbl"><table><tr><th>Tone</th><th>Frequency</th><th>Clean</th><th>Noisy</th><th>Quiet</th></tr>${rows.join('')}</table></div>
-      <p class="hint2" style="margin:8px 0 0">Limits: clean ±2¢, noisy (about 20 dB signal-to-noise) and quiet ±5¢. Each press uses new random phases, detunes and noise. This checks the software only; your microphone, room and instrument add their own error.</p></details>`;
+      <details id="stDet"${keepOpen ? ' open' : ''}><summary>Results by tone (worst error)</summary><div class="scroll tbl"><table><tr><th>Tone</th><th>Frequency</th><th>Clean</th><th>Noisy</th><th>Quiet</th><th>Hum</th><th>Weak</th></tr>${rows.join('')}</table></div>
+      <p class="hint2" style="margin:8px 0 0">Limits: clean ±2¢; noisy (about 20 dB signal-to-noise), quiet, 60 Hz mains hum and weak-fundamental tones (like a phone speaker or low guitar string) ±5¢. Each press uses new random phases, detunes and noise. This checks the software only; your microphone, room and instrument add their own error.</p></details>`;
   } finally { btn.disabled = false; btn.textContent = label; }
 };
 
@@ -1800,7 +1828,9 @@ async function startListening() {
   try { await openMic(); } finally { starting = false; }
 }
 async function openMic() {
-  stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+  const base = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 }, dev = $('micDev').value;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: dev ? { ...base, deviceId: { exact: dev } } : base }); }
+  catch (e) { if (!dev) throw e; stream = await navigator.mediaDevices.getUserMedia({ audio: base }); }   // saved device unplugged: fall back to default
   const c = getCtx(); if (c.state === 'suspended') await c.resume();
   srcNode = c.createMediaStreamSource(stream);
   hpNode = c.createBiquadFilter(); hpNode.type = 'highpass'; hpNode.frequency.value = 70;
@@ -1813,7 +1843,7 @@ async function openMic() {
   capNode.onaudioprocess = ev => { if (recording) capPush(ev.inputBuffer.getChannelData(0)); };
   boostNode.connect(capNode); capNode.connect(capSink); capSink.connect(c.destination);
   buf = new Float32Array(analyser.fftSize); t0 = c.currentTime; listening = true; keepAwake();
-  showMicProc(); $('start').textContent = '■ Stop listening'; $('rec').disabled = false; $('status').textContent = '';
+  showMicProc(); listMics(); audioInfo(); $('start').textContent = '■ Stop listening'; $('rec').disabled = false; $('status').textContent = '';
   loop();
 }
 function stopListening() {
@@ -1844,42 +1874,105 @@ function showMicProc() {
     $('micProc').innerHTML = on.length ? `<span class="warn-t">Browser left ${on.join(', ')} switched on — it can disturb pitch readings. Try Chrome, or play a little louder/closer.</span>` : '<span class="ok-t">Mic processing is off (echo cancellation, noise suppression, auto-gain) — good for tuning.</span>';
   } catch { $('micProc').textContent = 'Mic processing: could not be read on this browser.'; }
 }
-// Noise-floor calibration: listen ~2 s of silence, put the gate just above the ambient level.
-let calib = null;
-$('calib').onclick = () => {
-  if (!listening) { $('calibMsg').textContent = 'Start listening first.'; return; }
-  calib = { vals: [], end: performance.now() + 2000 }; $('calibMsg').textContent = 'Listening to the room…';
-};
-function calibFrame(rms) {
-  if (!calib) return;
-  calib.vals.push(rms);
-  if (performance.now() < calib.end) return;
-  const v = calib.vals.sort((x, y) => x - y), p95 = v[Math.floor(v.length * 0.95)] || 0;
-  const g = Math.min(0.1, Math.max(0.002, Math.round(p95 * 2.5 * 1000) / 1000));
-  $('gate').value = g; updateGateMark(); saveSettings();
-  $('calibMsg').textContent = `Gate set to ${g.toFixed(3)} (room noise ≈ ${(20 * Math.log10(Math.max(p95, 1e-6))).toFixed(0)} dB).`; calib = null;
+const MIC_KEY = 'tuner-mic-dev';
+async function listMics() {
+  try {
+    const sel = $('micDev'), want = sel.value || localStorage.getItem(MIC_KEY) || '', d = (await navigator.mediaDevices.enumerateDevices()).filter(x => x.kind === 'audioinput' && x.deviceId);
+    sel.innerHTML = '<option value="">Default microphone</option>' + d.map((x, i) => `<option value="${x.deviceId}">${(x.label || 'Microphone ' + (i + 1)).replace(/[<&]/g, '')}</option>`).join('');
+    if ([...sel.options].some(o => o.value === want)) sel.value = want;
+  } catch {}
 }
+$('micDev').onchange = () => { try { localStorage.setItem(MIC_KEY, $('micDev').value); } catch {} if (listening) { stopListening(); startListening(); } };
+try { navigator.mediaDevices.addEventListener('devicechange', listMics); } catch {}
+function audioInfo() { const sr = ctx.sampleRate; $('audioInfo').textContent = `Audio: ${sr} Hz · ${(4096 / sr * 1000).toFixed(0)} ms analysis window · lowest note ≈ ${Math.ceil(sr / 2047)} Hz`; }
+// Noise-floor calibration: listen ~2 s of silence, put the gate just above the ambient level.
+let calib = null, calRes = {};
+const calMsg = t => { $('calibMsg').textContent = t; };
+function startCalib(phase) {
+  calib = { phase, vals: [], pk: 0, end: performance.now() + (phase === 1 ? 3000 : 4000) }; $('calib').disabled = true;
+  calMsg(phase === 1 ? 'Step 1 of 2: stay quiet for 3 seconds…' : 'Step 2 of 2: play one steady note at normal volume for 4 seconds…');
+}
+$('calib').onclick = () => { if (!listening) { calMsg('Tap “Start listening” at the top first.'); return; } $('calibOut').classList.add('hide'); startCalib(1); };
+function calibFrame(rms, pk = 0) {
+  if (!calib) return;
+  calib.vals.push(rms); calib.pk = Math.max(calib.pk, pk);
+  if (performance.now() < calib.end) return;
+  const v = calib.vals.sort((x, y) => x - y), q = p => v[Math.min(v.length - 1, Math.floor(v.length * p))] || 0, db = x => 20 * Math.log10(Math.max(x, 1e-6));
+  const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+  if (calib.phase === 1) {
+    const p95 = q(0.95); calRes = { noise: p95, boost: +$('boost').value };
+    const g = clamp(Math.round(Math.max(p95 * 2.5, q(0.5) * 4) * 1000) / 1000, 0.002, 0.1); $('gate').value = g; updateGateMark(); saveSettings();
+    calib = null; calMsg(`Room noise ${db(p95).toFixed(0)} dB. Get ready…`); setTimeout(() => { if (listening) startCalib(2); else $('calib').disabled = false; }, 1200); return;
+  }
+  const noise = calRes.noise, sig = v.filter(x => x > noise * 2), clip = calib.pk >= 0.98; calib = null; $('calib').disabled = false;
+  if (sig.length < 10) { calMsg('No clear sound heard. Check the microphone, play louder or closer, then try again.'); return; }
+  const p90 = sig[Math.min(sig.length - 1, Math.floor(sig.length * 0.9))], b = calRes.boost;
+  const nb = clip ? Math.max(1, Math.round(b * 0.6 * 2) / 2) : clamp(Math.round(b * 0.08 / p90 * 2) / 2, 1, 8);   // aim for a played level of about −22 dB
+  const ratio = nb / b; $('boost').value = nb; $('boostVal').textContent = nb + '×'; if (boostNode) boostNode.gain.value = nb;
+  $('gate').value = clamp(Math.round(+$('gate').value * ratio * 1000) / 1000, 0.002, 0.1); updateGateMark(); saveSettings();
+  const snr = db(p90) - db(noise), rate = snr >= 30 ? ['Excellent', 'ok'] : snr >= 20 ? ['Good', 'ok'] : snr >= 12 ? ['Fair', 'warn'] : ['Poor', 'bad'];
+  const nDb = db(noise * ratio), noisy = nDb > -40;
+  $('calibOut').innerHTML = `<div class="${noisy ? 'warn' : ''}">Room noise<b>${nDb.toFixed(0)} dB</b></div><div>Your playing<b>${db(p90 * ratio).toFixed(0)} dB</b></div><div class="${rate[1]}">Signal-to-noise<b>${snr.toFixed(0)} dB · ${rate[0]}</b></div><div>Boost / gate<b>${nb}× / ${(+$('gate').value).toFixed(3)}</b></div>`;
+  $('calibOut').classList.remove('hide');
+  calMsg(clip ? 'Your sound was clipping: input lowered. Move the microphone a little further away and run it again.' : noisy ? 'The room is noisy. Move somewhere quieter or closer to the instrument for best accuracy.' : snr < 20 ? 'Move the microphone closer to the instrument, or play a little louder.' : 'Calibrated. You are ready to tune.');
+}
+// Live check: how steady is the pitch your microphone really hears?
+let lc = null;
+$('livetest').onclick = () => {
+  if (!listening) { $('lcMsg').textContent = 'Tap “Start listening” at the top first.'; return; }
+  lc = { end: performance.now() + 4000, fs: [], n: 0 }; $('livetest').disabled = true; $('lcOut').classList.add('hide'); $('lcMsg').textContent = 'Listening… play one steady note.';
+};
+function liveFrame(f, open) {
+  if (!lc) return;
+  if (open) { lc.n++; if (f) lc.fs.push(f); }
+  if (performance.now() < lc.end) return;
+  const L = lc; lc = null; $('livetest').disabled = false;
+  if (L.n < 20 || L.fs.length < 12) { $('lcMsg').textContent = 'Not enough sound heard. Play louder or closer (or lower the noise gate) and try again.'; return; }
+  const med = median(L.fs), n0 = freqToNote(med, a4()), ref = noteToFreq(n0.midi, a4());
+  const cs = L.fs.map(f => centsBetween(f, ref)), mean0 = cs.reduce((a, b) => a + b, 0) / cs.length;
+  const good = cs.filter(c => Math.abs(c - mean0) < 100), jumps = cs.length - good.length;
+  const mean = good.reduce((a, b) => a + b, 0) / good.length, sd = Math.sqrt(good.reduce((a, b) => a + (b - mean) ** 2, 0) / good.length), det = L.fs.length / L.n * 100;
+  const st = sd <= 2 ? ['Very steady', 'ok'] : sd <= 4 ? ['Steady', 'ok'] : sd <= 8 ? ['Slightly unsteady', 'warn'] : ['Unsteady', 'bad'];
+  $('lcOut').innerHTML = `<div>Note<b>${nm(n0.name)}</b></div><div>Tuning<b>${mean >= 0 ? '+' : '−'}${Math.abs(mean).toFixed(1)}¢</b></div><div class="${st[1]}">Steadiness<b>±${sd.toFixed(1)}¢ · ${st[0]}</b></div><div class="${det >= 90 ? 'ok' : det >= 70 ? 'warn' : 'bad'}">Detected<b>${det.toFixed(0)}%</b></div><div class="${jumps ? 'warn' : 'ok'}">Glitches<b>${jumps}</b></div>`;
+  $('lcOut').classList.remove('hide');
+  $('lcMsg').textContent = sd > 8 ? 'Unsteady readings: try Strict detection, a quieter room, or a steadier note (vibrato counts as movement).' : jumps > 2 ? 'A few octave glitches: set the pitch range to your instrument.' : det < 70 ? 'The note was often missed: raise the boost or move closer.' : 'Tuning is your instrument against the reference pitch; steadiness is the measurement noise. Under ±3¢ is excellent.';
+};
 // Settings: saved on this device, restorable to the recommended values.
-const SET_IDS = ['a4', 'tol', 'gate', 'boost', 'conf', 'mindur', 'fmin', 'fmax'], SET_KEY = 'tuner-settings-v1';
-const SET_DEFAULTS = { a4: 440, tol: 10, gate: 0.004, boost: 1, conf: 0.85, mindur: 60, fmin: 60, fmax: 1500 };
+const SET_IDS = ['a4', 'tol', 'gate', 'boost', 'conf', 'mindur', 'fmin', 'fmax', 'smooth'], SET_KEY = 'tuner-settings-v1';
+const SET_DEFAULTS = { a4: 440, tol: 10, gate: 0.004, boost: 1, conf: 0.85, mindur: 60, fmin: 60, fmax: 1500, smooth: 'normal' };
 function saveSettings() { const o = {}; SET_IDS.forEach(id => o[id] = $(id).value); try { localStorage.setItem(SET_KEY, JSON.stringify(o)); } catch {} }
 function applySettings(o) {
   SET_IDS.forEach(id => { if (o[id] != null) $(id).value = o[id]; });
   $('boostVal').textContent = $('boost').value + '×'; $('confVal').textContent = (+$('conf').value).toFixed(2);
   if (boostNode) boostNode.gain.value = +$('boost').value;
-  updateGateMark(); applyTol(); resetTuner(); renderScale();
+  updateGateMark(); applyTol(); resetTuner(); renderScale(); syncQuick();
 }
 SET_IDS.forEach(id => $(id).addEventListener('input', saveSettings));
 $('conf').addEventListener('input', () => { $('confVal').textContent = (+$('conf').value).toFixed(2); });
-$('defaults').onclick = () => { applySettings(SET_DEFAULTS); saveSettings(); $('calibMsg').textContent = 'Defaults restored.'; };
+const DET = { sens: [0.8, 40, 'Shows notes quickly, even quiet or rough ones. Best in a quiet room; may show an occasional wrong note.'], bal: [0.85, 60, 'Recommended. A good mix of speed and reliability for most instruments and rooms.'], strict: [0.9, 100, 'Only clear, steady notes. Best in noisy rooms or with a weak microphone; reacts a little later.'] };
+function syncQuick() {
+  document.querySelectorAll('.qk[data-for]').forEach(q => q.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.v === +$(q.dataset.for).value)));
+  document.querySelectorAll('#rangeQ button').forEach(b => b.classList.toggle('on', b.dataset.r === $('fmin').value + ',' + $('fmax').value));
+  let hit = null; for (const k in DET) if (Math.abs(DET[k][0] - +$('conf').value) < 0.005 && DET[k][1] === +$('mindur').value) hit = k;
+  document.querySelectorAll('#detSeg button').forEach(b => b.classList.toggle('on', b.dataset.d === hit));
+  $('detHint').textContent = hit ? DET[hit][2] : 'Custom values set under Advanced.';
+}
+document.querySelectorAll('.qk[data-for] button').forEach(b => b.onclick = () => { const i = $(b.parentNode.dataset.for); i.value = b.dataset.v; i.dispatchEvent(new Event('input')); i.dispatchEvent(new Event('change')); syncQuick(); });
+document.querySelectorAll('#rangeQ button').forEach(b => b.onclick = () => { const [a, c] = b.dataset.r.split(','); $('fmin').value = a; $('fmax').value = c; $('fmin').dispatchEvent(new Event('input')); $('fmax').dispatchEvent(new Event('input')); applyLimits(); syncQuick(); });
+document.querySelectorAll('#detSeg button').forEach(b => b.onclick = () => { const d = DET[b.dataset.d]; $('conf').value = d[0]; $('mindur').value = d[1]; $('conf').dispatchEvent(new Event('input')); $('mindur').dispatchEvent(new Event('input')); syncQuick(); });
+['a4', 'tol', 'conf', 'mindur', 'fmin', 'fmax'].forEach(id => $(id).addEventListener('input', syncQuick));
+syncQuick();
+$('defaults').onclick = () => { applySettings(SET_DEFAULTS); saveSettings(); calMsg('Defaults restored.'); $('calibOut').classList.add('hide'); };
+let gateOn = false;
 function loop() {
   rafId = requestAnimationFrame(loop);
   analyser.getFloatTimeDomainData(buf);
   const t = ctx.currentTime - t0;
   let rms = 0, pk = 0; for (let i = 0; i < buf.length; i++) { rms += buf[i] * buf[i]; const a = Math.abs(buf[i]); if (a > pk) pk = a; } rms = Math.sqrt(rms / buf.length);
-  updateLevel(rms, pk); calibFrame(rms);
+  updateLevel(rms, pk); calibFrame(rms, pk);
   let f = null, fR = null;
-  if (rms > +$('gate').value) {
+  gateOn = rms > +$('gate').value || (gateOn && rms > +$('gate').value * 0.6);   // hysteresis: a fading note does not chatter the gate
+  if (gateOn) {
     let lo = +$('fmin').value, hi = +$('fmax').value;
     if (tab === 'tuner' && !recording && !sc.running) {          // the tuner only needs the instrument's own range: fewer octave errors, less CPU
       const S = strMidis(); if (S.length) {
@@ -1892,6 +1985,7 @@ function loop() {
     if (recording) fR = recPitch(r, rms, pk, conf);   // the recorder is stricter than the tuner: fewer wrong notes from noise
   }
   if (recording) { const m = recModeCfg(); seg.a4 = a4(); seg.minDur = Math.max(+$('mindur').value, m.minDur); seg.confirm = m.confirm; seg.frame(t, fR, rms); }
+  liveFrame(f, gateOn);
   if (tab === 'tuner') tunerFrame(t, f);
   if (demoIdx < 0) collectHold(f);                   // keep scoring the note that is still sounding
   if (sc.running && demoIdx < 0) { det.frame(t, f, a4()); liveScaleFrame(f); }
