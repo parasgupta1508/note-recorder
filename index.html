@@ -2028,7 +2028,7 @@ const MODE_DESC = {
 };
 function modeDesc() {
   const v = $('recMode').value, d = MODE_DESC[v] || MODE_DESC.fast;
-  $('recModeDesc').innerHTML = `${d[0]} <i>${d[1]}</i>` + (v === 'fast' && +$('fmin').value < 80 ? '<br>Tip: for violin, choose the Violin range in Settings → Advanced. It makes fast passages more accurate.' : '');
+  $('recModeDesc').innerHTML = `${d[0]} <i>${d[1]}</i>` + (v === 'fast' && +$('fmin').value < 80 ? '<br>Tip: for violin, choose the Violin range in Settings → Detection → Pitch range. It makes fast passages more accurate.' : '');
 }
 $('recMode').addEventListener('change', modeDesc); $('fmin').addEventListener('input', modeDesc); $('fmin').addEventListener('change', modeDesc); modeDesc();
 function setView(m) {
