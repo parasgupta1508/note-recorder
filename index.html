@@ -509,6 +509,12 @@
 <!-- ============ SETTINGS ============ -->
 <section id="tab-settings" class="panel hide stack" data-layout="list">
   <div id="setMenu"></div><div id="setTabs"></div><button id="setBack"><span>‹</span> <b id="setTitle"></b></button>
+  <div class="set-group" data-g="instrument"><h3>Instrument</h3><p>Choose what you play. The Tuner, Practice, Recorder and pitch range all switch to match, so you don't have to set them one by one.</p>
+    <div class="qk" id="profChips" style="margin-top:0"></div>
+    <label class="field hide" id="profTuningWrap" style="margin-top:12px"><span>Tuning</span><select id="profTuning"></select></label>
+    <p class="hint2" id="profHint" style="margin:10px 0 0"></p>
+  </div>
+
   <div class="set-group" data-g="tuning"><h3>Tuning</h3><p>What counts as “in tune”.</p>
     <div class="grid">
       <label class="field"><span>A4 reference (Hz)</span><input id="a4" type="number" value="440" min="400" max="480"></label>
@@ -537,7 +543,7 @@
     <div class="hint2" id="audioInfo" style="margin-top:4px"></div></div>
 
   <div class="set-group" data-g="detect"><h3>Detection</h3><p>How careful the app is before it shows a note. Pick a preset, or fine-tune below.</p>
-    <div class="seg" id="detSeg"><button data-d="sens">Sensitive</button><button data-d="bal">Balanced</button><button data-d="strict">Strict</button></div>
+    <div class="seg" id="detSeg"><button data-d="sens">Sensitive</button><button data-d="bal">Balanced</button><button data-d="strict">Strict</button><button data-d="custom">Custom</button></div>
     <p class="hint2" id="detHint" style="margin:8px 0 0"></p>
     <div class="grid" style="margin-top:12px">
       <label class="field"><span>Pitch confidence <b id="confVal">0.85</b></span><input id="conf" type="range" min="0.7" max="0.95" step="0.01" value="0.85">
@@ -552,7 +558,7 @@
       <div class="grid">
         <label class="field"><span>Lowest and highest pitch (Hz)</span><div class="pair"><input id="fmin" type="number" value="60"><input id="fmax" type="number" value="1500"></div></label>
       </div>
-      <div class="qk" id="rangeQ"><button data-r="30,400">Bass</button><button data-r="70,1400">Guitar</button><button data-r="180,1800">Violin</button><button data-r="190,1000">Ukulele</button><button data-r="80,1100">Voice</button><button data-r="60,1500">All</button></div>
+      <div class="qk" id="rangeQ"><button data-r="30,400">Bass</button><button data-r="70,1400">Guitar</button><button data-r="180,1800">Violin</button><button data-r="140,1000">Ukulele</button><button data-r="80,1100">Voice</button><button data-r="60,1500">All</button></div>
       <p class="hint2" style="margin:10px 0 0">Tap your instrument, or type your own limits. A narrower range avoids octave mistakes and saves battery. The Tuner already narrows it to your instrument's strings; this applies to the Recorder and Practice.</p></details></div>
 
   <div class="set-group" data-g="check"><h3>Accuracy check</h3><p>The software test proves the maths. The live check measures your own microphone and instrument.</p>
@@ -772,7 +778,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
 });
 
 // ----- TUNER -----
-let inst = 'chromatic'; const tuned = new Set();
+let inst = 'chromatic'; const tuned = new Set(); var profReady = false;
 const HN = () => ({ fast: 3, normal: 7, calm: 11 }[$('smooth').value] || 7), hist = []; let pend = null, lastVoiced = -9, inTuneSince = null, confirmed = false, shownActive = -2;
 const strMidis = () => PRESETS[inst].strings.map(nameToMidi);
 
@@ -792,6 +798,7 @@ function buildInstChips() {
   const sel = $('tuningSel'); sel.classList.toggle('hide', fam[2].length < 2);
   sel.innerHTML = fam[2].map(k => '<option value="' + k + '">' + PRESETS[k].label.replace(/^[^–(]*[–(]\s*/, '').replace(/\)$/, '') + '  ·  ' + PRESETS[k].strings.map(n => nm(n.replace(/\d+/, ''))).join(' ') + '</option>').join('');
   sel.value = inst;
+  if (profReady) syncProf();
 }
 $('tuningSel').onchange = () => { inst = $('tuningSel').value; resetTuner(); buildInstChips(); };
 let lock = null;                                       // null = Auto (detect the string), number = locked to that string
@@ -1349,10 +1356,11 @@ $('selftest').onclick = async () => {
 };
 
 // ----- settings layout (List / Tabs / Classic) -----
-const SG = [['tuning', 'Tuning'], ['mic', 'Microphone'], ['detect', 'Detection'], ['check', 'Accuracy check'], ['data', 'Data & reset']], LAY_KEY = 'tuner-setlayout';
+const SG = [['instrument', 'Instrument'], ['tuning', 'Tuning'], ['mic', 'Microphone'], ['detect', 'Detection'], ['check', 'Accuracy check'], ['data', 'Data & reset']], LAY_KEY = 'tuner-setlayout';
 let setLay = 'list', setCur = null; try { setLay = localStorage.getItem(LAY_KEY) || 'list'; } catch {}
 if (!['list', 'tabs', 'classic'].includes(setLay)) setLay = 'list';
 const setSum = k => ({
+  instrument: () => profReady ? profName() : 'All instruments',
   tuning: () => `A4 ${$('a4').value} Hz · ±${$('tol').value}¢`,
   mic: () => `Noise gate ${(+$('gate').value).toFixed(3)} · Boost ${$('boost').value}×`,
   detect: () => { const h = [...document.querySelectorAll('#detSeg button.on')][0]; return `${h ? h.textContent : 'Custom'} · ${$('smooth').selectedOptions[0].textContent.split(' ')[0]} needle`; },
@@ -1361,7 +1369,7 @@ const setSum = k => ({
 }[k])();
 function renderSet() {
   const T = $('tab-settings'); T.dataset.layout = setLay;
-  if (setLay === 'tabs' && !setCur) setCur = 'tuning';
+  if (setLay === 'tabs' && !setCur) setCur = 'instrument';
   if (setLay === 'classic') setCur = null;
   T.classList.toggle('home', setLay === 'list' && !setCur);
   document.querySelectorAll('.set-group[data-g]').forEach(g => g.classList.toggle('cur', g.dataset.g === setCur));
@@ -2186,19 +2194,70 @@ $('conf').addEventListener('input', () => { $('confVal').textContent = (+$('conf
 function syncNames() { useFlats = $('names').value === 'flat'; buildInstChips(); buildStrChips(shownActive); renderScale(); drawTMeter(); }
 $('names').addEventListener('change', () => { syncNames(); saveSettings(); });
 const DET = { sens: [0.8, 40, 'Shows notes quickly, even soft or rough ones. Best in a quiet room; an occasional wrong note is possible.'], bal: [0.85, 60, 'Recommended. A good mix of speed and reliability for most instruments and rooms.'], strict: [0.9, 100, 'Shows only clear, steady notes. Best in a noisy room or with a weak microphone; reacts a little later.'] };
+let detCustom = false, detSaved = null; try { detSaved = JSON.parse(localStorage.getItem('tuner-detcustom')); } catch {}   // Custom = whatever values are not one of the three presets
 function syncQuick() {
   document.querySelectorAll('.qk[data-for]').forEach(q => q.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.v === +$(q.dataset.for).value)));
   document.querySelectorAll('#rangeQ button').forEach(b => b.classList.toggle('on', b.dataset.r === $('fmin').value + ',' + $('fmax').value));
   let hit = null; for (const k in DET) if (Math.abs(DET[k][0] - +$('conf').value) < 0.005 && DET[k][1] === +$('mindur').value) hit = k;
-  document.querySelectorAll('#detSeg button').forEach(b => b.classList.toggle('on', b.dataset.d === hit));
-  $('detHint').textContent = hit ? DET[hit][2] : 'Custom: you have set your own values below.';
+  if (!hit) { detSaved = { conf: +$('conf').value, mindur: +$('mindur').value }; try { localStorage.setItem('tuner-detcustom', JSON.stringify(detSaved)); } catch {} }
+  const on = hit && !detCustom ? hit : 'custom';
+  document.querySelectorAll('#detSeg button').forEach(b => b.classList.toggle('on', b.dataset.d === on));
+  $('detHint').textContent = on === 'custom' ? 'Your own values, set with the controls below. Changing any preset value brings you here.' : DET[hit][2];
 }
 document.querySelectorAll('.qk[data-for] button').forEach(b => b.onclick = () => { const i = $(b.parentNode.dataset.for); i.value = b.dataset.v; i.dispatchEvent(new Event('input')); i.dispatchEvent(new Event('change')); syncQuick(); });
 document.querySelectorAll('#rangeQ button').forEach(b => b.onclick = () => { const [a, c] = b.dataset.r.split(','); $('fmin').value = a; $('fmax').value = c; $('fmin').dispatchEvent(new Event('input')); $('fmax').dispatchEvent(new Event('input')); applyLimits(); syncQuick(); });
-document.querySelectorAll('#detSeg button').forEach(b => b.onclick = () => { const d = DET[b.dataset.d]; $('conf').value = d[0]; $('mindur').value = d[1]; $('conf').dispatchEvent(new Event('input')); $('mindur').dispatchEvent(new Event('input')); syncQuick(); });
+function setDet(c, m) { $('conf').value = c; $('mindur').value = m; $('conf').dispatchEvent(new Event('input')); $('mindur').dispatchEvent(new Event('input')); }
+document.querySelectorAll('#detSeg button').forEach(b => b.onclick = () => {
+  if (b.dataset.d === 'custom') { if (detSaved) setDet(detSaved.conf, detSaved.mindur); detCustom = true; }   // back to the values you last set yourself
+  else { const d = DET[b.dataset.d]; setDet(d[0], d[1]); detCustom = false; }
+  syncQuick();
+});
+['conf', 'mindur'].forEach(id => $(id).addEventListener('input', () => { detCustom = false; }));
 ['a4', 'tol', 'conf', 'mindur', 'fmin', 'fmax'].forEach(id => $(id).addEventListener('input', syncQuick));
 syncQuick();
-$('defaults').onclick = () => { applySettings(SET_DEFAULTS); saveSettings(); calMsg('Defaults restored.'); $('calibOut').classList.add('hide'); };
+
+// ----- instrument profile: one choice sets the tuner, practice, recorder and pitch range together -----
+const INST_PROFILES = [
+  { k: 'all',      name: 'All',      fam: null,        range: [60, 1500], rec: 'fast' },
+  { k: 'guitar',   name: 'Guitar',   fam: 'guitar',    range: [70, 1400], rec: 'normal' },
+  { k: 'bass',     name: 'Bass',     fam: 'bass',      range: [30, 400],  rec: 'normal' },
+  { k: 'violin',   name: 'Violin',   fam: 'violin',    range: [180, 1800], rec: 'fast' },
+  { k: 'viola',    name: 'Viola',    fam: 'viola',     range: [120, 1500], rec: 'fast' },
+  { k: 'cello',    name: 'Cello',    fam: 'cello',     range: [55, 1200], rec: 'normal' },
+  { k: 'ukulele',  name: 'Ukulele',  fam: 'ukulele',   range: [140, 1000], rec: 'fast' },
+  { k: 'mandolin', name: 'Mandolin', fam: 'mandolin',  range: [180, 1800], rec: 'fast' },
+  { k: 'voice',    name: 'Voice',    fam: null,        range: [80, 1100], rec: 'normal' },
+];
+const REC_NAMES = { fast: 'Fast tempo', normal: 'Standard' }, PROF_KEY = 'tuner-instprofile';
+let prof = { k: 'all', t: 'chromatic' }; try { const o = JSON.parse(localStorage.getItem(PROF_KEY)); if (o && INST_PROFILES.some(p => p.k === o.k)) prof = o; } catch {}
+const profOf = k => INST_PROFILES.find(p => p.k === k) || INST_PROFILES[0];
+const profFam = p => FAMILIES.find(f => f[0] === p.fam) || FAMILIES[0];
+function applyProfile(k, tuning) {
+  const p = profOf(k), fam = p.fam ? profFam(p) : null, key = fam ? (fam[2].includes(tuning) ? tuning : fam[2][0]) : 'chromatic';
+  prof = { k: p.k, t: key }; try { localStorage.setItem(PROF_KEY, JSON.stringify(prof)); } catch {}
+  inst = key; resetTuner(); buildInstChips();                                   // Tuner: instrument and tuning
+  $('scInst').value = key; $('scInst').dispatchEvent(new Event('change'));       // Practice: same instrument
+  $('fmin').value = p.range[0]; $('fmax').value = p.range[1];                    // pitch range for Recorder and Practice
+  $('fmin').dispatchEvent(new Event('input')); $('fmax').dispatchEvent(new Event('input')); applyLimits();
+  $('recMode').value = p.rec; $('recMode').dispatchEvent(new Event('change'));   // Recorder listening mode
+  syncProf(); renderSet();
+}
+function syncProf() {
+  const p = profOf(prof.k), fam = (profFam(p) || FAMILIES[0])[0], cur = (FAMILIES.find(f => f[2].includes(inst)) || FAMILIES[0])[0];
+  const live = fam === cur;                                                      // the Tuner was switched by hand to another instrument → no profile is "on"
+  $('profChips').innerHTML = INST_PROFILES.map(x => `<button data-k="${x.k}" class="${live && x.k === p.k ? 'on' : ''}">${x.name === 'All' ? 'All instruments' : x.name}</button>`).join('');
+  const f = p.fam ? profFam(p) : null, sel = $('profTuning');
+  $('profTuningWrap').classList.toggle('hide', !f || f[2].length < 2);
+  if (f) { sel.innerHTML = f[2].map(k => `<option value="${k}">${PRESETS[k].label.replace(/^[^–(]*[–(]\s*/, '').replace(/\)$/, '') + '  ·  ' + PRESETS[k].strings.map(n => nm(n.replace(/\d+/, ''))).join(' ')}</option>`).join(''); sel.value = inst; }
+  $('profHint').textContent = live ? `${p.name === 'All' ? 'All instruments' : p.name}: pitch range ${p.range[0]}–${p.range[1]} Hz · Recorder listening “${REC_NAMES[p.rec]}”${p.fam ? ' · Practice and Tuner use this instrument' : ' · chromatic Tuner and Practice'}. You can still change any setting individually.` : 'Tuner instrument was changed by hand. Pick an instrument above to set everything to match.';
+}
+function profName() { const p = profOf(prof.k), cur = (FAMILIES.find(f => f[2].includes(inst)) || FAMILIES[0])[0]; return (profFam(p)[0] === cur) ? (p.k === 'all' ? 'All instruments' : p.name) : 'Custom'; }
+$('profChips').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) applyProfile(b.dataset.k); });
+$('profTuning').onchange = () => applyProfile(prof.k, $('profTuning').value);
+profReady = true;
+if (prof.k !== 'all') { inst = FAMILIES.some(f => f[2].includes(prof.t)) ? prof.t : 'chromatic'; resetTuner(); buildInstChips(); }   // remember the instrument between visits
+syncProf(); renderSet();
+$('defaults').onclick = () => { applySettings(SET_DEFAULTS); applyProfile('all'); saveSettings(); calMsg('Defaults restored.'); $('calibOut').classList.add('hide'); };
 let gateOn = false, trkF = 0, trkT = -9, hpCut = 70;
 function loop() {
   rafId = requestAnimationFrame(loop);
