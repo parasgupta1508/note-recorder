@@ -138,6 +138,24 @@
   .kv{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px} .kv>div{border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:12.5px;color:var(--mut);min-width:84px} .kv b{display:block;color:#f4f6fb;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
   .kv .ok b{color:var(--ok)} .kv .warn b{color:var(--warn)} .kv .bad b{color:var(--bad)}
 
+  /* settings layouts */
+  #setMenu,#setTabs,#setBack{display:none}
+  #tab-settings[data-layout=list] .set-group,#tab-settings[data-layout=tabs] .set-group{display:none}
+  #tab-settings[data-layout=list] .set-group.cur,#tab-settings[data-layout=tabs] .set-group.cur{display:block}
+  #tab-settings:not([data-layout=classic]) .set-group{background:transparent;border:0;padding:4px 2px}
+  #tab-settings:not([data-layout=classic]) .set-group>h3{display:none}
+  #tab-settings[data-layout=list].home #setMenu{display:grid;gap:10px}
+  #tab-settings[data-layout=list]:not(.home) #setBack{display:flex}
+  #tab-settings[data-layout=tabs] #setTabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+  #tab-settings[data-layout=tabs] #setTabs::-webkit-scrollbar{display:none}
+  #setTabs button{flex:none;background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:7px 16px;font-size:14px;min-height:38px}
+  #setTabs button.on{color:#f4f6fb;border-color:#aeb8d0;background:#1a2030}
+  .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:16px 18px;min-height:68px}
+  .set-row b{display:block;font-size:16.5px;font-weight:600;color:#f4f6fb} .set-row small{display:block;font-size:13px;color:var(--mut);margin-top:3px;font-weight:400}
+  .set-row i{font-style:normal;font-size:24px;color:var(--mut);line-height:1}
+  #setBack{align-items:center;gap:6px;background:transparent;border:0;color:var(--acc);font-size:15px;padding:6px 2px;min-height:40px;justify-content:flex-start}
+  #setBack span{font-size:26px;line-height:1} #setBack b{font-size:18px;color:#f4f6fb;font-weight:600;margin-left:6px}
+
   /* scale */
   .sc-grid{display:grid;gap:14px}
   .actions{display:grid;grid-template-columns:1.4fr 1.3fr .8fr;gap:8px}
@@ -460,8 +478,9 @@
 </section>
 
 <!-- ============ SETTINGS ============ -->
-<section id="tab-settings" class="panel hide stack">
-  <div class="set-group"><h3>Tuning</h3><p>What counts as “in tune”.</p>
+<section id="tab-settings" class="panel hide stack" data-layout="list">
+  <div id="setMenu"></div><div id="setTabs"></div><button id="setBack"><span>‹</span> <b id="setTitle"></b></button>
+  <div class="set-group" data-g="tuning"><h3>Tuning</h3><p>What counts as “in tune”.</p>
     <div class="grid">
       <label class="field"><span>A4 reference (Hz)</span><input id="a4" type="number" value="440" min="400" max="480"></label>
       <label class="field"><span>In-tune tolerance (±¢)</span><input id="tol" type="number" value="10" min="1" max="30"></label>
@@ -471,7 +490,7 @@
     <div class="qk" data-for="tol"><button data-v="3">Pro 3¢</button><button data-v="5">Standard 5¢</button><button data-v="10">Learner 10¢</button></div>
     <p class="hint2" style="margin:8px 0 0">Most people cannot hear less than 3–5¢. 100¢ is one semitone.</p></div>
 
-  <div class="set-group"><h3>Microphone</h3><p>Watch the Input bar at the top while you play: it turns green when your sound is loud enough to be analysed.</p>
+  <div class="set-group" data-g="mic"><h3>Microphone</h3><p>Watch the Input bar at the top while you play: it turns green when your sound is loud enough to be analysed.</p>
     <label class="field"><span>Input device</span><select id="micDev"><option value="">Default microphone</option></select></label>
     <div class="row" style="margin-top:12px"><button id="calib" class="sec">Calibrate microphone</button><span class="hint2" id="calibMsg">Takes 7 seconds. Sets the noise gate and input level for your room.</span></div>
     <div class="kv hide" id="calibOut"></div>
@@ -484,7 +503,7 @@
     <div class="hint2" id="micProc" style="margin-top:12px">Mic processing: start listening to check.</div>
     <div class="hint2" id="audioInfo" style="margin-top:4px"></div></div>
 
-  <div class="set-group"><h3>Detection</h3><p>How cautious the app is before it shows a note.</p>
+  <div class="set-group" data-g="detect"><h3>Detection</h3><p>How cautious the app is before it shows a note.</p>
     <div class="seg" id="detSeg"><button data-d="sens">Sensitive</button><button data-d="bal">Balanced</button><button data-d="strict">Strict</button></div>
     <p class="hint2" id="detHint" style="margin:8px 0 0"></p>
     <label class="field" style="margin-top:12px"><span>Tuner needle</span><select id="smooth"><option value="fast">Fast – follows every change</option><option value="normal" selected>Normal</option><option value="calm">Calm – steadier, slower</option></select></label>
@@ -497,16 +516,18 @@
       <div class="qk" id="rangeQ"><button data-r="30,400">Bass</button><button data-r="70,1400">Guitar</button><button data-r="180,1800">Violin</button><button data-r="190,1000">Ukulele</button><button data-r="80,1100">Voice</button><button data-r="60,1500">All</button></div>
       <p class="hint2" style="margin:10px 0 0">A narrower range avoids octave jumps and saves battery. The tuner already narrows it to your instrument's strings; this applies to the recorder and practice.</p></details></div>
 
-  <div class="set-group"><h3>Accuracy check</h3><p>The software test proves the maths. The live check measures your own microphone and instrument.</p>
+  <div class="set-group" data-g="check"><h3>Accuracy check</h3><p>The software test proves the maths. The live check measures your own microphone and instrument.</p>
     <div class="row"><button id="selftest" class="sec">Software test</button><button id="livetest" class="sec">Live check</button></div>
     <p class="hint2" id="lcMsg" style="margin:10px 0 0">Live check: tap, then play one steady note for 4 seconds (start listening first).</p>
     <div class="kv hide" id="lcOut"></div>
     <div id="stOut" style="margin-top:10px"></div></div>
-  <div class="set-group"><h3>Backup &amp; restore</h3><p>Saves both children's scores and history in one file. Send it to yourself by WhatsApp or email, or keep the downloaded copy. A backup can only be imported if its version number is higher than the data on this device.</p>
+  <div class="set-group" data-g="data"><h3>Backup &amp; restore</h3><p>Saves both children's scores and history in one file. Send it to yourself by WhatsApp or email, or keep the downloaded copy. A backup can only be imported if its version number is higher than the data on this device.</p>
     <div class="hint2" id="verInfo"></div>
     <div class="row" style="margin-top:10px"><button id="bkShare">Back up &amp; share</button><button id="bkDl" class="sec">Save file only</button><button id="bkImp" class="sec">Import backup…</button><input type="file" id="impFile" class="hide" accept=".json,.txt,application/json,text/plain"></div>
     <div class="hint2" id="bkMsg" style="margin-top:8px"></div></div>
-  <div class="set-group"><h3>Reset</h3><p>Put every setting above back to its recommended value.</p>
+  <div class="set-group" data-g="data"><h3>Settings layout</h3><p>How this page is arranged.</p>
+    <div class="seg" id="laySeg"><button data-l="list">List</button><button data-l="tabs">Tabs</button><button data-l="classic">Classic</button></div></div>
+  <div class="set-group" data-g="data"><h3>Reset</h3><p>Put every setting above back to its recommended value.</p>
     <button id="defaults" class="sec">Restore default settings</button></div>
 </section>
 </main>
@@ -688,6 +709,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   for (const t of ['tuner', 'scale', 'analysis', 'rec', 'settings']) $('tab-' + t).classList.toggle('hide', t !== tab);
   if (tab !== 'scale') { stopDemo(); stopMetro(); finalizeHold(); if (sc.running) { sc.running = false; $('scStart').textContent = 'Start practice'; $('scMsg').textContent = 'Paused — press Start practice'; renderScale(); } }
   if (tab === 'analysis') renderAnalysis();
+  if (tab === 'settings') renderSet();
   if (tab !== 'rec') pbStop(); else { recUi(); requestDraw(); }
   if (tab === 'tuner') drawTMeter();
 });
@@ -1263,6 +1285,36 @@ $('selftest').onclick = async () => {
       <p class="hint2" style="margin:8px 0 0">Limits: clean ±2¢; noisy (about 20 dB signal-to-noise), quiet, 60 Hz mains hum and weak-fundamental tones (like a phone speaker or low guitar string) ±5¢. Each press uses new random phases, detunes and noise. This checks the software only; your microphone, room and instrument add their own error.</p></details>`;
   } finally { btn.disabled = false; btn.textContent = label; }
 };
+
+// ----- settings layout (List / Tabs / Classic) -----
+const SG = [['tuning', 'Tuning'], ['mic', 'Microphone'], ['detect', 'Detection'], ['check', 'Accuracy check'], ['data', 'Data & reset']], LAY_KEY = 'tuner-setlayout';
+let setLay = 'list', setCur = null; try { setLay = localStorage.getItem(LAY_KEY) || 'list'; } catch {}
+if (!['list', 'tabs', 'classic'].includes(setLay)) setLay = 'list';
+const setSum = k => ({
+  tuning: () => `A4 ${$('a4').value} Hz · ±${$('tol').value}¢`,
+  mic: () => `Noise gate ${(+$('gate').value).toFixed(3)} · Boost ${$('boost').value}×`,
+  detect: () => { const h = [...document.querySelectorAll('#detSeg button.on')][0]; return `${h ? h.textContent : 'Custom'} · ${$('smooth').selectedOptions[0].textContent.split(' ')[0]} needle`; },
+  check: () => 'Software test · Live check',
+  data: () => 'Backup, restore, layout, reset',
+}[k])();
+function renderSet() {
+  const T = $('tab-settings'); T.dataset.layout = setLay;
+  if (setLay === 'tabs' && !setCur) setCur = 'tuning';
+  if (setLay === 'classic') setCur = null;
+  T.classList.toggle('home', setLay === 'list' && !setCur);
+  document.querySelectorAll('.set-group[data-g]').forEach(g => g.classList.toggle('cur', g.dataset.g === setCur));
+  $('setMenu').innerHTML = SG.map(([k, n]) => `<button class="set-row" data-g="${k}"><span><b>${n}</b><small>${setSum(k)}</small></span><i>›</i></button>`).join('');
+  $('setTabs').innerHTML = SG.map(([k, n]) => `<button data-g="${k}" class="${k === setCur ? 'on' : ''}">${n.replace(' check', '').replace(' & reset', '')}</button>`).join('');
+  $('setTitle').textContent = (SG.find(x => x[0] === setCur) || [0, ''])[1];
+  document.querySelectorAll('#laySeg button').forEach(b => b.classList.toggle('on', b.dataset.l === setLay));
+}
+$('tab-settings').addEventListener('click', e => {
+  const r = e.target.closest('#setMenu button, #setTabs button'); if (r) { setCur = r.dataset.g; renderSet(); scrollTo(0, 0); return; }
+  if (e.target.closest('#setBack')) { setCur = null; renderSet(); scrollTo(0, 0); return; }
+  const l = e.target.closest('#laySeg button'); if (l) { setLay = l.dataset.l; try { localStorage.setItem(LAY_KEY, setLay); } catch {} if (setLay === 'list') setCur = null; renderSet(); }
+});
+$('tab-settings').addEventListener('input', () => { if (setLay === 'list' && !setCur) renderSet(); });
+renderSet();
 
 // ----- backup / restore (versioned) -----
 const VER_KEY = 'tuner-data-version', APP_ID = 'tuner-scale-trainer';
@@ -1945,7 +1997,7 @@ function applySettings(o) {
   SET_IDS.forEach(id => { if (o[id] != null) $(id).value = o[id]; });
   $('boostVal').textContent = $('boost').value + '×'; $('confVal').textContent = (+$('conf').value).toFixed(2);
   if (boostNode) boostNode.gain.value = +$('boost').value;
-  updateGateMark(); applyTol(); resetTuner(); renderScale(); syncQuick();
+  updateGateMark(); applyTol(); resetTuner(); renderScale(); syncQuick(); renderSet();
 }
 SET_IDS.forEach(id => $(id).addEventListener('input', saveSettings));
 $('conf').addEventListener('input', () => { $('confVal').textContent = (+$('conf').value).toFixed(2); });
