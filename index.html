@@ -484,7 +484,8 @@
   </div>
 
   <div class="ropts">
-    <label class="field wide"><span>Listening</span><select id="recMode"><option value="fast" selected>Fast passages (violin, runs)</option><option value="normal">Balanced</option><option value="relaxed">Relaxed (picks up everything)</option><option value="strict">Strict (noisy room)</option></select></label>
+    <label class="field wide" title="This sets how certain the app must be before it records a note.&#10;• Notes missing? Choose Fast tempo or Soft &amp; quiet.&#10;• Notes that you didn't play? Choose Standard or Noisy room."><span>Listening</span><select id="recMode"><option value="fast" selected>Fast tempo</option><option value="normal">Standard</option><option value="relaxed">Soft &amp; quiet</option><option value="strict">Noisy room</option></select></label>
+    <div class="wide hint2" id="recModeDesc"></div>
     <label class="field"><span>Colours</span><select id="recColor"><option value="acc" selected>By accuracy</option><option value="note">By note name</option></select></label>
     <label class="field"><span>Tempo (0 = off)</span><input id="recBpm" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
     <label class="field"><span>Replay sound</span><select id="pbMode"><option value="audio">Recorded sound</option><option value="notes">Detected notes</option></select></label>
@@ -2013,6 +2014,17 @@ $('rvFit').onclick = () => { if (view.mode === 'fall') { if (hasRec()) { const A
 $('rvLive').onclick = () => { view.follow = !view.follow; requestDraw(); };
 $('rvPos').oninput = () => { if (view.mode === 'fall') { if (!recording) pbSeek(+$('rvPos').value / 1000 * recLen()); return; } const Wc = cv.clientWidth, vsMax = Math.max(0, recLen() - (Wc - GUT) / view.pps * 0.2); view.follow = false; view.vs = +$('rvPos').value / 1000 * vsMax; requestDraw(); };
 window.addEventListener('resize', requestDraw);
+const MODE_DESC = {
+  fast: ['Follows rapid note changes, even notes as short as 30 ms.', 'Best for violin runs and quick melodies. Occasionally adds a stray note.'],
+  normal: ['Balanced accuracy for music at an ordinary pace.', "The best starting point if you're unsure."],
+  relaxed: ['Listens closely for faint or delicate notes.', 'Best in a silent room, since it will also pick up background sound.'],
+  strict: ['Accepts only clear, confident notes and ignores everything else.', 'Best with fans, traffic or other people nearby. Very short notes may be skipped.'],
+};
+function modeDesc() {
+  const v = $('recMode').value, d = MODE_DESC[v] || MODE_DESC.fast;
+  $('recModeDesc').innerHTML = `${d[0]} <i>${d[1]}</i>` + (v === 'fast' && +$('fmin').value < 80 ? '<br>Tip: for violin, choose the Violin range in Settings → Advanced. It makes fast passages more accurate.' : '');
+}
+$('recMode').addEventListener('change', modeDesc); $('fmin').addEventListener('input', modeDesc); $('fmin').addEventListener('change', modeDesc); modeDesc();
 function setView(m) {
   view.mode = m; $('tab-rec').dataset.view = m; cv.classList.toggle('fall', m === 'fall');
   for (const [id, k] of [['vwSheet', 'sheet'], ['vwFall', 'fall']]) { $(id).classList.toggle('on', m === k); $(id).setAttribute('aria-pressed', m === k); }
@@ -2026,6 +2038,7 @@ try { if (localStorage.getItem('tuner-recview') === 'fall') setView('fall'); els
 $('tol').addEventListener('input', () => { renderLegend(); updateStats(); requestDraw(); });
 const RP_KEY = 'tuner-recprefs-v1', RP_IDS = ['recMode', 'recColor', 'recBpm'];   // only these three options are remembered, never any recording
 try { const o = JSON.parse(localStorage.getItem(RP_KEY)); if (o) RP_IDS.forEach(id => { if (o[id] != null) $(id).value = o[id]; }); } catch {}
+modeDesc();
 RP_IDS.forEach(id => $(id).addEventListener('change', () => { const o = {}; RP_IDS.forEach(k => o[k] = $(k).value); try { localStorage.setItem(RP_KEY, JSON.stringify(o)); } catch {} }));
 
 // ----- audio engine -----
