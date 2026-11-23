@@ -1,10 +1,10 @@
 # Tuner & Scale Trainer (note-recorder)
 
-Installable offline PWA: a single `index.html` (inline CSS/JS), `sw.js`, `manifest.webmanifest` and icons. It is hosted on Netlify (uploaded from the sibling `netlify-upload` folder).
+Installable offline PWA: a single `index.html` (inline CSS/JS), `sw.js`, `manifest.webmanifest` and icons. It is deployed with GitHub Pages from `main` at https://parasgupta1508.github.io/note-recorder/ (the repo is public for this reason). Pushing to `main` redeploys it within about a minute. It was also hosted earlier on Netlify, from the sibling `netlify-upload` folder.
 
 ## Automatic GitHub backup
 
-Backup repo: https://github.com/parasgupta1508/note-recorder (private, branch `main`). The GitHub CLI is installed and signed in as `parasgupta1508`.
+Backup repo: https://github.com/parasgupta1508/note-recorder (public, branch `main`). The GitHub CLI is installed and signed in as `parasgupta1508`.
 
 Whenever you change any file in this project, back it up to GitHub without being asked:
 
