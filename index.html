@@ -536,18 +536,24 @@
     <div class="hint2" id="micProc" style="margin-top:12px">Mic processing: start listening to check.</div>
     <div class="hint2" id="audioInfo" style="margin-top:4px"></div></div>
 
-  <div class="set-group" data-g="detect"><h3>Detection</h3><p>How cautious the app is before it shows a note.</p>
+  <div class="set-group" data-g="detect"><h3>Detection</h3><p>How careful the app is before it shows a note. Pick a preset, or fine-tune below.</p>
     <div class="seg" id="detSeg"><button data-d="sens">Sensitive</button><button data-d="bal">Balanced</button><button data-d="strict">Strict</button></div>
     <p class="hint2" id="detHint" style="margin:8px 0 0"></p>
-    <label class="field" style="margin-top:12px"><span>Tuner needle</span><select id="smooth"><option value="fast">Fast – follows every change</option><option value="normal" selected>Normal</option><option value="calm">Calm – steadier, slower</option></select></label>
-    <details class="adv"><summary>Advanced</summary>
+    <div class="grid" style="margin-top:12px">
+      <label class="field"><span>Pitch confidence <b id="confVal">0.85</b></span><input id="conf" type="range" min="0.7" max="0.95" step="0.01" value="0.85">
+        <small class="hint2">How sure the app must be of a pitch. Higher = fewer wrong notes, but soft notes may be missed.</small></label>
+      <label class="field"><span>Min note length (ms)</span><input id="mindur" type="number" value="60" min="20" max="1000" step="10">
+        <small class="hint2">Sounds shorter than this are ignored. Lower it for fast passages; raise it to skip clicks and bumps.</small></label>
+    </div>
+    <p class="hint2" style="margin:8px 0 0">The Recorder's <b>Fast tempo</b> mode uses its own values for these two.</p>
+    <label class="field" style="margin-top:12px"><span>Tuner needle</span><select id="smooth"><option value="fast">Fast – follows every change</option><option value="normal" selected>Normal</option><option value="calm">Calm – steadier, slower</option></select>
+      <small class="hint2">How the needle moves on the Tuner page.</small></label>
+    <details class="adv"><summary>Pitch range</summary>
       <div class="grid">
-        <label class="field"><span>Pitch confidence <b id="confVal">0.85</b></span><input id="conf" type="range" min="0.7" max="0.95" step="0.01" value="0.85"></label>
-        <label class="field"><span>Min note length (ms)</span><input id="mindur" type="number" value="60" min="20" max="1000" step="10"></label>
-        <label class="field"><span>Pitch range (Hz)</span><div class="pair"><input id="fmin" type="number" value="60"><input id="fmax" type="number" value="1500"></div></label>
+        <label class="field"><span>Lowest and highest pitch (Hz)</span><div class="pair"><input id="fmin" type="number" value="60"><input id="fmax" type="number" value="1500"></div></label>
       </div>
       <div class="qk" id="rangeQ"><button data-r="30,400">Bass</button><button data-r="70,1400">Guitar</button><button data-r="180,1800">Violin</button><button data-r="190,1000">Ukulele</button><button data-r="80,1100">Voice</button><button data-r="60,1500">All</button></div>
-      <p class="hint2" style="margin:10px 0 0">A narrower range avoids octave jumps and saves battery. The tuner already narrows it to your instrument's strings; this applies to the recorder and practice.</p></details></div>
+      <p class="hint2" style="margin:10px 0 0">Tap your instrument, or type your own limits. A narrower range avoids octave mistakes and saves battery. The Tuner already narrows it to your instrument's strings; this applies to the Recorder and Practice.</p></details></div>
 
   <div class="set-group" data-g="check"><h3>Accuracy check</h3><p>The software test proves the maths. The live check measures your own microphone and instrument.</p>
     <div class="row"><button id="selftest" class="sec">Software test</button><button id="livetest" class="sec">Live check</button></div>
@@ -2179,13 +2185,13 @@ SET_IDS.forEach(id => $(id).addEventListener('input', saveSettings));
 $('conf').addEventListener('input', () => { $('confVal').textContent = (+$('conf').value).toFixed(2); });
 function syncNames() { useFlats = $('names').value === 'flat'; buildInstChips(); buildStrChips(shownActive); renderScale(); drawTMeter(); }
 $('names').addEventListener('change', () => { syncNames(); saveSettings(); });
-const DET = { sens: [0.8, 40, 'Shows notes quickly, even quiet or rough ones. Best in a quiet room; may show an occasional wrong note.'], bal: [0.85, 60, 'Recommended. A good mix of speed and reliability for most instruments and rooms.'], strict: [0.9, 100, 'Only clear, steady notes. Best in noisy rooms or with a weak microphone; reacts a little later.'] };
+const DET = { sens: [0.8, 40, 'Shows notes quickly, even soft or rough ones. Best in a quiet room; an occasional wrong note is possible.'], bal: [0.85, 60, 'Recommended. A good mix of speed and reliability for most instruments and rooms.'], strict: [0.9, 100, 'Shows only clear, steady notes. Best in a noisy room or with a weak microphone; reacts a little later.'] };
 function syncQuick() {
   document.querySelectorAll('.qk[data-for]').forEach(q => q.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.v === +$(q.dataset.for).value)));
   document.querySelectorAll('#rangeQ button').forEach(b => b.classList.toggle('on', b.dataset.r === $('fmin').value + ',' + $('fmax').value));
   let hit = null; for (const k in DET) if (Math.abs(DET[k][0] - +$('conf').value) < 0.005 && DET[k][1] === +$('mindur').value) hit = k;
   document.querySelectorAll('#detSeg button').forEach(b => b.classList.toggle('on', b.dataset.d === hit));
-  $('detHint').textContent = hit ? DET[hit][2] : 'Custom values set under Advanced.';
+  $('detHint').textContent = hit ? DET[hit][2] : 'Custom: you have set your own values below.';
 }
 document.querySelectorAll('.qk[data-for] button').forEach(b => b.onclick = () => { const i = $(b.parentNode.dataset.for); i.value = b.dataset.v; i.dispatchEvent(new Event('input')); i.dispatchEvent(new Event('change')); syncQuick(); });
 document.querySelectorAll('#rangeQ button').forEach(b => b.onclick = () => { const [a, c] = b.dataset.r.split(','); $('fmin').value = a; $('fmax').value = c; $('fmin').dispatchEvent(new Event('input')); $('fmax').dispatchEvent(new Event('input')); applyLimits(); syncQuick(); });
