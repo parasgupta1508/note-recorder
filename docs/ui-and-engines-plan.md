@@ -50,6 +50,60 @@ Desktop and tablet: two panes (sheet or chart on the left, controls on the right
 - **Accessibility.** Tabs get `role="tablist"`, `role="tab"`, `aria-selected`; the mic chip and player chip are buttons with labels; touch targets at least 44 px; visible focus; colour is never the only signal (shape and text too).
 - **Naming.** Title and home-screen name become "Practice Companion" (manifest `name` and `short_name`, `index.html` title and apple title); bump the service worker cache.
 
+## 3a. Add a piece: layout (reference design adopted)
+
+The owner liked the input pattern of songscription.ai: one card, one drop target, links and recording as secondary rows. Use this structure (copy the pattern, not the branding, colours or text). It **replaces the four-tile layout** in the product plan, section 7; everything else in that section (questions, stepper, helper chip, Review draft) still applies.
+
+```
+[ Violin | Guitar | Ukulele | Piano ]            <- instrument chips, preset from the Pieces tab
+
++--------------------------------------------------+
+|  +--------------------------------------------+  |
+|  |  Drop a recording or sheet music here      |  |   big dashed drop zone
+|  |  Audio, video, PDF, photos, MusicXML, MIDI |  |
+|  |            [ Upload a song ]               |  |   opens the file picker (accept = all of those)
+|  +--------------------------------------------+  |
+|  [ link icon  Paste a link          (YouTube) ]  |   paste field; detects the source
++--------------------------------------------------+
+[ mic icon   Record audio                       > ]   "Play into your microphone"  (mic check first)
+[ camera     Take a photo   Experimental        > ]   "Photograph printed sheet music"
+```
+
+Behaviour:
+- **Auto-detect.** Whatever arrives (dropped file, picked file, pasted link, recording, photo) is classified and shown as one line under the card: "Detected: MusicXML, exact notes", "Detected: MIDI, exact notes", "Detected: audio, will be a Draft", "Detected: PDF or photo, will be a Draft (experimental)", "Detected: YouTube link, needs the helper". The player never chooses a type.
+- **Upload accepts** audio, video (the audio track is used), PDF, images, `.musicxml`/`.xml`/`.mxl`, `.mid`/`.midi`. In-page decoding is used where the browser can do it; otherwise the helper (ffmpeg) does it and the screen says so.
+- **Paste a link.** YouTube first (the helper already fetches it). Other sites only if the helper's downloader handles them; do not show their icons until they work.
+- **Take a photo / PDF** needs a new engine role, `omr` (optical music recognition), see 4.1. Treat it as experimental: photographed printed music is the least accurate input in the whole app, always a Draft, always shows the Review screen with the original image beside the result, and the Review screen must make fixing in MuseScore the easy path. Do not hide this limit.
+- **Record audio** here means a demo performance (a teacher or the student playing the piece to turn into a reference). Practice takes are recorded inside the Piece view.
+- After detection the flow continues as before: questions (what is it, which part, melody or chords), the stepper with real stage names, then Review draft for anything audio-derived.
+
+## 3b. Library and instrument tabs
+
+**Instrument tabs.** At the top of Pieces (and mirrored on Tuner and Scale drills) a segmented control **Violin | Guitar | Piano | Ukulele**. It is stored per player, drives the library contents, the tuning and range defaults, and the evaluator. These are not separate bottom tabs (four more bottom tabs would not fit a phone and would split one library into four); they are one switch that everything follows.
+
+**What the library holds.**
+1. **Generated scales and arpeggios (no files).** Per instrument: major, natural/harmonic/melodic minor, pentatonic, chromatic, arpeggios, one to three octaves (violin), positions (guitar), hands separate and together (piano), open-position and chord shapes (ukulele). They come from a generator (reuse `buildScale` and the Practice engine) and become ordinary pieces with a `generator` field, so they use the same Listen, Practise, scoring and progress screens as any piece.
+2. **Built-in pieces.** A small set shipped in the repo. Only files that are public domain or under a licence that allows redistribution, with `licence` and `source` recorded in the manifest. The repository and site are public, so anything committed there is published.
+3. **Library packs (the owner's own collections).** Import a folder or a `.zip` such as `Violin/Mozart/Volume 1/*.mid`. Categories come from the folder names, or from an optional `pack.json`. Packs are stored in the browser's IndexedDB on that device, never committed, and can be re-imported or moved with the backup file. This is how Mozart volumes, books and teacher material get in.
+4. **My imports** from "Add a piece". At save the player picks a category or leaves it under "My imports".
+
+**Categories are data, not code.** Suggested starting taxonomy (new folders create new categories automatically):
+- Violin: Scales and arpeggios; Etudes and technique; Repertoire (by composer, then collection or volume); Folk and pop; My imports.
+- Guitar: Scales and positions; Chords and progressions; Pieces and songs; My imports.
+- Piano: Scales (hands separate, together); Technique; Pieces (by composer, then collection or volume); My imports.
+- Ukulele: Scales; Chord progressions; Songs; My imports.
+
+**Browsing screen.** Instrument tabs, a search box, filter chips (Built-in / Mine, Verified / Draft, Difficulty, Favourites), a "Continue" row, then category cards. Tapping drills down (Category, Collection, Pieces) with a breadcrumb. Each piece row shows title, composer, key, length in bars, a difficulty chip, a progress ring (tempo reached) and a Draft/Verified badge, with two buttons: **Listen** and **Practise**. A piece's menu offers Favourite, Edit info, Move to category, Delete (local data only).
+
+**MIDI pieces (no engraved sheet).** MIDI has no notation, so these use the views the Recorder already has: the Sheet view (notes drawn on staves from the timeline) and the Falling-notes view, with Replay, speed, metronome and bar looping. Additions needed:
+- **Part picker** when a file has several tracks or channels: "Your part" (for example the violin melody) and the rest as accompaniment. Piano adds a hand choice (right, left, both, by track or by a split at middle C).
+- **Transposition and range check:** shift to fit the instrument (violin starts at G3) with a warning for notes out of range.
+- **Bar grid** from the MIDI time-signature and tempo events, so ranges and loops work; a file with no usable grid gets a constant-tempo grid and the Review screen says so.
+- **Listen vs Practise.** Listen plays the piece with the synth (accompaniment on or off). Practise opens the Piece view with scoring.
+- Guitar tablature (string and fret suggestions) is a later feature; until then guitar and ukulele MIDI pieces show notes and chord names.
+
+**Data model additions** (also in `js/core/schema.js`): `Piece { instrument, categoryPath: ['Mozart', 'Volume 1'], collection?, difficulty?, tags[], licence?, source?, builtin: bool, generator?: { type:'scale', root, mode, octaves, pattern }, favourite: bool, verified: bool }` and `Pack { id, name, importedAt, itemCount }`. Pure code in `js/core/library.js`: parse a pack or folder tree, build the category tree, search and filter. Tested in Node with fixture folder listings.
+
 ## 4. Pluggable engines
 
 **Goal.** Any algorithm can be added by writing one file and registering it. Screens, tests and Settings only talk to the registry.
@@ -62,6 +116,7 @@ Desktop and tablet: two panes (sheet or chart on the left, controls on the right
 | `segmenter` | f0 frames to notes `{midi, start, dur, cents, lvl, pts, vib, ...}` | live and offline | `Segmenter` and `analyseSamples` (listening.js) |
 | `transcriber` | audio to notes (mono or polyphonic) | offline | Basic Pitch plus `refineEvents` (detailed.js), Lab engines |
 | `separator` | audio to stems | offline, helper only | Demucs `separate.py` |
+| `omr` | PDF or photo of printed music to MusicXML | offline, helper only, experimental | none yet (Audiveris through the helper is the first candidate; measure before trusting) |
 | `aligner` | reference plus events to alignment | offline | new (product plan, section 6) |
 | `scorer` | alignment to note results and bar scores | offline | new |
 | `verifier` | reference plus audio to "expected notes present?" for chords and piano | offline | new (product plan, decision 14) |
@@ -129,7 +184,9 @@ Each package: small commits, run `node tests/structure.js`, `node tests/smoke.js
 
 **UI5. Screen declutter (M).** Practice home, Tuner chips and layout, Free record simplification with "More", Scale drills naming, Progress merge. Gate: screenshot review on phone, tablet and desktop; one-hand reachability of the primary action on a phone; no screen needs more than two taps to start.
 
-**UI6. Add a piece shell (M).** The single input screen with the four tiles, instrument chips, drop zone, mic check and stepper (product plan, section 7), wired to the engines it can already run (score file, audio file, Record). YouTube and Separating show "needs the helper" until the helper engines are plugged in. Gate: a MusicXML fixture and a MIDI fixture import end to end into the library (this depends on Phase 1 of the product plan, so build the shell and a stubbed importer first and connect it when Phase 1 lands).
+**UI6. Add a piece shell (M).** The single input screen in the layout of section 3a (drop zone with Upload a song, paste-link field, Record audio row, Take a photo row, instrument chips, auto-detect line, mic check, stepper), wired to the engines it can already run (score file, audio file, Record). YouTube and Separating show "needs the helper" until the helper engines are plugged in. Gate: a MusicXML fixture and a MIDI fixture import end to end into the library (this depends on Phase 1 of the product plan, so build the shell and a stubbed importer first and connect it when Phase 1 lands).
+
+**UI7. Library and instrument tabs (M; needs the reference timeline from Phase 1 of the product plan).** `js/core/schema.js` additions, `js/core/library.js` with tests, the scale and arpeggio generator for all four instruments, folder and zip pack import into IndexedDB, the browsing screen of section 3b with the instrument switch, search and filters, Listen and Practise buttons, the MIDI part picker, transposition and range check, bar grid from MIDI. Built-in pieces limited to files whose licence allows redistribution (manifest records it); keep the shipped set small enough for the offline cache. Gate: importing a fixture folder `Violin/Mozart/Volume 1/*.mid` produces the expected category tree; every generated scale plays and is practisable through the same Piece view as an imported file; switching the instrument tab changes the library, the tuner defaults and the scale drills together; a MIDI piece can be listened to and looped by bar on a phone.
 
 **Then plug in as we go.** When Phase A produces a candidate (for example SwiftF0), adding it is: one engine file, its vendor files, one registry call, contract test passes, appears in Settings. Nothing else changes.
 

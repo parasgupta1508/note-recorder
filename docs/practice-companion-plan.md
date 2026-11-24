@@ -148,7 +148,7 @@ Existing tabs: Tuner, Scale, Analysis, Recorder, Lab, Settings (`js/app/base.js`
 
 - **Player switcher** (header): pick a player; all new data is per player.
 - **Pieces (library):** list with last practised, tempo reached, share of bars "learned", a Draft/Verified badge. One "+ Add a piece" button, which opens the screen below. Also shown on first run.
-- **Add a piece (the only input screen).** All sources go through here; nothing else imports anything. Layout, top to bottom:
+- **Add a piece (the only input screen).** All sources go through here; nothing else imports anything. **The layout is now defined in `docs/ui-and-engines-plan.md` section 3a (one drop zone, paste-link field, Record and Photo rows); the library, categories and instrument tabs are in section 3b. Where the list below conflicts with those sections, they win.** Original description:
   1. **Instrument** chips: Violin, Guitar, Ukulele, Piano (remembered per player).
   2. **One smart drop zone**: "Drop a file, paste a link, or press Record". It detects what it was given (YouTube URL, `.musicxml`/`.mxl`, `.mid`, audio file) and routes it. Under it, four explicit tiles for the same thing, each with a quality badge so the player knows what to expect:
      - **Score file** (MusicXML, MXL, MIDI): "Best quality, exact notes".
