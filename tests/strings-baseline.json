@@ -1,7 +1,7 @@
 {
  "summary": {
   "violin": 0.986,
-  "guitar": 0.983,
+  "guitar": 0.984,
   "ukulele": 0.994,
   "overall": 0.988
  },
@@ -68,7 +68,7 @@
   "guitar fast 48k+room normal": 1,
   "guitar fast mic-hp+reverb auto": 0.969,
   "guitar fast quiet+hum auto": 0.984,
-  "guitar fast chatter auto": 0.984,
+  "guitar fast chatter auto": 1,
   "guitar fast loud-clip auto": 0.984,
   "guitar fast ringing auto": 0.6,
   "guitar fast beating auto": 1,

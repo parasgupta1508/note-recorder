@@ -42,6 +42,6 @@ Known-truth synthetic phrases (`tests/synth.js`: bowed, plucked, nylon; with vib
 
 ## Other conventions
 
-- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v33`) so installed copies update.
+- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v34`) so installed copies update.
 - Netlify is no longer used and its folder was deleted. GitHub Pages is the only host.
 - Before committing, run `node tests/smoke.js` (loads the page in headless Edge, checks for script errors and clicks through the Recorder). A script error at load silently kills every button.
