@@ -13,7 +13,16 @@ Whenever you change any file in this project, back it up to GitHub without being
 3. End the commit message with the attribution line from the session's system reminder, if there is one.
 4. Tell the user the backup is done, or say why it failed. If the push fails because the login expired, run `gh auth login --hostname github.com --git-protocol https --web` and ask the user to approve the code. Don't pipe that command's output.
 
+## Never make detection worse (ratchet)
+
+`tests/bench.js` runs the real detector (loaded from `index.html`) on synthetic violin cases (legato, détaché, staccato, fast runs, noise, violin over piano) and compares with `tests/baseline.json`.
+
+1. Before committing any change to `yin`, `Segmenter`, `recPitchCore`, `analyseSamples` or `REC_MODES`, run `node tests/bench.js`.
+2. If it prints REGRESSION, the change made something worse. Fix it or drop it. Do not commit it.
+3. If it improved, run `node tests/bench.js --update`. The baseline only ever goes up.
+4. When you add a new detection feature, add a benchmark case for it first.
+
 ## Other conventions
 
-- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v22`) so installed copies update.
+- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v24`) so installed copies update.
 - The `netlify-upload` folder is a copy of the deployable files. After changes, tell the user it needs re-uploading to Netlify, or sync it if asked.

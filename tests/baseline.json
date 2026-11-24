@@ -1,0 +1,19 @@
+{
+ "overall": 0.956,
+ "cases": {
+  "fast | legato scale (violin, vibrato)": 1,
+  "fast | detache: repeated E5 (level dips only)": 1,
+  "fast | staccato: repeated A4 (clear gaps)": 1,
+  "fast | fast run (5 notes/s)": 1,
+  "fast | one note in room noise (no false notes)": 1,
+  "fast | noise only (expect nothing)": 1,
+  "fast | violin melody over soft piano": 0.8,
+  "normal | legato scale (violin, vibrato)": 0.696,
+  "normal | detache: repeated E5 (level dips only)": 1,
+  "normal | staccato: repeated A4 (clear gaps)": 1,
+  "normal | fast run (5 notes/s)": 0.889,
+  "normal | one note in room noise (no false notes)": 1,
+  "normal | noise only (expect nothing)": 1,
+  "normal | violin melody over soft piano": 1
+ }
+}
