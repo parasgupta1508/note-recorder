@@ -19,10 +19,11 @@ ck('ms toggle exists, off by default',!!$('msBtn')&&$('msBtn').getAttribute('ari
 }catch(e){ck('exception '+e.message,false)}
 
 document.title='RESULT|'+r.join('|')},1500)</script>`;
-const f = path.join(os.tmpdir(), 'smoke_index.html'); fs.writeFileSync(f, src.replace('</body>', probe + '</body>'));
+const f = path.join(__dirname, '..', '_smoke.html'); fs.writeFileSync(f, src.replace('</body>', probe + '</body>'));   // next to index.html so the relative script paths work
 const out = spawnSync(exe, ['--headless=new', '--disable-gpu', '--enable-logging=stderr', '--v=0',  '--window-size=420,900', '--virtual-time-budget=6000', '--dump-dom', 'file:///' + f.split('\\').join('/')], { encoding: 'utf8', maxBuffer: 1 << 28 });
 const errs = (out.stderr || '').split('\n').filter(l => /CONSOLE/.test(l) && /Uncaught|TypeError|ReferenceError|SyntaxError/.test(l));
 const m = (out.stdout || '').match(/<title>RESULT\|([^<]*)<\/title>/);
 (m ? m[1].split('|') : ['FAIL probe did not run']).forEach(l => console.log(l));
 errs.forEach(l => console.log('FAIL script error: ' + l.slice(l.indexOf('"'), l.indexOf('"', 40) + 1)));
+try { fs.unlinkSync(f); } catch {}
 process.exit(errs.length || !m || /FAIL/.test(m[1]) ? 1 : 0);

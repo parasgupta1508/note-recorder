@@ -2,7 +2,7 @@
 // Run: node tests/shot.js [outDir]   -> fall-phone.png, fall-tablet.png, sheet-tablet.png, fall-full.png
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os'), { spawn } = require('child_process');
 const root = path.join(__dirname, '..'), out = process.argv[2] || os.tmpdir();
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/json' };
+const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/json' };
 const exe = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Google/Chrome/Application/chrome.exe'].find(fs.existsSync);
 if (!exe) { console.log('No Edge/Chrome found'); process.exit(0); }
 const HOOK = `window.__t = { load(mode, full) {
@@ -14,7 +14,7 @@ const HOOK = `window.__t = { load(mode, full) {
 const srv = http.createServer((q, r) => { const f = path.join(root, decodeURIComponent(q.url.split('?')[0]).replace(/^\/$/, '/index.html')); fs.readFile(f, (e, d) => { if (e) { r.writeHead(404); r.end(); } else { r.writeHead(200, { 'content-type': types[path.extname(f)] || 'application/octet-stream' }); r.end(d); } }); });
 srv.listen(0, async () => {
   const port = srv.address().port;
-  fs.writeFileSync(path.join(root, '_shot.html'), fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace('/*__TEST_HOOK__*/', HOOK));
+  fs.writeFileSync(path.join(root, '_shot.html'), fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace('</body>', '<script>' + HOOK + '</script></body>'));
   const dbg = 9333 + Math.floor(Math.random() * 500), prof = path.join(os.tmpdir(), 'edge_shot_' + Date.now());
   const br = spawn(exe, ['--headless=new', '--disable-gpu', '--remote-debugging-port=' + dbg, '--user-data-dir=' + prof, '--no-first-run', 'about:blank'], { stdio: 'ignore' });
   const done = code => { try { br.kill(); } catch {} try { fs.unlinkSync(path.join(root, '_shot.html')); } catch {} srv.close(); setTimeout(() => process.exit(code), 300); };

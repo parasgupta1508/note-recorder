@@ -1,6 +1,6 @@
 # Tuner & Scale Trainer (note-recorder)
 
-Installable offline PWA: a single `index.html` (inline CSS/JS), `sw.js`, `manifest.webmanifest` and icons. It is deployed with GitHub Pages from `main` at https://parasgupta1508.github.io/note-recorder/ (the repo is public for this reason). Pushing to `main` redeploys it within about a minute.
+Installable offline PWA, no build step: `index.html` (markup only), `css/`, `js/core/` (pure logic), `js/app/` (the screens), `icons/`, `sw.js`, `manifest.webmanifest`. It is deployed with GitHub Pages from `main` at https://parasgupta1508.github.io/note-recorder/ (the repo is public for this reason). Pushing to `main` redeploys it within about a minute. `README.md` has the folder map and "how to add a feature" recipes.
 
 ## Automatic GitHub backup
 
@@ -13,35 +13,46 @@ Whenever you change any file in this project, back it up to GitHub without being
 3. End the commit message with the attribution line from the session's system reminder, if there is one.
 4. Tell the user the backup is done, or say why it failed. If the push fails because the login expired, run `gh auth login --hostname github.com --git-protocol https --web` and ask the user to approve the code. Don't pipe that command's output.
 
+## Layout rules
+
+- `js/core/*.js` is pure (no `document`, `window`, `localStorage`). Tests load these exact files in Node through `tests/lib/load.js`. Anything that touches the screen or the microphone goes in `js/app/`.
+- `js/app/*.js` are classic scripts that share one scope, loaded in the order `index.html` lists them. A top-level statement may only call things from files loaded earlier. Calls inside functions are fine. `main.js` loads last.
+- `yin()` in `js/core/pitch.js` is the single pitch detector. The tuner, Practice, the Recorder, the self-test, file analysis and the Detailed refinement all call it, so improve it there and every module benefits. Do not write a second detector.
+- When you add, rename or remove a file under `js/`, `css/` or `icons/`: list it in `index.html` AND in `FILES` in `sw.js` (otherwise the app breaks offline). `node tests/structure.js` checks both.
+- No loose images in the project root. Icons live in `icons/`.
+
 ## Never make detection worse (ratchet)
 
-`tests/bench.js` runs the real detector (loaded from `index.html`) on synthetic violin cases (legato, détaché, staccato, fast runs, noise, violin over piano) and compares with `tests/baseline.json`.
+Each benchmark runs the real code and compares with a saved baseline in `tests/baselines/`. The baseline only ever goes up: `--update` saves it only when nothing got worse.
 
-1. Before committing any change to `yin`, `Segmenter`, `recPitchCore`, `analyseSamples` or `REC_MODES`, run `node tests/bench.js`.
-2. If it prints REGRESSION, the change made something worse. Fix it or drop it. Do not commit it.
-3. If it improved, run `node tests/bench.js --update`. The baseline only ever goes up.
-4. When you add a new detection feature, add a benchmark case for it first.
+| Command | What it checks | When to run it |
+|---|---|---|
+| `node tests/bench.js` | Violin cases: legato, détaché, staccato, fast runs, noise, violin over piano | Any change to `yin`, `Segmenter`, `recPitchCore`, `analyseSamples`, `REC_MODES` |
+| `node tests/strings.js` | Live path on violin, guitar, ukulele with known notes, cents, detune, reverb, hum, chatter, clipping, ringing, beating (`tests/lib/synth.js`) | Same as above, and any change to the Recorder loop or `AutoMode` |
+| `node tests/detailed-strings.js` | Detailed path with the real Basic Pitch model in Node (about 5 min; needs `tools/node_modules`) | Any change to `bpToEvents`, `markAttacks`, `refineEvents`, `extractMelody`, `resample`, `BP_PARAMS` |
+| `node tests/pitch-sweep.js` | Raw YIN error per semitone and sample rate | Any change to `yin` |
+| `node tests/resample.js` | The resampler keeps pitch and level and does not alias | Any change to `resample` |
 
-## String-instrument accuracy (violin, guitar, ukulele)
+If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. When you add a detection feature, add a benchmark case for it first. `DBG="guitar mid clean auto" node tests/strings.js` prints expected versus found notes; `KIND=repeat`, `ONLY=ukulele` narrow the Detailed run.
 
-Known-truth synthetic phrases (`tests/synth.js`: bowed, plucked, nylon; with vibrato, scoops, detune, reverb, hum, chatter, clipping, ringing, beating):
+## Detection facts worth remembering
 
-- `node tests/strings.js` is the Live path. Ratchet like `bench.js` (`--update` only when nothing got worse). It reads each instrument's pitch range from `INST_PROFILES`.
-- `node tests/detailed-strings.js` is the Detailed path with the real Basic Pitch model in Node (needs `tools/node_modules`, takes about 5 min). It scores notes and cents error. `KIND=repeat`, `ONLY=ukulele` and `DBG="guitar mid clean"` narrow or print a run.
-- `node tests/pitch-sweep.js` checks raw YIN accuracy per semitone and sample rate.
-- Run the Live one after any change to `yin`, `Segmenter`, `recPitchCore`, `AutoMode` or the Recorder loop, and the Detailed one after any change to `bpToEvents`, `markAttacks`, `refineEvents`, `extractMelody` or `BP_PARAMS`.
-- Basic Pitch pitch bends in this build are centred on 1 (1.0 = exactly on the note), not 0. `bpToEvents` subtracts 1. `refineEvents` then re-measures every note's pitch with YIN, because the model's bends only have 1/3-semitone steps.
+- YIN finds a half or a third of the true period when a harmonic is strong (a bowed violin note swelling). `yin` checks the spectrum: if there is a clear peak at f/2 or f/3 and the signal repeats more cleanly at 2x or 3x the period, that is the pitch. This idea comes from fgnass/tuner (MIT). aubio is GPL-3.0, so never copy its code; use its ideas only.
+- Basic Pitch only ends a note after 11 quiet frames (about 128 ms), so a repeated note can merge into one long note. `markAttacks` finds the fresh attack in the audio and `extractMelody` then keeps those notes apart.
+- Basic Pitch pitch bends in this build are centred on 1 (1.0 = exactly on the note). `bpToEvents` subtracts 1. `refineEvents` then re-measures every note's pitch with `yin`, because the model's bends only have 1/3-semitone steps.
+- Recordings are kept at the device's own sample rate (16-bit). `resample` converts to 22,050 Hz for Basic Pitch with a proper low-pass filter.
 
-## Detailed analysis (Basic Pitch) and tests
+## Detailed analysis (Basic Pitch) and browser tests
 
 - `vendor/` holds the offline Detailed-analysis files (Basic Pitch model + TensorFlow.js, Apache-2.0). Rebuild with `cd tools && npm install && npm run build`. They are loaded only when Detailed mode is used, and cached by the service worker in its own `tuner-vendor-v1` cache.
-- `node tests/smoke-detailed.js` runs a synthetic recording through the Detailed path in headless Edge (about 30 s). Run it after changing `analyseDetailed`, `extractMelody` or `vendor/`.
+- `node tests/smoke.js`: loads the page in headless Edge, checks for script errors, clicks through the Recorder. A script error at load silently kills every button, so run it before every commit.
+- `node tests/structure.js`: file layout, offline cache list, core purity.
+- `node tests/smoke-detailed.js` runs a synthetic recording through the Detailed path in headless Edge (about 30 s). Run it after changing `analyseDetailed` or `vendor/`.
 - `node tests/shot.js <folder>` renders the Recorder (Falling, Sheet, full screen; phone and tablet sizes) with sample notes and saves screenshots. Look at them after any display change.
-- Audio test clips (`tests/audio/`, `*.mp3`) are copyrighted and git-ignored. Never commit them.
+- Audio test clips (`tests/audio/`, `*.mp3`) are copyrighted or personal and git-ignored. Never commit them. `tests/realclip.js <file.f32>` runs the Live detector over a decoded clip (`ffmpeg -i x.mp3 -ac 1 -ar 44100 -f f32le x.f32`).
 - Design background and roadmap: `docs/intelligence-plan.md`.
 
 ## Other conventions
 
-- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v35`) so installed copies update.
-- Netlify is no longer used and its folder was deleted. GitHub Pages is the only host.
-- Before committing, run `node tests/smoke.js` (loads the page in headless Edge, checks for script errors and clicks through the Recorder). A script error at load silently kills every button.
+- When you change any cached file, bump `CACHE` in `sw.js` (currently `tuner-v36`) so installed copies update.
+- Netlify is no longer used. GitHub Pages is the only host.

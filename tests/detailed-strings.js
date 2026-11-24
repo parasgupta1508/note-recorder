@@ -1,11 +1,10 @@
 // Detailed path (real Basic Pitch model in Node + the app's bpToEvents / refine / extractMelody) on the same synthetic string phrases.
 // node tests/detailed-strings.js            print table (about 3-5 min on CPU)
-// node tests/detailed-strings.js --update   ratchet tests/detailed-baseline.json
+// node tests/detailed-strings.js --update   ratchet tests/baselines/detailed.json
 // Needs tools/node_modules (cd tools && npm install). Scoring is identical to tests/strings.js.
 const fs = require('fs'), path = require('path');
-const S = require('./synth.js');
-const root = path.join(__dirname, '..'), src = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const lib = new Function(src.slice(src.indexOf('<script>') + 8, src.indexOf('// ---------- APP ----------')) + '\nreturn { bpToEvents, extractMelody, typeof_refine: refineEvents, typeof_split: (ev, b, sr) => markAttacks(ev, b, sr), noteToFreq };')();
+const S = require('./lib/synth.js');
+const lib = require('./lib/load.js'), root = lib.root, src = fs.readFileSync(path.join(root, 'js', 'app', 'profiles.js'), 'utf8');
 const nm = path.join(root, 'tools', 'node_modules');
 const tf = require(path.join(nm, '@tensorflow', 'tfjs')), BPm = require(path.join(nm, '@spotify', 'basic-pitch'));
 const rangeOf = k => { const line = src.split('\n').find(l => l.includes("k: '" + k + "'") && l.includes('range:')), m = line.match(/range: \[(\d+), (\d+)\]/); return [+m[1], +m[2]]; };
@@ -54,9 +53,9 @@ function match(found, notes) {
       const toMidi = f => Math.round(69 + 12 * Math.log2(f / a4));
       let ev = lib.bpToEvents(raw, a4);
       if (process.env.DBG && `${inst} ${kind} ${cond}`.includes(process.env.DBG)) console.log(' BP raw  ', ev.map(e => e.midi + '@' + e.start.toFixed(2) + '/' + Math.round(e.dur) + ' hz' + e.hz.toFixed(0)).join(' '));
-      if (lib.typeof_split && !process.env.NOSPLIT) ev = lib.typeof_split(ev, b, SR);
+      if (lib.markAttacks && !process.env.NOSPLIT) ev = lib.markAttacks(ev, b, SR);
       if (process.env.DBG && `${inst} ${kind} ${cond}`.includes(process.env.DBG)) console.log(' split   ', ev.map(e => e.midi + '@' + e.start.toFixed(2) + '/' + Math.round(e.dur) + (e.split ? 's' : '')).join(' '));
-      if (lib.typeof_refine && !process.env.NOREFINE) ev = lib.typeof_refine(ev, b, SR, { a4, poly: P.poly });
+      if (lib.refineEvents && !process.env.NOREFINE) ev = lib.refineEvents(ev, b, SR, { a4, poly: P.poly });
       const found = lib.extractMelody(ev, { lo: toMidi(P.lo) - 1, hi: toMidi(P.hi) + 1, poly: P.poly });
       if (process.env.DBG && `${inst} ${kind} ${cond}`.includes(process.env.DBG)) { console.log('--', inst, kind, cond, 'seed', seed); console.log(' expected', ph.notes.map(n => n.midi + (n.detune >= 0 ? '+' : '') + n.detune + '@' + n.t.toFixed(2)).join(' ')); console.log(' found   ', found.map(f => f.midi + (f.cents >= 0 ? '+' : '') + Math.round(f.cents) + '@' + f.start.toFixed(2) + '/' + Math.round(f.dur)).join(' ')); }
       const r = match(found, ph.notes); for (const k of ['hit', 'oct', 'wrong', 'extra', 'n']) tot[k] += r[k]; tot.errs.push(...r.errs);
@@ -70,7 +69,7 @@ function match(found, notes) {
   const summary = { violin: avg('f1', 'violin'), guitar: avg('f1', 'guitar'), ukulele: avg('f1', 'ukulele') }; summary.overall = +((summary.violin + summary.guitar + summary.ukulele) / 3).toFixed(3);
   const cents = +(keys.reduce((a, x) => a + res[x].cents, 0) / keys.length).toFixed(2);
   console.log('MEAN F1', JSON.stringify(summary), ' mean cents error', cents);
-  const bp = path.join(__dirname, 'detailed-baseline.json'), base = fs.existsSync(bp) ? JSON.parse(fs.readFileSync(bp, 'utf8')) : null; const worse = [];
+  const bp = path.join(__dirname, 'baselines', 'detailed.json'), base = fs.existsSync(bp) ? JSON.parse(fs.readFileSync(bp, 'utf8')) : null; const worse = [];
   if (base) { for (const k of keys) if (base.cases[k] != null && res[k].f1 < base.cases[k] - 0.05) worse.push(`${k}: ${base.cases[k]} -> ${res[k].f1}`); for (const i of ['violin', 'guitar', 'ukulele', 'overall']) if (summary[i] < base.summary[i] - 0.02) worse.push(`${i}: ${base.summary[i]} -> ${summary[i]}`); if (cents > base.cents + 1) worse.push(`cents error: ${base.cents} -> ${cents}`); }
   if (worse.length) { console.log('\nREGRESSION:\n  ' + worse.join('\n  ')); process.exit(1); }
   if (base) console.log('OK - nothing got worse');

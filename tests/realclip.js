@@ -1,7 +1,6 @@
 // Runs the detector over a real clip (tests/audio/*.f32 = mono float32 @44100, made with ffmpeg) and prints stats. Not committed (audio is ignored).
 const fs = require('fs'), path = require('path');
-const src = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-const lib = new Function(src.slice(src.indexOf('<script>') + 8, src.indexOf('// ---------- APP ----------')) + '\nreturn { analyseSamples, REC_MODES, midiName };')();
+const lib = require('./lib/load.js');
 const file = process.argv[2] || 'taegukgi.f32', b = fs.readFileSync(path.join(__dirname, 'audio', file)), x = new Float32Array(b.buffer, b.byteOffset, b.length >> 2);
 const modes = (process.argv[3] || 'auto,fast,normal,strict').split(','), lo = +(process.argv[4] || 190), hi = +(process.argv[5] || 2600);
 for (const mode of modes) {

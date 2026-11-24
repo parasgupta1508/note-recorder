@@ -1,10 +1,8 @@
-// Detection regression benchmark. Run: node tests/bench.js          (fails if any case got worse than tests/baseline.json)
+// Detection regression benchmark. Run: node tests/bench.js          (fails if any case got worse than tests/baselines/bench.json)
 //                                      node tests/bench.js --update (ratchet: only saves the baseline if nothing got worse)
-// It loads the real detector code out of index.html, so it always tests what ships.
+// It loads the real detector code out of js/core, so it always tests what ships.
 const fs = require('fs'), path = require('path');
-const src = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-const script = src.slice(src.indexOf('<script>') + 8, src.indexOf('// ---------- APP ----------'));
-const lib = new Function(script + '\nreturn { analyseSamples, REC_MODES, noteToFreq, extractMelody };')();
+const lib = require('./lib/load.js');
 const SR = 44100;
 
 // ---- synthetic instruments ----
@@ -70,7 +68,7 @@ const keys = Object.keys(res), mean = +(keys.reduce((a, k) => a + res[k].f1, 0) 
 keys.forEach(k => console.log(String(res[k].f1.toFixed(2)).padStart(5), ` ${res[k].found}/${res[k].expected}`.padEnd(7), k));
 console.log('OVERALL', mean);
 
-const bp = path.join(__dirname, 'baseline.json'), base = fs.existsSync(bp) ? JSON.parse(fs.readFileSync(bp, 'utf8')) : null;
+const bp = path.join(__dirname, 'baselines', 'bench.json'), base = fs.existsSync(bp) ? JSON.parse(fs.readFileSync(bp, 'utf8')) : null;
 let worse = [];
 if (base) for (const k of keys) if (base.cases[k] != null && res[k].f1 < base.cases[k] - 0.02) worse.push(`${k}: ${base.cases[k]} -> ${res[k].f1}`);
 if (base && mean < base.overall - 0.005) worse.push(`OVERALL: ${base.overall} -> ${mean}`);

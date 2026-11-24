@@ -1,8 +1,7 @@
 // Checks resample(): a tone must keep its pitch and level, and a tone above the new Nyquist must NOT alias into the band.
 // node tests/resample.js
 const fs = require('fs'), path = require('path');
-const src = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-const lib = new Function(src.slice(src.indexOf('<script>') + 8, src.indexOf('// ---------- APP ----------')) + '\nreturn { resample, binMag };')();
+const lib = require('./lib/load.js');
 let fail = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fail++; };
 const tone = (f, sr, n) => Float32Array.from({ length: n }, (_, i) => 0.5 * Math.sin(2 * Math.PI * f * i / sr));
 for (const from of [44100, 48000]) {

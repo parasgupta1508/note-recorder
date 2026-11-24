@@ -2,8 +2,7 @@
 // node tests/pitch-sweep.js [--json]   -> per instrument: octave errors, missed frames, cents error (mean/p95/max)
 const fs = require('fs'), path = require('path');
 const S = require('./synth.js');
-const src = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-const lib = new Function(src.slice(src.indexOf('<script>') + 8, src.indexOf('// ---------- APP ----------')) + '\nreturn { yin, centsBetween };')();
+const lib = require('./lib/load.js');
 const PROF = { violin: { lo: 180, hi: 1800, m: [55, 93] }, guitar: { lo: 70, hi: 1400, m: [40, 84] }, ukulele: { lo: 140, hi: 1000, m: [60, 83] } };
 const out = {};
 for (const inst of ['violin', 'guitar', 'ukulele']) {

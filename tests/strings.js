@@ -1,11 +1,11 @@
 // Note-level accuracy for violin / guitar / ukulele phrases with KNOWN notes and detuning, through the real Live path.
 // node tests/strings.js            print table
-// node tests/strings.js --update   ratchet tests/strings-baseline.json (fails when anything got worse)
+// node tests/strings.js --update   ratchet tests/baselines/strings.json (fails when anything got worse)
 // Per case: hit = right note name (and right octave) with onset within 120 ms. cents error = |found pitch - true pitch| on hits.
 const fs = require('fs'), path = require('path');
-const S = require('./synth.js');
-const src = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-const lib = new Function(src.slice(src.indexOf('<script>') + 8, src.indexOf('// ---------- APP ----------')) + '\nreturn { analyseSamples, REC_MODES, noteToFreq };')();
+const S = require('./lib/synth.js');
+const lib = require('./lib/load.js');
+const src = fs.readFileSync(path.join(lib.root, 'js', 'app', 'profiles.js'), 'utf8');   // the instrument profiles (pitch ranges) live here
 // pitch ranges come from the app's own instrument profiles, so the test always uses what ships
 const rangeOf = k => { const line = src.split('\n').find(l => l.includes("k: '" + k + "'") && l.includes('range:')), m = line.match(/range: \[(\d+), (\d+)\]/); return [+m[1], +m[2]]; };
 const PROF = { violin: { lowM: 55, highM: 88, topM: [88, 100] }, guitar: { lowM: 40, highM: 76, topM: [76, 88] }, ukulele: { lowM: 60, highM: 81, topM: [76, 84] } };
@@ -66,7 +66,7 @@ const keys = Object.keys(res), mean = k => +(keys.filter(x => x.startsWith(k)).r
 if (!process.argv.includes('-q')) for (const k of keys) { const r = res[k]; console.log(k.padEnd(30), 'F1', r.f1.toFixed(2), ' hit', r.hit.padEnd(6), 'octErr', r.oct, 'wrongNote', r.wrong, 'extra', String(r.extra).padEnd(3), 'cents', r.cents, 'p95', r.p95); }
 const summary = { violin: mean('violin'), guitar: mean('guitar'), ukulele: mean('ukulele') }; summary.overall = +((summary.violin + summary.guitar + summary.ukulele) / 3).toFixed(3);
 console.log('MEAN F1', JSON.stringify(summary));
-const bp = path.join(__dirname, 'strings-baseline.json'), base = fs.existsSync(bp) ? JSON.parse(fs.readFileSync(bp, 'utf8')) : null; const worse = [];
+const bp = path.join(__dirname, 'baselines', 'strings.json'), base = fs.existsSync(bp) ? JSON.parse(fs.readFileSync(bp, 'utf8')) : null; const worse = [];
 if (base) { for (const k of keys) if (base.cases[k] != null && res[k].f1 < base.cases[k] - 0.03) worse.push(`${k}: ${base.cases[k]} -> ${res[k].f1}`); for (const i of ['violin', 'guitar', 'ukulele', 'overall']) if (summary[i] < base.summary[i] - 0.01) worse.push(`${i}: ${base.summary[i]} -> ${summary[i]}`); }
 if (worse.length) { console.log('\nREGRESSION:\n  ' + worse.join('\n  ')); process.exit(1); }
 if (base) console.log('OK - nothing got worse');

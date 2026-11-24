@@ -1,7 +1,7 @@
 // Tests the Detailed (Basic Pitch) path in headless Edge/Chrome over a local web server, with a synthetic recording.
 // Run: node tests/smoke-detailed.js     (slow: loads TensorFlow.js; the microphone is not needed)
 const http = require('http'), fs = require('fs'), path = require('path');
-const root = path.join(__dirname, '..'), types = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.bin': 'application/octet-stream', '.png': 'image/png', '.webmanifest': 'application/json' };
+const root = path.join(__dirname, '..'), types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.bin': 'application/octet-stream', '.png': 'image/png', '.webmanifest': 'application/json' };
 const browsers = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Google/Chrome/Application/chrome.exe'];
 const exe = browsers.find(fs.existsSync); if (!exe) { console.log('No Edge/Chrome found - skipped'); process.exit(0); }
 const HOOK = `window.__selftest = { async run(f32, rate) { newRecording(); cap.rate = rate; const i16 = new Int16Array(f32.length); for (let i = 0; i < f32.length; i++) i16[i] = Math.max(-32768, Math.min(32767, Math.round(f32[i] * 32767))); cap.chunks = [i16]; cap.n = i16.length; engine = 'det'; events = []; await analyseDetailed(); return { info: $('recInfo').textContent, live: liveEv && liveEv.length, det: detEv && detEv.map(e => [e.note, +e.start.toFixed(2), Math.round(e.dur)]) }; } };`;
@@ -11,7 +11,7 @@ srv.listen(0, () => {
     const sr=16000,N=sr*6,x=new Float32Array(N),seq=[[69,0.3,1.4],[71,1.8,1.4],[73,3.3,1.4],[69,4.8,0.9]];
     for(const [m,t0,d] of seq){const f=440*Math.pow(2,(m-69)/12);for(let i=0;i<d*sr;i++){const t=i/sr,env=Math.min(1,t/0.03)*Math.min(1,(d-t)/0.05);let v=0;for(let h=1;h<=5;h++)v+=Math.sin(2*Math.PI*f*h*t)/h;x[Math.floor(t0*sr)+i]+=0.3*env*v}}
     const r=await window.__selftest.run(x,sr);document.title='RESULT|'+JSON.stringify(r)}catch(e){document.title='RESULT|ERR '+e.message}})()</script>`;
-  fs.writeFileSync(path.join(root, '_probe.html'), fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace('/*__TEST_HOOK__*/', HOOK).replace('</body>', probe + '</body>'));
+  fs.writeFileSync(path.join(root, '_probe.html'), fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace('</body>', '<script>' + HOOK + '</script>' + probe + '</body>'));
   const { spawn } = require('child_process'), dbg = 9333 + Math.floor(Math.random() * 500), prof = path.join(require('os').tmpdir(), 'edge_det_' + Date.now());
   const br = spawn(exe, ['--headless=new', '--disable-gpu', '--remote-debugging-port=' + dbg, '--user-data-dir=' + prof, '--window-size=420,900', '--no-first-run', 'about:blank'], { stdio: 'ignore' });
   const done = (code, msg) => { console.log(msg); try { br.kill(); } catch {} try { fs.unlinkSync(path.join(root, '_probe.html')); } catch {} srv.close(); setTimeout(() => process.exit(code), 300); };

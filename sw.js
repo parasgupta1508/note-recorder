@@ -1,8 +1,36 @@
 // Service worker: makes the app installable and usable offline.
 // Bump CACHE whenever you change any file, so installed copies pick up the update.
-const CACHE = 'tuner-v35';
+const CACHE = 'tuner-v36';
 const VENDOR = 'tuner-vendor-v1';   // the Detailed-analysis files live in their own cache, so a new app version does not delete them
-const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
+const FILES = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './css/app.css',
+  './js/core/pitch.js',
+  './js/core/music.js',
+  './js/core/segmenter.js',
+  './js/core/listening.js',
+  './js/core/detailed.js',
+  './js/app/base.js',
+  './js/app/tuner.js',
+  './js/app/practice.js',
+  './js/app/analysis.js',
+  './js/app/metronome.js',
+  './js/app/selftest.js',
+  './js/app/settings-ui.js',
+  './js/app/practice-engine.js',
+  './js/app/recorder.js',
+  './js/app/chart.js',
+  './js/app/audio.js',
+  './js/app/profiles.js',
+  './js/app/main.js',
+  './js/app/install.js',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
+  './icons/apple-touch-icon.png',
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
