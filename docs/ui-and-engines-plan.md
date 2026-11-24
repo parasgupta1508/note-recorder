@@ -65,6 +65,7 @@ The owner liked the input pattern of songscription.ai: one card, one drop target
 |  +--------------------------------------------+  |
 |  [ link icon  Paste a link          (YouTube) ]  |   paste field; detects the source
 +--------------------------------------------------+
+[ note icon  Upload MIDI or MusicXML  Best quality > ]  "Exact notes from a .mid, .midi, .musicxml, .xml or .mxl file"
 [ mic icon   Record audio                       > ]   "Play into your microphone"  (mic check first)
 [ camera     Take a photo   Experimental        > ]   "Photograph printed sheet music"
 ```
@@ -72,6 +73,7 @@ The owner liked the input pattern of songscription.ai: one card, one drop target
 Behaviour:
 - **Auto-detect.** Whatever arrives (dropped file, picked file, pasted link, recording, photo) is classified and shown as one line under the card: "Detected: MusicXML, exact notes", "Detected: MIDI, exact notes", "Detected: audio, will be a Draft", "Detected: PDF or photo, will be a Draft (experimental)", "Detected: YouTube link, needs the helper". The player never chooses a type.
 - **Upload accepts** audio, video (the audio track is used), PDF, images, `.musicxml`/`.xml`/`.mxl`, `.mid`/`.midi`. In-page decoding is used where the browser can do it; otherwise the helper (ffmpeg) does it and the screen says so.
+- **Upload MIDI or MusicXML (dedicated row, not in the reference design).** Opens a file picker limited to `.mid`, `.midi`, `.musicxml`, `.xml`, `.mxl`, and accepts several files at once (each becomes a piece; a multi-select can also be saved into one category). Marked "Best quality" because the notes are exact and the piece is Verified by default (no Draft step, no engine involved). MIDI files then show the part picker, transposition and bar-grid check from section 3b; MusicXML files show the part picker and the engraved sheet. Files dropped on the big drop zone are routed the same way, so both paths give the same result.
 - **Paste a link.** YouTube first (the helper already fetches it). Other sites only if the helper's downloader handles them; do not show their icons until they work.
 - **Take a photo / PDF** needs a new engine role, `omr` (optical music recognition), see 4.1. Treat it as experimental: photographed printed music is the least accurate input in the whole app, always a Draft, always shows the Review screen with the original image beside the result, and the Review screen must make fixing in MuseScore the easy path. Do not hide this limit.
 - **Record audio** here means a demo performance (a teacher or the student playing the piece to turn into a reference). Practice takes are recorded inside the Piece view.
