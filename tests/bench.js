@@ -4,7 +4,7 @@
 const fs = require('fs'), path = require('path');
 const src = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const script = src.slice(src.indexOf('<script>') + 8, src.indexOf('// ---------- APP ----------'));
-const lib = new Function(script + '\nreturn { analyseSamples, REC_MODES, noteToFreq };')();
+const lib = new Function(script + '\nreturn { analyseSamples, REC_MODES, noteToFreq, extractMelody };')();
 const SR = 44100;
 
 // ---- synthetic instruments ----
@@ -49,6 +49,20 @@ for (const mode of ['auto', 'fast', 'normal']) for (const c of cases) {
   const m = lib.REC_MODES[mode === 'auto' ? 'fast' : mode], found = lib.analyseSamples(c.b, SR, { m, auto: mode === 'auto', fmin: 180, fmax: 2400, conf: 0.85, a4: 440 });
   res[mode + ' | ' + c.name] = score(found, c.exp);
 }
+
+// ---- melody extraction (works on note lists, e.g. from Basic Pitch): violin line out of piano + overtones ----
+{
+  const N = (midi, start, dur, amp) => ({ midi, note: '', start, dur, amp, pts: [] });
+  const violin = [[76, 0.0, 800], [74, 0.8, 800], [72, 1.6, 900], [71, 2.5, 700], [72, 3.2, 1200]].map(([m, t, d]) => N(m, t, d, 0.8));
+  const piano = [[48, 0.0, 1600, 0.35], [55, 0.0, 1600, 0.3], [52, 1.6, 1600, 0.35], [57, 1.6, 1600, 0.3], [64, 0.0, 600, 0.3], [60, 2.5, 1500, 0.3]].map(([m, t, d, a]) => N(m, t, d, a));
+  const over = [N(88, 0.0, 700, 0.5), N(86, 0.8, 700, 0.5)];                      // octave overtones of the violin notes (+12)
+  const frag = [N(72, 3.2, 500, 0.8), N(72, 3.75, 650, 0.8)];                    // one note split in two fragments (same pitch, short gap)
+  const all = [...violin.slice(0, 4), ...frag, ...piano, ...over];
+  const got = lib.extractMelody(all, { lo: 55, hi: 96 });
+  const exp = violin.map(n => ({ midi: n.midi, start: n.start }));
+  res['melody | violin out of piano + overtones'] = score(got.map(g => ({ midi: g.midi, start: g.start })), exp);
+}
+
 const keys = Object.keys(res), mean = +(keys.reduce((a, k) => a + res[k].f1, 0) / keys.length).toFixed(3);
 keys.forEach(k => console.log(String(res[k].f1.toFixed(2)).padStart(5), ` ${res[k].found}/${res[k].expected}`.padEnd(7), k));
 console.log('OVERALL', mean);

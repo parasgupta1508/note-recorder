@@ -22,8 +22,15 @@ Whenever you change any file in this project, back it up to GitHub without being
 3. If it improved, run `node tests/bench.js --update`. The baseline only ever goes up.
 4. When you add a new detection feature, add a benchmark case for it first.
 
+## Detailed analysis (Basic Pitch) and tests
+
+- `vendor/` holds the offline Detailed-analysis files (Basic Pitch model + TensorFlow.js, Apache-2.0). Rebuild with `cd tools && npm install && npm run build`. They are loaded only when Detailed mode is used, and cached by the service worker in its own `tuner-vendor-v1` cache.
+- `node tests/smoke-detailed.js` runs a synthetic recording through the Detailed path in headless Edge (about 30 s). Run it after changing `analyseDetailed`, `extractMelody` or `vendor/`.
+- Audio test clips (`tests/audio/`, `*.mp3`) are copyrighted and git-ignored. Never commit them.
+- Design background and roadmap: `docs/intelligence-plan.md`.
+
 ## Other conventions
 
-- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v26`) so installed copies update.
+- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v27`) so installed copies update.
 - Netlify is no longer used and its folder was deleted. GitHub Pages is the only host.
 - Before committing, run `node tests/smoke.js` (loads the page in headless Edge, checks for script errors and clicks through the Recorder). A script error at load silently kills every button.

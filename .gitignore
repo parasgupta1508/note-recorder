@@ -4,3 +4,5 @@
 *.wav
 *.m4a
 tests/audio/
+tests/_probe.html
+_probe.html

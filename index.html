@@ -492,6 +492,12 @@
   </div>
 
   <div class="ropts">
+    <div class="field wide" id="engWrap"><span>Analysis</span>
+      <div class="seg" id="engSeg" role="group" aria-label="Analysis mode"><button data-e="live" class="on">Live</button><button data-e="det">Detailed</button></div>
+      <div class="hint2" id="engHint"></div></div>
+    <label class="field"><span>Display size</span><select id="dispSize" title="How big the notes and text are on the chart"><option value="auto" selected>Auto (fits this screen)</option><option value="large">Large</option><option value="xl">Extra large</option></select></label>
+    <div class="field wide hide" id="showWrap"><span>Showing</span>
+      <div class="seg" id="showSeg" role="group" aria-label="Which result to show"><button data-s="live" class="on">Live result</button><button data-s="det">Detailed result</button></div></div>
     <label class="field wide" title="This sets how certain the app must be before it records a note.&#10;• Notes missing? Choose Fast tempo or Soft &amp; quiet.&#10;• Notes that you didn't play? Choose Standard or Noisy room."><span>Listening</span><select id="recMode"><option value="auto" selected>Auto (recommended)</option><option value="fast">Fast tempo</option><option value="normal">Standard</option><option value="relaxed">Soft &amp; quiet</option><option value="strict">Noisy room</option></select></label>
     <div class="wide hint2" id="recModeDesc"></div>
     <label class="field"><span>Colours</span><select id="recColor"><option value="acc" selected>By accuracy</option><option value="note">By note name</option></select></label>
@@ -580,6 +586,8 @@
     <div class="hint2" id="bkMsg" style="margin-top:8px"></div></div>
   <div class="set-group" data-g="data"><h3>Settings layout</h3><p>How this page is arranged.</p>
     <div class="seg" id="laySeg"><button data-l="list">List</button><button data-l="tabs">Tabs</button><button data-l="classic">Classic</button></div></div>
+  <div class="set-group" data-g="data"><h3>Install app</h3><p id="instText">Install the app on this device so it opens like a normal app, works without internet, and keeps your recordings' analysis files.</p>
+    <button id="installBtn" class="hide">Install app</button></div>
   <div class="set-group" data-g="data"><h3>Reset</h3><p>Put every setting above back to its recommended value.</p>
     <button id="defaults" class="sec">Restore default settings</button></div>
 </section>
@@ -840,6 +848,49 @@ function analyseSamples(x, sr, opts = {}) {
   const finish = () => { sg.end(); return out; };
   if (!opts.chunk) { step(n); return finish(); }
   return new Promise(res => { const tick = () => { step(f + 150); if (opts.onProgress) opts.onProgress(f / Math.max(1, n)); f < n ? setTimeout(tick, 0) : res(finish()); }; tick(); });
+}
+
+// ---------- Detailed analysis helpers (pure) ----------
+// Basic Pitch notes -> the app's note shape. bends are in 1/3 semitone per frame (11.6 ms per frame).
+function bpToEvents(bp, a4 = 440) {
+  return bp.map(n => {
+    const b = n.pitchBends || [], mean = b.length ? b.reduce((x, y) => x + y, 0) / b.length : 0, cents = Math.max(-50, Math.min(50, mean * 100 / 3));
+    const step = Math.max(1, Math.ceil(b.length / 120)), pts = [];
+    for (let i = 0; i < b.length; i += step) pts.push([Math.round(i * 256 / 22050 * 1000), +(b[i] * 100 / 3).toFixed(1)]);
+    const ref = noteToFreq(n.pitchMidi, a4);
+    return { midi: n.pitchMidi, note: midiName(n.pitchMidi), hz: ref * Math.pow(2, cents / 1200), cents, start: n.startTimeSeconds, dur: n.durationSeconds * 1000, lvl: +(20 * Math.log10(Math.max(1e-4, n.amplitude))).toFixed(1), pts, amp: n.amplitude, src: 'bp' };
+  }).sort((a, b) => a.start - b.start);
+}
+// Picks the melody out of a polyphonic note list (violin over piano). Works on app notes (start s, dur ms).
+// o: { lo, hi (MIDI range), minDur (ms), mergeGap (ms) }
+function extractMelody(ev, o = {}) {
+  const lo = o.lo ?? 0, hi = o.hi ?? 127, minDur = o.minDur ?? 90, mergeGap = o.mergeGap ?? 70;
+  let n = ev.filter(e => e.midi >= lo && e.midi <= hi && e.dur >= minDur);
+  const end = e => e.start + e.dur / 1000, ov = (a, b) => Math.max(0, Math.min(end(a), end(b)) - Math.max(a.start, b.start));
+  const keep = n.map(() => true);
+  for (let i = 0; i < n.length; i++) for (let j = 0; j < n.length; j++) {            // pass 1: overtones (an octave / twelfth / double octave above a stronger note that starts with it)
+    if (i === j) continue; const a = n[i], b = n[j], d = b.midi - a.midi;
+    if ((d === -12 || d === -19 || d === -24) && b.amp >= a.amp * 0.8 && Math.abs(a.start - b.start) < 0.08 && ov(a, b) / (a.dur / 1000) >= 0.6) keep[i] = false;
+  }
+  n = n.filter((_, i) => keep[i]);
+  const keep2 = n.map(() => true);
+  if (o.skyline !== false) for (let i = 0; i < n.length; i++) for (let j = 0; j < n.length; j++) {   // pass 2: a clearly stronger note above covers most of this one = accompaniment
+    if (i === j) continue; const a = n[i], b = n[j], d = b.midi - a.midi;
+    if (d >= 1 && d <= 36 && b.amp >= a.amp * 0.6 && ov(a, b) / (a.dur / 1000) >= 0.6 && ov(a, b) / (b.dur / 1000) > 0.5) keep2[i] = false;
+  }
+  n = n.filter((_, i) => keep2[i]);
+  // one tune: strongest and longest notes win; a weaker note that mostly overlaps an already chosen one is accompaniment
+  const chosen = [], order = n.map((e, i) => i).sort((i, j) => (n[j].amp || 0.1) * Math.sqrt(n[j].dur) - (n[i].amp || 0.1) * Math.sqrt(n[i].dur));
+  for (const i of order) { const e = n[i]; if (chosen.every(c => ov(e, c) / (e.dur / 1000) < 0.35)) chosen.push(e); }
+  n = chosen.sort((x, y) => x.start - y.start).map(e => ({ ...e }));
+  for (let i = 0; i + 1 < n.length; i++) if (end(n[i]) > n[i + 1].start) n[i].dur = Math.max(minDur * 0.6, (n[i + 1].start - n[i].start) * 1000);   // trim the small overlap
+  const out = [];
+  for (const e of n) {                               // merge fragments of one note
+    const p = out[out.length - 1];
+    if (p && p.midi === e.midi && e.start - end(p) < mergeGap / 1000) { p.dur = (end(e) - p.start) * 1000; p.pts = (p.pts || []).concat((e.pts || []).map(q => [q[0] + Math.round((e.start - p.start) * 1000), q[1]])); p.amp = Math.max(p.amp || 0, e.amp || 0); }
+    else out.push({ ...e });
+  }
+  return out;
 }
 
 // ---------- APP ----------
@@ -1697,6 +1748,7 @@ const recLen = () => recording ? Math.max(0, ctx.currentTime - t0 - recT0)
 const hasRec = () => events.length > 0 || cap.n > 0;
 
 function newRecording() {
+  recGen++; liveEv = detEv = null; shownRes = 'live';
   events = []; $('rows').innerHTML = ''; recSel = -1; recEnd = 0;
   cap.chunks = []; cap.n = 0; cap.acc = 0; cap.cnt = 0; pb.abuf = null; pb.pos = 0; view.vs = 0;
   $('noteInfo').textContent = infoHint(); $('noteInfo').className = 'mut';
@@ -1719,20 +1771,91 @@ function addEvent(ev) {
   updateStats();
 }
 function setRecording(on) {
+  if (on && detBusy) return;                           // still analysing the last recording
   if (on && !recording) {
     pbStop(); newRecording();                            // a new recording replaces the previous one
     cap.k = Math.max(1, Math.floor(ctx.sampleRate / 16000)); cap.rate = ctx.sampleRate / cap.k;   // a loaded file may have changed these
     recT0 = ctx.currentTime - t0; seg.reset(); autoM.reset(); view.follow = true;
   }
   if (!on && recording) {
-    seg.end(); recEnd = Math.max(0, ctx.currentTime - t0 - recT0);
+    seg.end(); recEnd = Math.max(0, ctx.currentTime - t0 - recT0); if (engine === 'det') setTimeout(analyseDetailed, 0);
     const Wc = cv.clientWidth || 360; view.follow = false; view.vs = 0; view.pps = Math.min(Math.max(8, (Wc - GUT) / 8), Math.max(20, (Wc - GUT - 24) / Math.max(2, recEnd)));
   }
-  recording = on; $('rec').textContent = on ? '■ Stop' : '● Record'; $('rec').className = on ? 'rec' : '';
+  recording = on; $('rec').textContent = on ? '■ Stop' : '● Record'; $('rec').className = on ? 'rec' : ''; engUi();
   recUi(); requestDraw();
 }
 
 // ----- analyse a saved audio file with the same detector (offline) -----
+
+// ----- Live vs Detailed analysis -----
+// Live: the light detector runs while you play. Detailed: after you stop, the recording goes through Basic Pitch
+// (a small neural network, files in vendor/, loaded only when needed) and the melody is picked out of it.
+const BP_PARAMS = { onset: 0.5, frame: 0.3, minLen: 11 };      // Basic Pitch note settings (minLen in 11.6 ms frames)
+const ENG_KEY = 'tuner-recengine';
+let recGen = 0, engine = 'live', liveEv = null, detEv = null, detBusy = false, shownRes = 'live', bpLoad = null;
+try { if (localStorage.getItem(ENG_KEY) === 'det') engine = 'det'; } catch {}
+function engUi() {
+  for (const b of $('engSeg').children) b.classList.toggle('on', b.dataset.e === engine);
+  $('engHint').textContent = engine === 'det' ? 'Notes appear as you play, then press Stop: the app studies the whole recording and shows a more accurate result (takes a little while).' + (bpReady === 'loading' ? ' Getting the analysis files…' : bpReady === 'ready' ? ' Ready, and works offline.' : '') : 'Notes appear instantly as you play. Light and fast.';
+  const both = !!(liveEv && detEv); $('showWrap').classList.toggle('hide', !both);
+  for (const b of $('showSeg').children) b.classList.toggle('on', b.dataset.s === shownRes);
+  if (detBusy) $('rec').disabled = true;
+}
+let bpReady = '';
+function prefetchBP() {                                    // download the detailed-analysis files once, so they work offline later (the service worker keeps them)
+  if (bpReady || !navigator.onLine || !('serviceWorker' in navigator) || !window.caches) return; bpReady = 'loading'; engUi();
+  const urls = ['vendor/basic-pitch.js', 'vendor/model/model.json', 'vendor/model/group1-shard1of1.bin'];
+  navigator.serviceWorker.ready.then(() => Promise.all(urls.map(u => fetch(u).then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); }))))
+    .then(() => Promise.all(urls.map(u => caches.match(u))))
+    .then(hits => { bpReady = hits.every(Boolean) ? 'ready' : ''; engUi(); }).catch(() => { bpReady = ''; engUi(); });
+}
+$('engSeg').addEventListener('click', e => { const b = e.target.closest('button[data-e]'); if (!b) return; engine = b.dataset.e; try { localStorage.setItem(ENG_KEY, engine); } catch {} if (engine === 'det') prefetchBP(); engUi(); });
+$('showSeg').addEventListener('click', e => { const b = e.target.closest('button[data-s]'); if (b) showResult(b.dataset.s); });
+function showEvents(list) {                                // replace what is shown (table, stats, chart)
+  const t = recT0; recT0 = 0; events = []; $('rows').innerHTML = ''; recSel = -1;
+  list.forEach(ev => addEvent({ ...ev })); recT0 = t; requestDraw(); recUi();
+}
+function showResult(k) { if (k === 'det' && !detEv) return; if (k === 'live' && !liveEv) return; shownRes = k; showEvents(k === 'det' ? detEv : liveEv); engUi(); }
+function loadBP() {
+  if (window.BP) return Promise.resolve();
+  return bpLoad || (bpLoad = new Promise((res, rej) => {
+    const sc = document.createElement('script'); sc.src = 'vendor/basic-pitch.js';
+    sc.onload = res; sc.onerror = () => { bpLoad = null; rej(new Error('offline')); }; document.head.appendChild(sc);
+  }));
+}
+function capSamples22() {                                   // the recorded sound as 22,050 Hz floats (what Basic Pitch needs)
+  const n = cap.n, src = new Float32Array(n); let o = 0;
+  for (const c of cap.chunks) { for (let i = 0; i < c.length; i++) src[o + i] = c[i] / 32768; o += c.length; }
+  const r = cap.rate / 22050, m = Math.floor((n - 1) / r), out = new Float32Array(m);
+  for (let i = 0; i < m; i++) { const p = i * r, j = p | 0, f = p - j; out[i] = src[j] * (1 - f) + src[j + 1] * f; }
+  return out;
+}
+async function analyseDetailed() {
+  if (detBusy || cap.n < cap.rate * 0.5) return;
+  const info = $('recInfo'), gen = recGen; detBusy = true; $('rec').disabled = true; liveEv = events.map(e => ({ ...e }));
+  const x = capSamples22();                            // snapshot now, so a later Clear or new recording cannot change what is analysed
+  try {
+    info.textContent = 'Loading detailed analysis…'; await loadBP(); const BP = window.BP;
+    try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+    if (!BP.model) { const m = BP.tf.loadGraphModel('vendor/model/model.json'); m.catch(() => { if (BP.model === m) BP.model = null; }); BP.model = m; }
+    await new Promise(r => setTimeout(r, 30));
+    const bp = new BP.BasicPitch(BP.model), F = [], O = [], C = [];
+    await bp.evaluateModel(x, (f, o, c) => { for (let i = 0; i < f.length; i++) { F.push(f[i]); O.push(o[i]); } for (let i = 0; i < c.length; i++) C.push(c[i]); }, p => { info.textContent = 'Analysing in detail… ' + Math.round(p * 100) + '%'; });
+    if (gen !== recGen) { detBusy = false; engUi(); return; }   // the recording was cleared or replaced meanwhile: drop this result
+    const lo = +$('fmin').value, hi = +$('fmax').value;
+    const raw = BP.noteFramesToTime(BP.addPitchBendsToNoteEvents(C, BP.outputToNotesPoly(F, O, BP_PARAMS.onset, BP_PARAMS.frame, BP_PARAMS.minLen, true, hi, lo)));
+    const toMidi = f => Math.round(69 + 12 * Math.log2(f / a4()));
+    detEv = extractMelody(bpToEvents(raw, a4()), { lo: toMidi(lo) - 1, hi: toMidi(hi) + 1 });
+    showResult('det');
+    info.textContent = `Detailed result: ${detEv.length} notes (Live found ${liveEv.length}).`;
+  } catch (err) {
+    console.warn('Detailed analysis failed:', err && (err.stack || err.message || err));
+    detEv = null; info.textContent = err && err.message === 'offline' ? 'Detailed analysis needs its files. Connect to the internet once, then it works offline.' : 'Detailed analysis could not run on this device. The Live result is shown.';
+  }
+  detBusy = false; $('rec').disabled = !listening; engUi(); recUi();
+}
+
+/*__TEST_HOOK__*/
 // Offline audio-file analysis. Parked: not wired to any button right now. To bring it back, add
 //   <input id="recFile" type="file" accept="audio/*">  in the Recorder options and call  analyseFile(input.files[0]).
 async function analyseFile(file) {
@@ -1888,6 +2011,10 @@ function syncCtl(pos, max) {      // slider + follow button
   sl.value = max > 0 ? Math.round(Math.max(0, Math.min(1, pos / max)) * 1000) : 0;
   $('rvLive').classList.toggle('on', view.follow);
 }
+// Display scale: Auto looks at this screen (phone / tablet / laptop) so notes and text stay comfortable to read; Large and Extra large add to that.
+const uiK = () => { const w = innerWidth, base = w >= 1100 ? 1.15 : w >= 600 ? 1.1 : 1; return base * ({ large: 1.2, xl: 1.45 }[$('dispSize').value] || 1); };
+$('dispSize').addEventListener('change', () => { try { localStorage.setItem('tuner-dispsize', $('dispSize').value); } catch {} requestDraw(); });
+try { const d = localStorage.getItem('tuner-dispsize'); if (d) $('dispSize').value = d; } catch {}
 const FS = () => $('tab-rec').classList.contains('fs');
 function setFS(on) {
   $('tab-rec').classList.toggle('fs', on); document.body.classList.toggle('fsrec', on);
@@ -1920,7 +2047,10 @@ function drawSheet() {
   const none = !all.length; let showT = none || maxD >= 35; const showB = none || minD <= 33; if (!showT && !showB) showT = true;
   const topLine = showT ? 45 : 33, botLine = showB ? 25 : 37;
   const dTop = Math.max(topLine, none ? 0 : maxD + 4), dBot = Math.min(botLine, none ? 99 : minD - 3);
-  const sp = FS() ? Math.min(20, Math.max(13, Wc / 60)) : Wc < 560 ? 11 : 13, st = sp / 2, padTop = 14, labBot = 14, laneH = 26, rulerH = bpm > 0 ? 44 : 26;
+  const K = uiK(), bandH = sp => { const st = sp / 2, staffH = (dTop - dBot) * st; return 14 + staffH + 14 + 26 + 6 + (bpm > 0 ? 44 : 26); };
+  let sp = Math.round(Math.min(26, Math.max(12, Wc / 46)) * K / 1.1 * (FS() ? 1.15 : 1));
+  const maxH = FS() ? innerHeight - 110 : Math.max(300, innerHeight * 0.62); while (sp > 11 && bandH(sp) > maxH) sp--;
+  const st = sp / 2, padTop = 14, labBot = 14, laneH = 26, rulerH = bpm > 0 ? 44 : 26;
   const staffH = (dTop - dBot) * st, laneTop = padTop + staffH + labBot, rulerTop = laneTop + laneH + 6, H = rulerTop + rulerH;
   lay = { rulerTop };
   const Y = d => padTop + (dTop - d) * st, tx = t => GUT + (t - view.vs) * view.pps;
@@ -2012,9 +2142,9 @@ function drawSheet() {
 
 // ----- view 2: falling notes (one lane per note that was played; time runs top → bottom) -----
 function drawFall() {
-  const Wc = cv.clientWidth, BG = '#0c0f15', TXT = '#f1f4fb', MUT = '#c9d2e6', hdr = 32;
+  const K = uiK(), Wc = cv.clientWidth, BG = '#0c0f15', TXT = '#f1f4fb', MUT = '#c9d2e6', hdr = Math.round(32 * K);
   const live = liveEvent(), all = live ? events.concat([live]) : events, len = recLen(), bpm = bpmVal();
-  const H = FS() ? Math.max(200, innerHeight - (($('tab-rec').querySelector('.tport') || {}).offsetHeight || 90) - 24) : Math.round(Math.min(540, Math.max(320, Wc * 0.9)));
+  const H = FS() ? Math.max(200, innerHeight - (($('tab-rec').querySelector('.tport') || {}).offsetHeight || 90) - 24) : Math.round(Math.min(760, Math.max(320, Math.min(Wc * 0.9, innerHeight * 0.62)))) ;
   sizeCanvas(Wc, H); g2.fillStyle = BG; g2.fillRect(0, 0, Wc, H);
   const now = recording ? len : pbPos(), fps = view.fps;
   const nowY = hdr + (recording ? 20 : Math.round((H - hdr) * 0.4));       // while recording the newest notes sit at the top and drop away
@@ -2049,7 +2179,7 @@ function drawFall() {
     g2.globalAlpha = past ? 0.5 : 1; rrect(x, top, bw, h, Math.min(7, h / 2)); g2.fillStyle = col; g2.fill();
     if (isAct || sel) { g2.lineWidth = 2; g2.strokeStyle = '#fff'; g2.stroke(); } else { g2.lineWidth = 1; g2.strokeStyle = 'rgba(255,255,255,.28)'; g2.stroke(); }
     g2.globalAlpha = past ? 0.75 : 1; g2.fillStyle = '#0b0d12';
-    const fs = Math.max(11, Math.min(18, Math.round(bw * 0.28)));
+    const fs = Math.max(Math.round(12 * K), Math.min(Math.round(22 * K), Math.round(bw * 0.3)));
     if (h >= 34) {
       g2.font = `700 ${fs}px system-ui,sans-serif`; g2.fillText(nm(e.note), x + bw / 2, top + h / 2 + 1, bw - 6);
       g2.font = `600 ${Math.max(11, fs - 2)}px system-ui,sans-serif`; g2.fillText(durText(e, bpm), x + bw / 2, top + h / 2 + fs + 2, bw - 6);
@@ -2061,7 +2191,7 @@ function drawFall() {
 
   // lane header: the note names, lit while that note sounds
   g2.fillStyle = '#111620'; g2.fillRect(0, 0, Wc, hdr); g2.fillStyle = 'rgba(255,255,255,.08)'; g2.fillRect(0, hdr - 1, Wc, 1);
-  const hf = Math.max(12, Math.min(17, Math.round(laneW * 0.34)));
+  const hf = Math.max(Math.round(12 * K), Math.min(Math.round(20 * K), Math.round(laneW * 0.34)));
   for (let i = 0; i < used.length; i++) {
     const lit = act.has(i), cx = i * laneW + laneW / 2, c = $('recColor').value === 'note' ? `hsl(${(((used[i] % 12) + 12) % 12) * 30},85%,62%)` : '#6c8dff';
     if (lit) { rrect(i * laneW + 3, 4, laneW - 6, hdr - 9, 7); g2.fillStyle = c; g2.fill(); }
@@ -2175,7 +2305,7 @@ try { if (localStorage.getItem('tuner-recview') === 'fall') setView('fall'); els
 $('tol').addEventListener('input', () => { renderLegend(); updateStats(); requestDraw(); });
 const RP_KEY = 'tuner-recprefs-v2', RP_IDS = ['recMode', 'recColor', 'recBpm'];   // only these three options are remembered, never any recording
 try { const o = JSON.parse(localStorage.getItem(RP_KEY)); if (o) RP_IDS.forEach(id => { if (o[id] != null) $(id).value = o[id]; }); } catch {}
-modeDesc();
+modeDesc(); engUi(); if (engine === 'det') prefetchBP();
 RP_IDS.forEach(id => $(id).addEventListener('change', () => { const o = {}; RP_IDS.forEach(k => o[k] = $(k).value); try { localStorage.setItem(RP_KEY, JSON.stringify(o)); } catch {} }));
 
 // ----- audio engine -----
@@ -2208,7 +2338,7 @@ async function openMic() {
   capNode.onaudioprocess = ev => { if (recording) capPush(ev.inputBuffer.getChannelData(0)); };
   boostNode.connect(capNode); capNode.connect(capSink); capSink.connect(c.destination);
   buf = new Float32Array(analyser.fftSize); t0 = c.currentTime; listening = true; keepAwake();
-  showMicProc(); listMics(); audioInfo(); $('start').textContent = '■ Stop listening'; $('rec').disabled = false; $('status').textContent = '';
+  showMicProc(); listMics(); audioInfo(); $('start').textContent = '■ Stop listening'; $('rec').disabled = detBusy; $('status').textContent = '';
   loop();
 }
 function stopListening() {
@@ -2462,6 +2592,16 @@ try { const o = JSON.parse(localStorage.getItem(SET_KEY)); if (o) applySettings(
 })();
 
 // Offline / installable: only works on https:// or localhost (silently skipped on file://).
+// ----- install as an app (PWA) -----
+(function () {
+  let dip = null; const btn = document.getElementById('installBtn'), txt = document.getElementById('instText');
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (standalone) txt.textContent = 'Installed. This is running as an app.';
+  else if (/iphone|ipad|ipod/i.test(navigator.userAgent)) txt.textContent = 'To install on iPhone or iPad: tap the Share button, then “Add to Home Screen”.';
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); dip = e; btn.classList.remove('hide'); });
+  btn.onclick = async () => { if (!dip) return; dip.prompt(); try { await dip.userChoice; } catch {} dip = null; btn.classList.add('hide'); try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {} };
+  window.addEventListener('appinstalled', () => { btn.classList.add('hide'); txt.textContent = 'Installed. Open it from your home screen or app list.'; });
+})();
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
