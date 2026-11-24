@@ -1772,7 +1772,7 @@ const FLN = { C: 'D♭', D: 'E♭', F: 'G♭', G: 'A♭', A: 'B♭' };
 const nm = s => useFlats ? s.replace(/([CDFGA])#/g, (_, l) => FLN[l]) : s.replace('#', '♯');
 const fmtT = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
 const centsCls = c => { const a = Math.abs(c); return a <= tol() ? 'cg' : a <= 25 ? 'cy' : 'cr'; };
-const fmtC = c => (c >= 0 ? '+' : '') + Math.round(c) + '¢';
+const fmtC = c => { const r = Math.round(c); return r === 0 ? '0¢' : (r > 0 ? '+' : '−') + Math.abs(r) + '¢'; };
 const bpmVal = () => Math.max(0, Math.min(300, +$('recBpm').value || 0));
 const recLen = () => recording ? Math.max(0, ctx.currentTime - t0 - recT0)
   : Math.max(recEnd, cap.n / cap.rate, events.reduce((m, e) => Math.max(m, e.start + e.dur / 1000), 0));
@@ -2119,7 +2119,7 @@ function drawSheet() {
 
   // notes (clipped so they slide under the clef gutter)
   g2.save(); g2.beginPath(); g2.rect(GUT, 0, Wc - GUT, H); g2.clip();
-  const endA = [-1e9, -1e9]; let lastB = -1e9;       // right edge of the last name label in each of two rows / of the last cents label
+  const occ = [], items = [];                        // occupied rectangles (noteheads, labels) and the notes to label
   g2.lineCap = 'round';
   for (let i = 0; i < all.length; i++) {
     const e = all[i], xs = tx(e.start), w = e.dur / 1000 * view.pps, d = dia(e.midi), y = Y(d), col = recColorOf(e), sel = i === recSel && !e.live;
@@ -2143,20 +2143,44 @@ function drawSheet() {
     g2.save(); g2.translate(xs, y); g2.rotate(-0.35); g2.beginPath(); g2.ellipse(0, 0, sp * 0.62, sp * 0.44, 0, 0, 7); g2.restore();
     g2.fillStyle = col; g2.fill(); g2.lineWidth = sel || e.live ? 2 : 1; g2.strokeStyle = sel || e.live ? '#fff' : BG; g2.stroke();
     if (SHARPPC[((e.midi % 12) + 12) % 12]) { g2.font = `700 ${Math.round(sp * 1.3)}px system-ui,sans-serif`; g2.textAlign = 'right'; haloText('♯', xs - sp * 0.8, y + sp * 0.45, TXT, BG); }
-    // note name: two rows so close notes do not hide each other
-    g2.textAlign = 'center'; g2.font = `700 ${sp + 2}px system-ui,sans-serif`;
-    const t1 = nm(e.note), w1 = g2.measureText(t1).width; let row = -1;
-    for (let r = 0; r < 2; r++) if (sel || xs - w1 / 2 > endA[r] + 3) { row = r; break; }
-    if (row >= 0) { haloText(t1, xs, y - sp * 0.85 - row * (sp + 2), TXT, BG); endA[row] = Math.max(endA[row], xs + w1 / 2); }
-    // cents + length (only when there is room)
-    g2.font = `600 ${sp}px system-ui,sans-serif`;
-    let t2 = fmtC(e.cents); if (bpm > 0) { const dn = durName(e.dur / 1000 * bpm / 60); if (dn) t2 += ' · ' + dn; }
-    const w2 = g2.measureText(t2).width;
-    if (sel || xs - w2 / 2 > lastB + 6) { haloText(t2, xs, y + sp * 1.55, accColor(e), BG); lastB = xs + w2 / 2; }
+    // labels are placed after the loop, when every notehead is known
+    occ.push([xs - sp * 0.7, y - sp * 0.55, xs + sp * 0.7, y + sp * 0.55]);
+    if (SHARPPC[((e.midi % 12) + 12) % 12]) occ.push([xs - sp * 1.5, y - sp * 0.4, xs - sp * 0.6, y + sp * 0.7]);
+    items.push({ e, xs, y, sel });
     // volume lane
     const lh = Math.max(0.1, Math.min(1, ((e.lvl ?? -40) + 55) / 50)) * (laneH - 6);
     g2.globalAlpha = 0.75; g2.fillStyle = col; g2.fillRect(xs, laneTop + laneH - 2 - lh, Math.max(2, w), lh); g2.globalAlpha = 1;
   }
+  // Labels. Note names first (selected note first), at the nearest free spot above the note;
+  // then cents below it. A label is only drawn where it touches no notehead and no other label.
+  const hit = r => occ.some(o => r[0] < o[2] && r[2] > o[0] && r[1] < o[3] && r[3] > o[1]);
+  const order = items.map((it, k) => k).sort((a, b) => (items[b].sel - items[a].sel) || (a - b));
+  g2.textAlign = 'center';
+  const fh1 = sp + 2, fh2 = sp * 0.92;
+  const names = [];
+  for (const k of order) {
+    const it = items[k]; g2.font = `700 ${fh1}px system-ui,sans-serif`;
+    const t = nm(it.e.note), tw = g2.measureText(t).width;
+    for (let r = 0; r < 4; r++) {
+      const by = it.y - sp * 0.85 - r * (fh1 * 0.95);
+      const rc = [it.xs - tw / 2 - 2, by - fh1 * 0.8, it.xs + tw / 2 + 2, by + fh1 * 0.2];
+      if (it.sel && r === 3 || !hit(rc)) { occ.push(rc); names.push([t, it.xs, by, fh1]); break; }
+    }
+  }
+  const small = [];
+  for (const k of order) {
+    const it = items[k], e = it.e; g2.font = `600 ${fh2}px system-ui,sans-serif`;
+    if (!it.sel && Math.round(e.cents) === 0 && !(bpm > 0)) continue;   // a perfect note needs no number; its green colour says it
+    let t = fmtC(e.cents); if (bpm > 0) { const dn = durName(e.dur / 1000 * bpm / 60); if (dn) t += ' · ' + dn; }
+    const tw = g2.measureText(t).width;
+    for (let r = 0; r < 2; r++) {
+      const by = it.y + sp * 1.55 + r * fh2 * 1.05;
+      const rc = [it.xs - tw / 2 - 2, by - fh2 * 0.8, it.xs + tw / 2 + 2, by + fh2 * 0.2];
+      if (it.sel && r === 1 || !hit(rc)) { occ.push(rc); small.push([t, it.xs, by, fh2, accColor(e)]); break; }
+    }
+  }
+  for (const [t, x, by, fh] of names) { g2.font = `700 ${fh}px system-ui,sans-serif`; haloText(t, x, by, TXT, BG); }
+  for (const [t, x, by, fh, c] of small) { g2.font = `600 ${fh}px system-ui,sans-serif`; haloText(t, x, by, c, BG); }
   g2.restore();
 
   // lane frame + left gutter (clefs)
