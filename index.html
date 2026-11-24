@@ -251,11 +251,13 @@
   .segc button{background:none;color:var(--mut);border-radius:999px;padding:7px 10px;font-size:14px}
   .segc button.on{background:var(--raise);color:var(--fg)}
   #roll{aspect-ratio:auto;height:300px;background:#0c0f15;border-radius:12px;box-shadow:0 0 0 1px var(--line);touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
+  #noteInfo:empty{display:none}
   .rwrap{position:relative}
   #fsBtn{position:absolute;right:8px;bottom:8px;width:34px;height:34px;padding:0;border-radius:8px;background:rgba(255,255,255,.08);color:#fff;font-size:19px;line-height:1;opacity:.5;backdrop-filter:blur(2px)}
   #fsBtn:hover,#fsBtn:focus-visible{opacity:1;background:rgba(255,255,255,.2)} #tab-rec.fs #fsBtn{opacity:.6}
   #tab-rec.fs{position:fixed;inset:0;z-index:60;background:var(--bg,#0c0f15);overflow:auto;padding:10px;margin:0;max-width:none}
-  #tab-rec.fs .ropts,#tab-rec.fs .more,#tab-rec.fs #noteInfo{display:none}
+  #tab-rec.fs .ropts,#tab-rec.fs .more,#tab-rec.fs #noteInfo,#tab-rec.fs .rbar{display:none}
+  #tab-rec.fs{display:flex;flex-direction:column;gap:6px;padding:6px 8px calc(6px + var(--sab))} #tab-rec.fs .rwrap{flex:1;min-height:0} #tab-rec.fs .tport{flex:none}
   body.fsrec{overflow:hidden}
   #roll.fall{touch-action:none} #roll.drag{cursor:grabbing}
   #noteInfo{min-height:20px;font-size:13px;color:var(--fg);text-align:center}
@@ -495,7 +497,6 @@
     <label class="field"><span>Colours</span><select id="recColor"><option value="acc" selected>By accuracy</option><option value="note">By note name</option></select></label>
     <label class="field"><span>Tempo (0 = off)</span><input id="recBpm" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
     <label class="field"><span>Replay sound</span><select id="pbMode"><option value="audio">Recorded sound</option><option value="notes">Detected notes</option></select></label>
-    <label class="field wide" title="Works offline. For best results use one instrument. To pull a violin out of a band or piano mix, split it into stems first with Demucs or UVR5, then load the violin stem here."><span>Analyse an audio file</span><input id="recFile" type="file" accept="audio/*"></label>
     <label class="field"><span>Speed</span><select id="pbSpeed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option></select></label>
   </div>
 
@@ -774,6 +775,7 @@ const REC_MODES = {
 // Auto listening: watches the sound while it runs and picks the best listening mode for it.
 // It measures the noise floor, how much of the loud sound is NOT a clean pitch (accompaniment, noise, reverb),
 // and how fast the notes come, then switches (with a short hold, so it never flickers).
+const REC_NAMES = { auto: 'Auto', fast: 'Fast tempo', normal: 'Standard', strict: 'Noisy room', relaxed: 'Soft & quiet' };
 class AutoMode {
   constructor() { this.reset(); }
   reset() { this.mode = 'fast'; this.why = 'listening…'; this.nf = 0; this.sig = 0; this.dirty = 0.2; this.prev = 0; this.n = 0; this.last = -99; this.ons = []; this.cand = 'fast'; this.hold = 0; }
@@ -1683,7 +1685,7 @@ const autoM = new AutoMode();
 const recModeCfg = () => $('recMode').value === 'auto' ? REC_MODES[autoM.mode] : (REC_MODES[$('recMode').value] || REC_MODES.fast);
 const recPitch = (r, rms, pk, conf) => recPitchCore(r, rms, pk, conf, recModeCfg(), seg, +$('gate').value, a4(), recModeCfg() === REC_MODES.relaxed);
 
-const infoHint = () => view.mode === 'fall' ? 'Drag up/down to scrub · pinch to zoom · tap a note to hear it' : 'Drag to scroll · pinch to zoom · tap a note to hear it · tap the ruler to jump';
+const infoHint = () => '';
 const FLN = { C: 'D♭', D: 'E♭', F: 'G♭', G: 'A♭', A: 'B♭' };
 const nm = s => useFlats ? s.replace(/([CDFGA])#/g, (_, l) => FLN[l]) : s.replace('#', '♯');
 const fmtT = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
@@ -1731,8 +1733,10 @@ function setRecording(on) {
 }
 
 // ----- analyse a saved audio file with the same detector (offline) -----
-$('recFile').addEventListener('change', async e => {
-  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+// Offline audio-file analysis. Parked: not wired to any button right now. To bring it back, add
+//   <input id="recFile" type="file" accept="audio/*">  in the Recorder options and call  analyseFile(input.files[0]).
+async function analyseFile(file) {
+  if (!file) return;
   if (recording) setRecording(false);
   const info = $('recInfo'); info.textContent = 'Reading ' + file.name + '…';
   try {
@@ -1749,7 +1753,7 @@ $('recFile').addEventListener('change', async e => {
     const Wc = cv.clientWidth || 360; view.follow = false; view.vs = 0; view.pps = Math.min(Math.max(8, (Wc - GUT) / 8), Math.max(20, (Wc - GUT - 24) / Math.max(2, recEnd)));
     info.textContent = notes.length + ' notes found in ' + file.name; recUi(); requestDraw();
   } catch (err) { info.textContent = 'Could not read that file.'; }
-});
+}
 function clearRec() {
   pbStop(); if (recording) setRecording(false);
   newRecording(); recUi(); requestDraw();
@@ -2010,7 +2014,7 @@ function drawSheet() {
 function drawFall() {
   const Wc = cv.clientWidth, BG = '#0c0f15', TXT = '#f1f4fb', MUT = '#c9d2e6', hdr = 32;
   const live = liveEvent(), all = live ? events.concat([live]) : events, len = recLen(), bpm = bpmVal();
-  const H = FS() ? Math.max(260, innerHeight - 170) : Math.round(Math.min(540, Math.max(320, Wc * 0.9)));
+  const H = FS() ? Math.max(200, innerHeight - (($('tab-rec').querySelector('.tport') || {}).offsetHeight || 90) - 24) : Math.round(Math.min(540, Math.max(320, Wc * 0.9)));
   sizeCanvas(Wc, H); g2.fillStyle = BG; g2.fillRect(0, 0, Wc, H);
   const now = recording ? len : pbPos(), fps = view.fps;
   const nowY = hdr + (recording ? 20 : Math.round((H - hdr) * 0.4));       // while recording the newest notes sit at the top and drop away
@@ -2347,7 +2351,7 @@ const INST_PROFILES = [
   { k: 'mandolin', name: 'Mandolin', fam: 'mandolin',  range: [180, 1800], rec: 'auto' },
   { k: 'voice',    name: 'Voice',    fam: null,        range: [80, 1100], rec: 'auto' },
 ];
-const REC_NAMES = { auto: 'Auto', fast: 'Fast tempo', normal: 'Standard', strict: 'Noisy room', relaxed: 'Soft & quiet' }, PROF_KEY = 'tuner-instprofile';
+const PROF_KEY = 'tuner-instprofile';
 let prof = { k: 'all', t: 'chromatic' }; try { const o = JSON.parse(localStorage.getItem(PROF_KEY)); if (o && INST_PROFILES.some(p => p.k === o.k)) prof = o; } catch {}
 const profOf = k => INST_PROFILES.find(p => p.k === k) || INST_PROFILES[0];
 const profFam = p => FAMILIES.find(f => f[0] === p.fam) || FAMILIES[0];

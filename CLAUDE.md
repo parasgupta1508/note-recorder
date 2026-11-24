@@ -1,6 +1,6 @@
 # Tuner & Scale Trainer (note-recorder)
 
-Installable offline PWA: a single `index.html` (inline CSS/JS), `sw.js`, `manifest.webmanifest` and icons. It is deployed with GitHub Pages from `main` at https://parasgupta1508.github.io/note-recorder/ (the repo is public for this reason). Pushing to `main` redeploys it within about a minute. It was also hosted earlier on Netlify, from the sibling `netlify-upload` folder.
+Installable offline PWA: a single `index.html` (inline CSS/JS), `sw.js`, `manifest.webmanifest` and icons. It is deployed with GitHub Pages from `main` at https://parasgupta1508.github.io/note-recorder/ (the repo is public for this reason). Pushing to `main` redeploys it within about a minute.
 
 ## Automatic GitHub backup
 
@@ -24,5 +24,6 @@ Whenever you change any file in this project, back it up to GitHub without being
 
 ## Other conventions
 
-- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v25`) so installed copies update.
-- The `netlify-upload` folder is a copy of the deployable files. After changes, tell the user it needs re-uploading to Netlify, or sync it if asked.
+- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v26`) so installed copies update.
+- Netlify is no longer used and its folder was deleted. GitHub Pages is the only host.
+- Before committing, run `node tests/smoke.js` (loads the page in headless Edge, checks for script errors and clicks through the Recorder). A script error at load silently kills every button.
