@@ -32,6 +32,6 @@ srv.listen(0, async () => {
     await wait(700);
     const r = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(out, name), Buffer.from(r.data, 'base64')); console.log('saved', path.join(out, name));
   };
-  await shot('fall-phone.png', 390, 800, 'fall'); await shot('fall-tablet.png', 900, 1000, 'fall'); await shot('sheet-tablet.png', 900, 1000, 'sheet'); await shot('fall-full.png', 1000, 620, 'fall', true);
+  await shot('fall-phone.png', 390, 800, 'fall'); await shot('fall-tablet.png', 900, 1000, 'fall'); await shot('sheet-tablet.png', 900, 1000, 'sheet'); await shot('fall-full.png', 1000, 620, 'fall', true); await shot('sheet-pc.png', 1280, 900, 'sheet');
   done(0);
 });

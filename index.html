@@ -276,8 +276,9 @@
   .zm button.on{background:var(--acc);color:#fff}
   #tab-rec[data-view="fall"] #rvLive{display:none}
   .ropts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px}
-  .ropts .wide{grid-column:1/-1}
-  .ropts select,.ropts input{padding:7px 9px;font-size:14px}
+  .ropts .top,.ropts .full,.ropts .last{grid-column:1/-1}
+  .ropts select,.ropts input{padding:7px 9px;font-size:14px;width:100%;min-height:40px}
+  .ropts .top{align-content:start} .ropts .seg{min-height:40px} .ropts .seg button{flex:1}
   .more>summary{padding:6px 2px;justify-content:center}
   .more[open]>summary{margin-bottom:8px}
   .rstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
@@ -291,7 +292,7 @@
   @media (min-width:720px){
     #tab-rec{padding:18px} #tab-rec.stack>*+*{margin-top:14px}
     .rbar{grid-template-columns:auto minmax(0,1fr) 230px auto;grid-template-areas:"rec info view clear"}
-    .ropts{grid-template-columns:1.6fr 1fr 1fr 1fr 1fr} .ropts .wide{grid-column:auto}
+    .ropts{grid-template-columns:repeat(10,minmax(0,1fr))} .ropts .top{grid-column:span 5} .ropts .full{grid-column:1/-1} .ropts .last{grid-column:auto} .ropts .field:not(.top):not(.full){grid-column:span 2}
     .tport{grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center}
     .tr1 #pbTime{margin-left:8px}
   }
@@ -495,18 +496,17 @@
   </div>
 
   <div class="ropts">
-    <div class="field wide" id="engWrap"><span>Analysis</span>
+    <div class="field top" id="engWrap"><span>Analysis</span>
       <div class="seg" id="engSeg" role="group" aria-label="Analysis mode"><button data-e="live" class="on">Live</button><button data-e="det">Detailed</button></div>
       <div class="hint2" id="engHint"></div></div>
-    <label class="field"><span>Display size</span><select id="dispSize" title="How big the notes and text are on the chart"><option value="auto" selected>Auto</option><option value="large">Large</option><option value="xl">Extra large</option></select></label>
-    <div class="field wide hide" id="showWrap"><span>Showing</span>
+    <label class="field top" title="This sets how certain the app must be before it records a note.&#10;• Notes missing? Choose Fast tempo or Soft &amp; quiet.&#10;• Notes that you didn't play? Choose Standard or Noisy room."><span>Listening</span><select id="recMode"><option value="auto" selected>Auto</option><option value="fast">Fast tempo</option><option value="normal">Standard</option><option value="relaxed">Soft &amp; quiet</option><option value="strict">Noisy room</option></select><div class="hint2" id="recModeDesc"></div></label>
+    <div class="field full hide" id="showWrap"><span>Showing</span>
       <div class="seg" id="showSeg" role="group" aria-label="Which result to show"><button data-s="live" class="on">Live result</button><button data-s="det">Detailed result</button></div></div>
-    <label class="field wide" title="This sets how certain the app must be before it records a note.&#10;• Notes missing? Choose Fast tempo or Soft &amp; quiet.&#10;• Notes that you didn't play? Choose Standard or Noisy room."><span>Listening</span><select id="recMode"><option value="auto" selected>Auto</option><option value="fast">Fast tempo</option><option value="normal">Standard</option><option value="relaxed">Soft &amp; quiet</option><option value="strict">Noisy room</option></select></label>
-    <div class="wide hint2" id="recModeDesc"></div>
-    <label class="field"><span>Colours</span><select id="recColor"><option value="acc" selected>By accuracy</option><option value="note">By note name</option></select></label>
-    <label class="field"><span>Tempo (0 = off)</span><input id="recBpm" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
     <label class="field"><span>Replay sound</span><select id="pbMode"><option value="audio">Recorded sound</option><option value="notes">Detected notes</option></select></label>
     <label class="field"><span>Speed</span><select id="pbSpeed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option></select></label>
+    <label class="field"><span>Colours</span><select id="recColor"><option value="acc" selected>By accuracy</option><option value="note">By note name</option></select></label>
+    <label class="field"><span>Tempo (0 = off)</span><input id="recBpm" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
+    <label class="field last"><span>Display size</span><select id="dispSize" title="How big the notes and text are on the chart"><option value="auto" selected>Auto</option><option value="large">Large</option><option value="xl">Extra large</option></select></label>
   </div>
 
   <details class="more">
