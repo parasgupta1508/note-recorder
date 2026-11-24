@@ -251,6 +251,9 @@
   .segc button{background:none;color:var(--mut);border-radius:999px;padding:7px 10px;font-size:14px}
   .segc button.on{background:var(--raise);color:var(--fg)}
   #roll{aspect-ratio:auto;height:300px;background:#0c0f15;border-radius:12px;box-shadow:0 0 0 1px var(--line);touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
+  #tab-rec.fs{position:fixed;inset:0;z-index:60;background:var(--bg,#0c0f15);overflow:auto;padding:10px;margin:0;max-width:none}
+  #tab-rec.fs .ropts,#tab-rec.fs .more,#tab-rec.fs #noteInfo{display:none}
+  body.fsrec{overflow:hidden}
   #roll.fall{touch-action:none} #roll.drag{cursor:grabbing}
   #noteInfo{min-height:20px;font-size:13px;color:var(--fg);text-align:center}
   button.rec{background:#ef4444;color:#fff}
@@ -460,6 +463,7 @@
       <button id="vwSheet" class="on" aria-pressed="true">Sheet</button>
       <button id="vwFall" aria-pressed="false">Falling</button>
     </div>
+    <button id="fsBtn" class="sec" aria-pressed="false" title="Full screen (Esc to exit)">⛶ Full screen</button>
     <button id="clear" class="sec">Clear</button>
   </div>
 
@@ -680,7 +684,7 @@ function pickTarget(f, a4, strings, lockIdx) {
 }
 
 class Segmenter {
-  constructor(onNote) { this.onNote = onNote; this.cur = null; this.cand = null; this.miss = 0; this.minDur = 60; this.a4 = 440; this.confirm = 4; this.maxMiss = 5; this.gap = 0; this.candGap = 0; }
+  constructor(onNote) { this.onNote = onNote; this.cur = null; this.cand = null; this.miss = 0; this.minDur = 60; this.a4 = 440; this.confirm = 4; this.maxMiss = 5; this.gap = 0; this.candGap = 0; this.rearticulate = true; }
   reset() { this.cur = null; this.cand = null; this.miss = 0; this.candGap = 0; }
   // t = seconds, f = Hz (or null when nothing reliable was heard), lv = signal level (RMS) for the volume lane
   frame(t, f, lv = 0) {
@@ -690,6 +694,9 @@ class Segmenter {
       const m = freqToNote(f, this.a4).midi, c = this.cur;
       // Stay on the current note while the pitch is within 65¢ of it: no flicker at semitone borders, vibrato is fine.
       if (c && (m === c.midi || Math.abs(centsBetween(f, noteToFreq(c.midi, this.a4))) < 65)) {
+        // Re-articulation (détaché / martelé / spiccato / staccato): the same pitch is played again after a dip in volume
+        // or a brief silence. Close the old note and begin a new one, so repeated notes are not merged into one long note.
+        if (this.rearticulate && this.rearm(c, t, lv)) { this.end(); this.cur = { midi: m, start: t, last: t, f: [f], t: [t], l: [lv], pk: lv, dip: lv, dipT: t, up: 0 }; this.miss = 0; this.cand = null; return; }
         c.f.push(f); c.t.push(t); c.l.push(lv); c.last = t; this.miss = 0; this.cand = null; return;
       }
       if (this.cand && Math.abs(centsBetween(f, noteToFreq(this.cand.midi, this.a4))) < 65) { const k = this.cand; k.f.push(f); k.t.push(t); k.l.push(lv); k.last = t; }
@@ -702,8 +709,21 @@ class Segmenter {
       else if (c && this.miss >= MISS) this.end();   // lost the old note; the candidate keeps building
     } else {
       if (this.cand && this.candGap < this.gap) this.candGap++; else this.cand = null;   // fast mode forgives one unclear frame inside a building note
+      if (this.cur && this.cur.pk != null && lv < this.cur.dip) { this.cur.dip = lv; this.cur.dipT = t; }   // the silence itself counts as the dip
       if (this.cur && ++this.miss >= MISS) this.end();
     }
+  }
+  // True when a new bow/tongue attack of the same pitch begins: the level fell to under ~60% of the note's recent
+  // peak (or the sound broke off for a few frames) and has now climbed back clearly above that dip.
+  rearm(c, t, lv) {
+    if (c.pk == null) { c.pk = lv; c.dip = lv; c.dipT = t; c.up = 0; }
+    const age = t - c.start, brokeOff = this.miss >= 1;      // frames with no clear pitch just before this one = a gap
+    if (lv > c.pk) c.pk = lv; else c.pk = c.pk * 0.985 + lv * 0.015;   // peak decays slowly so a long fade is not mistaken
+    if (lv < c.dip || t - c.dipT > 0.25) { c.dip = lv; c.dipT = t; c.up = 0; }
+    const dipped = c.dip < c.pk * 0.6 && t - c.start > 0.06;
+    const rose = lv > Math.max(c.dip * 1.5, c.pk * 0.7);
+    if (age > 0.08 && ((dipped && rose) || (brokeOff && c.dip < c.pk * 0.8 && lv > c.dip * 1.3))) return true;
+    return false;
   }
   end() {
     const c = this.cur; this.cur = null; this.miss = 0;
@@ -1779,6 +1799,17 @@ function syncCtl(pos, max) {      // slider + follow button
   sl.value = max > 0 ? Math.round(Math.max(0, Math.min(1, pos / max)) * 1000) : 0;
   $('rvLive').classList.toggle('on', view.follow);
 }
+const FS = () => $('tab-rec').classList.contains('fs');
+function setFS(on) {
+  $('tab-rec').classList.toggle('fs', on); document.body.classList.toggle('fsrec', on);
+  $('fsBtn').textContent = on ? '✕ Exit full screen' : '⛶ Full screen'; $('fsBtn').setAttribute('aria-pressed', on);
+  try { if (on && !document.fullscreenElement) $('tab-rec').requestFullscreen?.().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen(); } catch {}
+  requestDraw(); setTimeout(requestDraw, 120);
+}
+$('fsBtn').onclick = () => setFS(!FS());
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && FS()) setFS(false); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && FS()) setFS(false); });
+addEventListener('resize', () => { if (FS()) requestDraw(); });
 function drawRoll() {
   drawReq = 0;
   if (tab !== 'rec' || !cv.clientWidth) return;
@@ -1800,7 +1831,7 @@ function drawSheet() {
   const none = !all.length; let showT = none || maxD >= 35; const showB = none || minD <= 33; if (!showT && !showB) showT = true;
   const topLine = showT ? 45 : 33, botLine = showB ? 25 : 37;
   const dTop = Math.max(topLine, none ? 0 : maxD + 4), dBot = Math.min(botLine, none ? 99 : minD - 3);
-  const sp = Wc < 560 ? 11 : 13, st = sp / 2, padTop = 14, labBot = 14, laneH = 26, rulerH = bpm > 0 ? 44 : 26;
+  const sp = FS() ? Math.min(20, Math.max(13, Wc / 60)) : Wc < 560 ? 11 : 13, st = sp / 2, padTop = 14, labBot = 14, laneH = 26, rulerH = bpm > 0 ? 44 : 26;
   const staffH = (dTop - dBot) * st, laneTop = padTop + staffH + labBot, rulerTop = laneTop + laneH + 6, H = rulerTop + rulerH;
   lay = { rulerTop };
   const Y = d => padTop + (dTop - d) * st, tx = t => GUT + (t - view.vs) * view.pps;
@@ -1894,7 +1925,7 @@ function drawSheet() {
 function drawFall() {
   const Wc = cv.clientWidth, BG = '#0c0f15', TXT = '#f1f4fb', MUT = '#8e98b0', hdr = 32;
   const live = liveEvent(), all = live ? events.concat([live]) : events, len = recLen(), bpm = bpmVal();
-  const H = Math.round(Math.min(540, Math.max(320, Wc * 0.9)));
+  const H = FS() ? Math.max(260, innerHeight - 170) : Math.round(Math.min(540, Math.max(320, Wc * 0.9)));
   sizeCanvas(Wc, H); g2.fillStyle = BG; g2.fillRect(0, 0, Wc, H);
   const now = recording ? len : pbPos(), fps = view.fps;
   const nowY = hdr + (recording ? 20 : Math.round((H - hdr) * 0.4));       // while recording the newest notes sit at the top and drop away
