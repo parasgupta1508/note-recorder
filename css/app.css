@@ -54,7 +54,7 @@
   .pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 
   /* ---------- navigation: bottom bar on phones, pill bar on tablets ---------- */
-  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(6,1fr);
         background:rgba(20,24,33,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
         border-top:1px solid var(--line);padding:6px 6px calc(6px + var(--sab))}
   .tabs button{background:none;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:12px;font-size:13px;font-weight:550}
@@ -304,9 +304,9 @@
   /* ---------- tablets and up ---------- */
   @media (min-width:720px){
     body{font-size:16px}
-    .tabs{position:static;display:inline-grid;grid-template-columns:repeat(5,auto);gap:4px;border:1px solid var(--line);border-radius:999px;padding:4px;margin:14px auto 0;backdrop-filter:none;background:var(--surface)}
+    .tabs{position:static;display:inline-grid;grid-template-columns:repeat(6,auto);gap:4px;border:1px solid var(--line);border-radius:999px;padding:4px;margin:14px auto 0;backdrop-filter:none;background:var(--surface)}
     .tabs-wrap{display:flex;justify-content:center}
-    .tabs button{flex-direction:row;gap:8px;padding:8px 18px;border-radius:999px;font-size:14px;min-height:40px}
+    .tabs button{flex-direction:row;gap:8px;padding:8px 15px;border-radius:999px;font-size:14px;min-height:40px}
     .tabs button svg{width:18px;height:18px}
     main{padding:16px 0 40px}
     .panel{padding:22px}

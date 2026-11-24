@@ -109,23 +109,28 @@ function capSamples22() {                                   // the recorded soun
   for (const c of cap.chunks) { all.set(c, o); o += c.length; }
   return resample(all, cap.rate, 22050, 32768);
 }
+// Detailed analysis of 22,050 Hz samples: Basic Pitch, then the app's own refinement. Shared by the Recorder and the Lab page.
+// o: { lo, hi (Hz), poly (keep every chord note), a4, onStatus(text), onProgress(0..1) }  ->  notes
+async function detailedNotes(x, o) {
+  o.onStatus && o.onStatus('Loading detailed analysis…'); await loadBP(); const BP = window.BP;
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+  if (!BP.model) { const m = BP.tf.loadGraphModel('vendor/model/model.json'); m.catch(() => { if (BP.model === m) BP.model = null; }); BP.model = m; }
+  await new Promise(r => setTimeout(r, 30));
+  const bp = new BP.BasicPitch(BP.model), F = [], O = [], C = [];
+  await bp.evaluateModel(x, (f, ons, c) => { for (let i = 0; i < f.length; i++) { F.push(f[i]); O.push(ons[i]); } for (let i = 0; i < c.length; i++) C.push(c[i]); }, p => { o.onProgress && o.onProgress(p); });
+  const raw = BP.noteFramesToTime(BP.addPitchBendsToNoteEvents(C, BP.outputToNotesPoly(F, O, BP_PARAMS.onset, BP_PARAMS.frame, BP_PARAMS.minLen, true, o.hi, o.lo)));
+  const toMidi = f => Math.round(69 + 12 * Math.log2(f / o.a4));
+  return extractMelody(refineEvents(markAttacks(bpToEvents(raw, o.a4), x, 22050), x, 22050, { a4: o.a4, poly: o.poly }), { lo: toMidi(o.lo) - 1, hi: toMidi(o.hi) + 1, poly: o.poly });   // chord instruments keep every note; violin, voice etc. get one melody line
+}
+const isPolyInst = () => ['guitar', 'ukulele', 'mandolin'].includes(prof.k);
 async function analyseDetailed() {
   if (detBusy || cap.n < cap.rate * 0.5) return;
   const info = $('recInfo'), gen = recGen; detBusy = true; $('rec').disabled = true; liveEv = events.map(e => ({ ...e }));
   const x = capSamples22();                            // snapshot now, so a later Clear or new recording cannot change what is analysed
   try {
-    info.textContent = 'Loading detailed analysis…'; await loadBP(); const BP = window.BP;
-    try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
-    if (!BP.model) { const m = BP.tf.loadGraphModel('vendor/model/model.json'); m.catch(() => { if (BP.model === m) BP.model = null; }); BP.model = m; }
-    await new Promise(r => setTimeout(r, 30));
-    const bp = new BP.BasicPitch(BP.model), F = [], O = [], C = [];
-    await bp.evaluateModel(x, (f, o, c) => { for (let i = 0; i < f.length; i++) { F.push(f[i]); O.push(o[i]); } for (let i = 0; i < c.length; i++) C.push(c[i]); }, p => { info.textContent = 'Analysing in detail… ' + Math.round(p * 100) + '%'; });
+    const res = await detailedNotes(x, { lo: +$('fmin').value, hi: +$('fmax').value, poly: isPolyInst(), a4: a4(), onStatus: t => { info.textContent = t; }, onProgress: p => { info.textContent = 'Analysing in detail… ' + Math.round(p * 100) + '%'; } });
     if (gen !== recGen) { detBusy = false; engUi(); return; }   // the recording was cleared or replaced meanwhile: drop this result
-    const lo = +$('fmin').value, hi = +$('fmax').value;
-    const raw = BP.noteFramesToTime(BP.addPitchBendsToNoteEvents(C, BP.outputToNotesPoly(F, O, BP_PARAMS.onset, BP_PARAMS.frame, BP_PARAMS.minLen, true, hi, lo)));
-    const toMidi = f => Math.round(69 + 12 * Math.log2(f / a4()));
-    const polyI = ['guitar', 'ukulele', 'mandolin'].includes(prof.k);
-    detEv = extractMelody(refineEvents(markAttacks(bpToEvents(raw, a4()), x, 22050), x, 22050, { a4: a4(), poly: polyI }), { lo: toMidi(lo) - 1, hi: toMidi(hi) + 1, poly: polyI });   // chord instruments keep every note; violin, voice etc. get one melody line
+    detEv = res;
     showResult('det');
     info.textContent = `Detailed result: ${detEv.length} notes (Live found ${liveEv.length}).`;
   } catch (err) {

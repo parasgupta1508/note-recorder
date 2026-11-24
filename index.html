@@ -14,6 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Tuner & Scale Trainer</title>
 <link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/lab.css">
 </head>
 <body>
 <header class="appbar"><div class="in">
@@ -33,6 +34,7 @@
   <button data-tab="scale"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h4v-4h4v-4h4V8h6"/></svg>Practice</button>
   <button data-tab="analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Analysis</button>
   <button data-tab="rec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>Recorder</button>
+  <button data-tab="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M8 15h8"/></svg>Lab</button>
   <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Settings</button>
 </nav></div>
 
@@ -201,6 +203,56 @@
   </details>
 </section>
 
+<!-- ============ LAB ============ -->
+<section id="tab-lab" class="panel hide stack">
+  <div class="lab-card">
+    <div class="lab-h"><b>Helper</b><span id="labState" class="lab-pill">checking…</span></div>
+    <div id="labHelp" class="mut lab-small">The Lab turns a YouTube link or audio file into reference MIDI with other open-source tools, then checks the notes this app finds against it. The downloading and the other tools run in a small helper on your computer.</div>
+    <div class="lab-row"><label class="field grow"><span>Helper address</span><input id="labUrl" type="text" value="http://localhost:8787" inputmode="url" autocomplete="off" spellcheck="false"></label><button id="labConnect" class="sec">Connect</button></div>
+    <div id="labEngines" class="lab-small mut"></div>
+  </div>
+
+  <div class="lab-card">
+    <div class="lab-h"><b>1 · Audio</b></div>
+    <label class="field"><span>YouTube link</span><input id="labYt" type="text" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off" spellcheck="false"></label>
+    <div class="lab-row"><label class="field"><span>Start (s)</span><input id="labStart" type="number" min="0" value="0"></label><label class="field"><span>Length (s)</span><input id="labLen" type="number" min="5" max="300" value="45"></label><button id="labFetch">Get audio</button></div>
+    <div class="lab-row"><label class="field grow"><span>or an audio file</span><input id="labFile" type="file" accept="audio/*"></label></div>
+    <label class="field"><span>Saved clips</span><select id="labLib"><option value="">— none yet —</option></select></label>
+    <div id="labClipInfo" class="lab-small mut"></div>
+    <audio id="labAudio" controls class="hide" style="width:100%"></audio>
+    <div class="lab-small mut">Only use audio you have the right to use. Clips are kept on your computer, in tools/lab/data.</div>
+  </div>
+
+  <div class="lab-card">
+    <div class="lab-h"><b>2 · Reference MIDI</b></div>
+    <div id="labEngPick" class="lab-checks"></div>
+    <div class="lab-row"><button id="labMake">Make MIDI</button><label class="field grow"><span>or add your own .mid</span><input id="labMid" type="file" accept=".mid,.midi,audio/midi"></label></div>
+    <div id="labRefs" class="lab-small"></div>
+  </div>
+
+  <div class="lab-card">
+    <div class="lab-h"><b>3 · Compare with this app</b></div>
+    <div class="lab-row">
+      <label class="field grow"><span>Reference</span><select id="labRef"></select></label>
+      <label class="field grow"><span>App engine</span><select id="labApp"><option value="live">Live (Recorder settings)</option><option value="det">Detailed (Basic Pitch + refine)</option></select></label>
+    </div>
+    <label class="lab-check"><input type="checkbox" id="labRange" checked> Ignore reference notes outside the instrument's pitch range</label>
+    <label class="lab-check"><input type="checkbox" id="labMelody"> Reference: melody only (highest note at each moment)</label>
+    <label class="lab-check"><input type="checkbox" id="labShift" checked> Allow a constant timing offset (decoder delay)</label>
+    <div class="lab-row"><button id="labRun">Run app and compare</button><button id="labTune" class="sec">Find best Live settings</button><button id="labDl" class="sec" disabled>Download app notes (.mid)</button></div>
+    <div id="labProg" class="lab-bar hide"><i></i></div>
+    <div id="labMsg" class="lab-small mut"></div>
+    <div id="labRes"></div>
+    <div id="labRoll" class="lab-roll hide"><canvas id="labCv"></canvas></div>
+    <div id="labLegend" class="lab-small mut hide"><span class="lg" style="--c:#34d399"></span>both found it <span class="lg" style="--c:#f87171"></span>only the app <span class="lg" style="--c:#fbbf24"></span>only the reference</div>
+  </div>
+
+  <div class="lab-card">
+    <div class="lab-h"><b>What it has learned</b><button id="labClear" class="sec">Clear</button></div>
+    <div id="labHist" class="lab-small"></div>
+  </div>
+</section>
+
 <!-- ============ SETTINGS ============ -->
 <section id="tab-settings" class="panel hide stack" data-layout="list">
   <div id="setMenu"></div><div id="setTabs"></div><button id="setBack"><span>‹</span> <b id="setTitle"></b></button>
@@ -280,6 +332,8 @@
 <script src="js/core/segmenter.js"></script>
 <script src="js/core/listening.js"></script>
 <script src="js/core/detailed.js"></script>
+<script src="js/core/midi.js"></script>
+<script src="js/core/compare.js"></script>
 <script src="js/app/base.js"></script>
 <script src="js/app/tuner.js"></script>
 <script src="js/app/practice.js"></script>
@@ -292,6 +346,7 @@
 <script src="js/app/chart.js"></script>
 <script src="js/app/audio.js"></script>
 <script src="js/app/profiles.js"></script>
+<script src="js/app/lab.js"></script>
 <script src="js/app/main.js"></script>
 <script src="js/app/install.js"></script>
 </body>

@@ -1,3 +1,1 @@
-{ "name": "note-recorder-tools", "private": true, "description": "Builds vendor/basic-pitch.js (Basic Pitch + TensorFlow.js, offline). Run: npm install && npm run build",
-  "scripts": { "build": "node build-bp.js" },
-  "dependencies": { "@spotify/basic-pitch": "1.0.1", "@tensorflow/tfjs": "4.22.0" }, "devDependencies": { "esbuild": "0.25.0" } }
+{"name":"note-recorder-tools","private":true,"description":"Builds vendor/basic-pitch.js (Basic Pitch + TensorFlow.js, offline). Run: npm install && npm run build","scripts":{"build":"node build-bp.js"},"dependencies":{"@spotify/basic-pitch":"1.0.1","@tensorflow/tfjs":"4.22.0","pitchy":"4.1.0"},"devDependencies":{"esbuild":"0.25.0"}}

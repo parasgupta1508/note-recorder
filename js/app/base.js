@@ -29,10 +29,11 @@ let tab = 'tuner';
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   tab = b.dataset.tab;
   document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
-  for (const t of ['tuner', 'scale', 'analysis', 'rec', 'settings']) $('tab-' + t).classList.toggle('hide', t !== tab);
+  for (const t of ['tuner', 'scale', 'analysis', 'rec', 'lab', 'settings']) $('tab-' + t).classList.toggle('hide', t !== tab);
   if (tab !== 'scale') { stopDemo(); stopMetro(); finalizeHold(); if (sc.running) { sc.running = false; $('scStart').textContent = 'Start practice'; $('scMsg').textContent = 'Paused — press Start practice'; renderScale(); } }
   if (tab === 'analysis') renderAnalysis();
   if (tab === 'settings') renderSet();
+  if (tab === 'lab' && typeof labShow === 'function') labShow();
   if (tab !== 'rec') pbStop(); else { recUi(); requestDraw(); }
   if (tab === 'tuner') drawTMeter();
 });

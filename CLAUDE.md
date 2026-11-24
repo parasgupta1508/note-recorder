@@ -52,7 +52,15 @@ If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. W
 - Audio test clips (`tests/audio/`, `*.mp3`) are copyrighted or personal and git-ignored. Never commit them. `tests/realclip.js <file.f32>` runs the Live detector over a decoded clip (`ffmpeg -i x.mp3 -ac 1 -ar 44100 -f f32le x.f32`).
 - Design background and roadmap: `docs/intelligence-plan.md`.
 
+## Lab page (reference MIDI and comparison)
+
+- `js/app/lab.js` + `css/lab.css` (the Lab tab) talk to the local helper `tools/lab/server.js` (zero-dependency Node, 127.0.0.1 only, runs programs with argument lists, never a shell). It fetches YouTube audio with yt-dlp (`python -m yt_dlp` from `tools/lab/.venv`; the `yt-dlp.exe` launcher is blocked by this PC's Application Control policy) and ffmpeg, and makes reference MIDI with the engines in `tools/lab/engines/`. Setup: `node tools/lab/setup.js`.
+- `js/core/midi.js` (read/write .mid) and `js/core/compare.js` (matching, F1, why notes were missed, consensus) are pure and tested by `node tests/midi-compare.js`. The helper loads the same files through `tools/lab/core.js`.
+- `detailedNotes()` in `recorder.js` is the one Detailed pipeline; the Recorder and the Lab both call it.
+- Run `node tests/smoke-lab.js` after changing `lab.js`, `tools/lab/` or `compare.js`; `node tests/lab-engines.js` after changing an engine. A Lab score is agreement with another tool, not truth, and is not a ratchet baseline.
+- Python native modules (scipy) can be blocked on this PC by Application Control, which is why the McLeod engine (pure JS) exists. Do not try to work around that policy.
+
 ## Other conventions
 
-- When you change any cached file, bump `CACHE` in `sw.js` (currently `tuner-v36`) so installed copies update.
+- When you change any cached file, bump `CACHE` in `sw.js` (currently `tuner-v37`) so installed copies update.
 - Netlify is no longer used. GitHub Pages is the only host.
