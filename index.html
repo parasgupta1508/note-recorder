@@ -575,7 +575,7 @@
       <div class="grid">
         <label class="field"><span>Lowest and highest pitch (Hz)</span><div class="pair"><input id="fmin" type="number" value="60"><input id="fmax" type="number" value="1500"></div></label>
       </div>
-      <div class="qk" id="rangeQ"><button data-r="30,400">Bass</button><button data-r="70,1400">Guitar</button><button data-r="180,1800">Violin</button><button data-r="140,1000">Ukulele</button><button data-r="80,1100">Voice</button><button data-r="60,1500">All</button></div>
+      <div class="qk" id="rangeQ"><button data-r="30,400">Bass</button><button data-r="70,1500">Guitar</button><button data-r="180,2800">Violin</button><button data-r="140,1400">Ukulele</button><button data-r="80,1100">Voice</button><button data-r="60,1500">All</button></div>
       <p class="hint2" style="margin:10px 0 0">Tap your instrument, or type your own limits. A narrower range avoids octave mistakes and saves battery. The Tuner already narrows it to your instrument's strings; this applies to the Recorder and Practice.</p></details></div>
 
   <div class="set-group" data-g="check"><h3>Accuracy check</h3><p>The software test proves the maths. The live check measures your own microphone and instrument.</p>
@@ -722,18 +722,23 @@ class Segmenter {
       this.candGap = 0;
       this.hist.push([t, f]); if (this.hist.length > 60) this.hist.shift();
       const m = freqToNote(f, this.a4).midi, c = this.cur;
-      // Stay on the current note while the pitch is within 65¢ of it: no flicker at semitone borders, vibrato is fine.
-      if (c && (m === c.midi || Math.abs(centsBetween(f, noteToFreq(c.midi, this.a4))) < 65)) {
+      // Stay on the current note while the pitch is within 65¢ of where the note has actually been sounding (its running median,
+      // not the first frame): no flicker at semitone borders, vibrato is fine, and a note played 45¢ sharp stays one note.
+      if (c && (m === c.midi || Math.abs(centsBetween(f, this.refHz(c))) < 65)) {
         // Re-articulation (détaché / martelé / spiccato / staccato): the same pitch is played again after a dip in volume
         // or a brief silence. Close the old note and begin a new one, so repeated notes are not merged into one long note.
-        if (this.rearticulate && this.rearm(c, t, lv)) { this.end(); this.cur = { midi: m, start: t, last: t, f: [f], t: [t], l: [lv], pk: lv, dip: lv, dipT: t, up: 0 }; this.miss = 0; this.cand = null; return; }
-        c.f.push(f); c.t.push(t); c.l.push(lv); c.last = t; this.miss = 0; this.cand = null; return;
+        if (this.rearticulate && this.rearm(c, t, lv)) { this.end(); this.cur = { midi: m, start: t, last: t, f: [f], t: [t], l: [lv], pk: lv, dip: lv, dipT: t, up: 0, re: true }; this.miss = 0; this.cand = null; return; }
+        c.f.push(f); c.t.push(t); c.l.push(lv); c.last = t; c.ref = median(c.f.slice(-12)); this.miss = 0; this.cand = null; return;
       }
       if (this.cand && Math.abs(centsBetween(f, noteToFreq(this.cand.midi, this.a4))) < 65) { const k = this.cand; k.f.push(f); k.t.push(t); k.l.push(lv); k.last = t; }
       else this.cand = { midi: m, start: t, last: t, f: [f], t: [t], l: [lv] };
       // A jump of exactly an octave / twelfth is the classic wrong-harmonic mistake, so ask for more proof.
-      const jump = c ? Math.abs(this.cand.midi - c.midi) : 0;
-      const need = this.confirm + (jump === 12 || jump === 19 || jump === 24 ? 4 : 0);
+      const prevM = c ? c.midi : (this.lastEnd && t - this.lastEnd.t < 0.3 ? this.lastEnd.midi : null);   // also right after a note ended: room tails and attack noise give the same wrong-harmonic frames
+      const jump = prevM != null ? Math.abs(this.cand.midi - prevM) : 0;
+      // The same pitch coming straight back after a note ended is usually the old note's tail around a new pluck or bow attack
+      // (the attack noise breaks the pitch for a few frames, then the old pitch "returns"): ask for twice the proof.
+      const echo = !c && this.lastEnd && t - this.lastEnd.t < 0.15 && Math.abs(centsBetween(f, this.lastEnd.hz)) < 65;
+      const need = this.confirm + (jump === 12 || jump === 19 || jump === 24 ? 4 : 0) + (echo ? this.confirm : 0);
       if (c) this.miss++;
       if (this.cand.f.length >= need) { if (c) this.end(); this.cur = this.cand; this.cand = null; this.miss = 0; }
       else if (c && this.miss >= MISS) this.end();   // lost the old note; the candidate keeps building
@@ -752,7 +757,10 @@ class Segmenter {
     if (lv < c.dip || t - c.dipT > 0.25) { c.dip = lv; c.dipT = t; c.up = 0; }
     const dipped = c.dip < c.pk * 0.6 && t - c.start > 0.06;
     const rose = lv > Math.max(c.dip * 1.5, c.pk * 0.7);
-    if (age > 0.08 && ((dipped && rose) || (brokeOff && c.dip < c.pk * 0.8 && lv > c.dip * 1.3))) {
+    // A real attack climbs back from its dip in well under 0.1 s. A string "beating" (two vibration planes) or a room tail swells back over
+    // 0.15 s or more, so a slow recovery is never a new note.
+    const quick = t - c.dipT <= 0.1;
+    if (age > 0.08 && quick && ((dipped && rose) || (brokeOff && c.dip < c.pk * 0.8 && lv > c.dip * 1.3))) {
       // A deep dip (under 30% of the peak) is a bow change or a new tongue / pluck: always a new note.
       if (c.dip < c.pk * 0.3) return true;
       // A moderate dip may just be vibrato (the volume wobbles with the pitch). Look at the last ~0.8 s of pitch:
@@ -767,14 +775,23 @@ class Segmenter {
   end() {
     const c = this.cur; this.cur = null; this.miss = 0;
     if (!c) return;
+    this.lastEnd = { t: c.last, hz: this.refHz(c), midi: this.summary(c).midi };
     const dur = (c.last - c.start) * 1000;
     if (dur < this.minDur) return;
-    const hz = median(c.f), ref = noteToFreq(c.midi, this.a4);
+    if (c.re && dur < 90) return;   // a "re-attack" that dies at once is the level jump of the NEXT note arriving before its pitch is clear
+    const sm = this.summary(c), hz = sm.hz, ref = noteToFreq(sm.midi, this.a4);
     const step = Math.max(1, Math.ceil(c.f.length / 120)), pts = [];   // pitch contour: [ms from start, cents from the note centre]
     for (let i = 0; i < c.f.length; i += step) pts.push([Math.round((c.t[i] - c.start) * 1000), +centsBetween(c.f[i], ref).toFixed(1)]);
     const lvl = 20 * Math.log10(Math.max(1e-6, median(c.l)));
-    this.onNote({ midi: c.midi, note: midiName(c.midi), hz, cents: centsBetween(hz, ref), start: c.start, dur, lvl: +lvl.toFixed(1), pts, vib: vibratoOf(pts) });
+    this.onNote({ midi: sm.midi, note: midiName(sm.midi), hz, cents: sm.cents, start: c.start, dur, lvl: +lvl.toFixed(1), pts, vib: vibratoOf(pts) });
   }
+  // Where the note really sat: the median of its frames (the first 15% are skipped once there are enough, because a scoop or the
+  // attack of a pluck starts off-pitch). The name and the cents both come from this, so they always agree.
+  summary(c) {
+    const f = c.f.length >= 10 ? c.f.slice(Math.floor(c.f.length * 0.15)) : c.f, hz = median(f), n = freqToNote(hz, this.a4);
+    return { hz, midi: n.midi, cents: n.cents };
+  }
+  refHz(c) { return c.ref || noteToFreq(c.midi, this.a4); }
 }
 
 class AttemptDetector {
@@ -841,8 +858,8 @@ function recPitchCore(r, rms, pk, conf, m, sg, gate, a4, relaxed) {
   if (!r) return null;
   if (relaxed) return r.clarity > conf ? r.freq : null;
   if (m.own) conf = Math.min(conf, 0.82);                // fast mode: a short window gives slightly lower clarity on real notes
-  if (pk >= 0.98) return null;                           // clipping: the waveform is distorted, pitch unreliable
-  const same = sg.cur && Math.abs(centsBetween(r.freq, noteToFreq(sg.cur.midi, a4))) < 65;
+  if (pk >= 0.98 && r.clarity < 0.95) return null;       // clipping distorts the wave but keeps its period: trust it only when the pitch is very clear (a loud close mic must still record)
+  const same = sg.cur && Math.abs(centsBetween(r.freq, sg.refHz(sg.cur))) < 65;
   if (r.clarity < Math.max(conf, same ? m.sustain : m.onset)) return null;
   if (r.p2 != null && r.p2 < (same ? m.p2 * 0.8 : m.p2)) return null;
   if (!same && rms < gate * m.gateX) return null;
@@ -881,12 +898,61 @@ function analyseSamples(x, sr, opts = {}) {
 // Basic Pitch notes -> the app's note shape. bends are in 1/3 semitone per frame (11.6 ms per frame).
 function bpToEvents(bp, a4 = 440) {
   return bp.map(n => {
-    const b = n.pitchBends || [], mean = b.length ? b.reduce((x, y) => x + y, 0) / b.length : 0, cents = Math.max(-50, Math.min(50, mean * 100 / 3));
+    // Basic Pitch's notes sit on a fixed A = 440 grid and its pitch bend has only 1/3-semitone steps. Work out the frequency on that grid first,
+    // then name the note from the user's own A4. (refineEvents below measures the pitch properly from the sound.)
+    const b = (n.pitchBends || []).map(v => v - 1), mean = b.length ? b.reduce((x, y) => x + y, 0) / b.length : 0;   // this Basic Pitch build counts bends from 1: 1.0 = exactly on the note (measured: in tune 1.0, +30¢ 2.0, -30¢ 0.0)
+    const hz = 440 * Math.pow(2, (n.pitchMidi - 69) / 12 + mean / 36), nn = freqToNote(hz, a4);
     const step = Math.max(1, Math.ceil(b.length / 120)), pts = [];
-    for (let i = 0; i < b.length; i += step) pts.push([Math.round(i * 256 / 22050 * 1000), +(b[i] * 100 / 3).toFixed(1)]);
-    const ref = noteToFreq(n.pitchMidi, a4);
-    return { midi: n.pitchMidi, note: midiName(n.pitchMidi), hz: ref * Math.pow(2, cents / 1200), cents, start: n.startTimeSeconds, dur: n.durationSeconds * 1000, lvl: +(20 * Math.log10(Math.max(1e-4, n.amplitude))).toFixed(1), pts, vib: vibratoOf(pts), amp: n.amplitude, src: 'bp' };
+    for (let i = 0; i < b.length; i += step) pts.push([Math.round(i * 256 / 22050 * 1000), +((b[i] - mean) * 100 / 3 + nn.cents).toFixed(1)]);
+    return { midi: nn.midi, note: midiName(nn.midi), hz, cents: nn.cents, start: n.startTimeSeconds, dur: n.durationSeconds * 1000, lvl: +(20 * Math.log10(Math.max(1e-4, n.amplitude))).toFixed(1), pts, vib: vibratoOf(pts), amp: n.amplitude, src: 'bp' };
   }).sort((a, b) => a.start - b.start);
+}
+// Energy at one pitch over time: its 1st + 2nd harmonic, 46 ms Hann window every 6 ms. Looking only at the note's own pitch means other
+// instruments (a piano under a violin) cannot disturb it. Returns { m: magnitudes, t: window-centre times in seconds }.
+function bandEnv(x, sr, hz, from, to) {
+  const W = Math.round(sr * 0.046), hop = Math.round(sr * 0.006), m = [], t = [], w1 = 2 * Math.PI * hz / sr, w2 = 2 * w1;
+  bandEnv.win = bandEnv.win && bandEnv.win.length === W ? bandEnv.win : Float32Array.from({ length: W }, (_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (W - 1)));
+  const win = bandEnv.win, a0 = Math.max(0, Math.round(from * sr) - W / 2), a1 = Math.min(x.length - W, Math.round(to * sr) - W / 2);
+  for (let a = a0; a <= a1; a += hop) {
+    let r1 = 0, i1 = 0, r2 = 0, i2 = 0;
+    for (let i = 0; i < W; i++) { const v = x[a + i] * win[i]; r1 += v * Math.cos(w1 * i); i1 -= v * Math.sin(w1 * i); r2 += v * Math.cos(w2 * i); i2 -= v * Math.sin(w2 * i); }
+    m.push(Math.hypot(r1, i1) + Math.hypot(r2, i2)); t.push((a + W / 2) / sr);
+  }
+  return { m, t };
+}
+// Marks notes that begin with a fresh attack: the energy at the note's own pitch jumps to 2.5x what it was just before the start, or doubles
+// right after a clear dip (a bow change or a re-pluck). A slow swell, or a piano attack that only nudges the level, does not count.
+// extractMelody uses it so that a REPEATED note is not glued onto the previous one, while one note that Basic Pitch broke in two still is.
+function markAttacks(ev, x, sr) {
+  return ev.map(e => {
+    const { m, t } = bandEnv(x, sr, e.hz, e.start - 0.3, e.start + 0.14); if (m.length < 6) return e;
+    let pre = Infinity, post = 0, prePeak = 0;
+    for (let i = 0; i < m.length; i++) { if (t[i] <= e.start + 0.02) { if (t[i] >= e.start - 0.12) pre = Math.min(pre, m[i]); if (t[i] <= e.start - 0.04) prePeak = Math.max(prePeak, m[i]); } else post = Math.max(post, m[i]); }
+    return post >= 2.5 * pre || (post >= 2 * pre && prePeak >= 1.5 * pre) ? { ...e, split: true } : e;
+  });
+}
+// Basic Pitch is very good at WHICH notes were played and WHEN, but its pitch is coarse. Re-measure each note on the original sound with the same
+// YIN the Live path uses, searching only within 1.5 semitones of Basic Pitch's pitch, so the octave and the note can never be changed to something else.
+// ev = notes from bpToEvents, x = Float32 sound, sr = its sample rate. o: { a4, poly }. Notes with no clear pitch keep Basic Pitch's value.
+function refineEvents(ev, x, sr, o = {}) {
+  const a4 = o.a4 || 440, minClar = o.poly ? 0.9 : 0.8;
+  return ev.map(e => {
+    const lo = e.hz * Math.pow(2, -1.5 / 12), hi = e.hz * Math.pow(2, 1.5 / 12), N = Math.max(1024, 3 * Math.ceil(sr / lo)), hop = Math.round(sr * 0.012);
+    const skip = e.dur > 150 ? 0.04 : 0.015, s0 = Math.round((e.start + skip) * sr), s1 = Math.round((e.start + e.dur / 1000 - 0.02) * sr);
+    const fr = [];
+    for (let a = s0; a <= Math.max(s0, s1 - N); a += hop) {
+      const st = Math.max(0, Math.min(x.length - N, a)); if (st < 0 || st + N > x.length) continue;
+      const w = x.subarray(st, st + N); let r2 = 0; for (let i = 0; i < N; i += 2) r2 += w[i] * w[i];
+      const r = yin(w, sr, lo, hi); if (r && r.clarity >= minClar && (r.p2 == null || r.p2 > 0.4)) fr.push({ t: (st + N / 2) / sr - e.start, f: r.freq, lv: Math.sqrt(r2 / (N / 2)) });
+    }
+    if (fr.length < 2) return e;
+    const top = Math.max(...fr.map(q => q.lv)), good = fr.filter(q => q.lv >= top * 0.3);       // drop the faint decay tail
+    if (good.length < 2) return e;
+    const hz = median(good.map(q => q.f)), nn = freqToNote(hz, a4), ref = noteToFreq(nn.midi, a4);
+    let pts = e.pts, vib = e.vib;
+    if (good.length >= 6) { pts = good.map(q => [Math.round(q.t * 1000), +centsBetween(q.f, ref).toFixed(1)]); vib = vibratoOf(pts); }
+    return { ...e, midi: nn.midi, note: midiName(nn.midi), hz, cents: nn.cents, pts, vib, refined: true };
+  });
 }
 // Picks the melody out of a polyphonic note list (violin over piano). Works on app notes (start s, dur ms).
 // o: { lo, hi (MIDI range), minDur (ms), mergeGap (ms) }
@@ -917,7 +983,7 @@ function extractMelody(ev, o = {}) {
   const out = [], lastOf = new Map();
   for (const e of n.slice().sort((x, y) => x.start - y.start)) {                               // merge fragments of one note (per pitch, so chords work too)
     const p = lastOf.get(e.midi);
-    if (p && p.midi === e.midi && e.start - end(p) < mergeGap / 1000) { p.dur = (end(e) - p.start) * 1000; p.pts = (p.pts || []).concat((e.pts || []).map(q => [q[0] + Math.round((e.start - p.start) * 1000), q[1]])); p.amp = Math.max(p.amp || 0, e.amp || 0); p.vib = vibratoOf(p.pts); }
+    if (p && p.midi === e.midi && !e.split && e.start - end(p) < mergeGap / 1000) { p.dur = (end(e) - p.start) * 1000; p.pts = (p.pts || []).concat((e.pts || []).map(q => [q[0] + Math.round((e.start - p.start) * 1000), q[1]])); p.amp = Math.max(p.amp || 0, e.amp || 0); p.vib = vibratoOf(p.pts); }
     else { const q = { ...e }; out.push(q); lastOf.set(e.midi, q); }
   }
   return out;
@@ -1759,7 +1825,7 @@ const REC_MAX_S = 600;                                   // safety cap: 10 minut
 let events = [], recording = false, recT0 = 0, recEnd = 0, recSel = -1;
 const view = { vs: 0, pps: 0, follow: true, mode: 'sheet', fps: 120, spanF: 4, fallMid: null };            // vs = time (s) at the left edge, pps = pixels per second
 const pb = { playing: false, pos: 0, startCtx: 0, startPos: 0, rate: 1, nodes: [], abuf: null };
-const cap = { chunks: [], n: 0, k: 1, rate: 16000, acc: 0, cnt: 0 };   // recorded sound (16-bit, low sample rate to save memory)
+const cap = { chunks: [], n: 0, k: 1, rate: 22050, acc: 0, cnt: 0 };   // recorded sound (16-bit, about 22 kHz to save memory (44.1 and 48 kHz devices keep every second sample after averaging))
 let capNode = null, capSink = null;
 const seg = new Segmenter(ev => { if (recording) addEvent(ev); });
 
@@ -1796,7 +1862,8 @@ function capPush(x) {
   if (cap.n / cap.rate > REC_MAX_S) setTimeout(() => { if (recording) { setRecording(false); $('recInfo').textContent = 'Stopped: 10 minute limit reached.'; } }, 0);
 }
 function addEvent(ev) {
-  ev.start -= recT0; events.push(ev);
+  ev.start -= recT0; if (ev.start < 0) { ev.dur = Math.max(0, ev.dur + ev.start * 1000); ev.start = 0; }   // frames are stamped mid-window, so the very first note can begin a hair before Record was pressed
+  events.push(ev);
   const tr = document.createElement('tr'); tr.dataset.i = events.length - 1;
   tr.innerHTML = `<td>${events.length}</td><td><b>${nm(ev.note)}</b></td><td>${ev.hz.toFixed(2)}</td><td class="${centsCls(ev.cents)}">${ev.cents >= 0 ? '+' : ''}${ev.cents.toFixed(1)}</td><td>${ev.start.toFixed(3)}</td><td>${ev.dur.toFixed(0)}</td>`;
   $('rows').prepend(tr);
@@ -1806,7 +1873,7 @@ function setRecording(on) {
   if (on && detBusy) return;                           // still analysing the last recording
   if (on && !recording) {
     pbStop(); newRecording();                            // a new recording replaces the previous one
-    cap.k = Math.max(1, Math.floor(ctx.sampleRate / 16000)); cap.rate = ctx.sampleRate / cap.k;   // a loaded file may have changed these
+    cap.k = Math.max(1, Math.round(ctx.sampleRate / 22050)); cap.rate = ctx.sampleRate / cap.k;   // a loaded file may have changed these
     recT0 = ctx.currentTime - t0; seg.reset(); autoM.reset(); view.follow = true;
   }
   if (!on && recording) {
@@ -1877,7 +1944,8 @@ async function analyseDetailed() {
     const lo = +$('fmin').value, hi = +$('fmax').value;
     const raw = BP.noteFramesToTime(BP.addPitchBendsToNoteEvents(C, BP.outputToNotesPoly(F, O, BP_PARAMS.onset, BP_PARAMS.frame, BP_PARAMS.minLen, true, hi, lo)));
     const toMidi = f => Math.round(69 + 12 * Math.log2(f / a4()));
-    detEv = extractMelody(bpToEvents(raw, a4()), { lo: toMidi(lo) - 1, hi: toMidi(hi) + 1, poly: ['guitar', 'ukulele', 'mandolin'].includes(prof.k) });   // chord instruments keep every note; violin, voice etc. get one melody line
+    const polyI = ['guitar', 'ukulele', 'mandolin'].includes(prof.k);
+    detEv = extractMelody(refineEvents(markAttacks(bpToEvents(raw, a4()), x, 22050), x, 22050, { a4: a4(), poly: polyI }), { lo: toMidi(lo) - 1, hi: toMidi(hi) + 1, poly: polyI });   // chord instruments keep every note; violin, voice etc. get one melody line
     showResult('det');
     info.textContent = `Detailed result: ${detEv.length} notes (Live found ${liveEv.length}).`;
   } catch (err) {
@@ -1902,7 +1970,7 @@ async function analyseFile(file) {
     pbStop(); newRecording(); recT0 = 0;
     const notes = await analyseSamples(x, ab.sampleRate, { auto: $('recMode').value === 'auto', m: REC_MODES[$('recMode').value] || REC_MODES.fast, fmin: +$('fmin').value, fmax: +$('fmax').value, conf: +$('conf').value, a4: a4(), chunk: true, onProgress: p => { info.textContent = 'Analysing… ' + Math.round(p * 100) + '%'; } });
     notes.forEach(addEvent);
-    const k = Math.max(1, Math.floor(ab.sampleRate / 16000)); cap.k = k; cap.rate = ab.sampleRate / k;       // keep the sound for Replay
+    const k = Math.max(1, Math.round(ab.sampleRate / 22050)); cap.k = k; cap.rate = ab.sampleRate / k;       // keep the sound for Replay
     for (let o = 0; o < n; o += 65536) capPush(x.subarray(o, Math.min(n, o + 65536)));
     cap.rate = ab.sampleRate / k; recEnd = ab.duration;
     const Wc = cv.clientWidth || 360; view.follow = false; view.vs = 0; view.pps = Math.min(Math.max(8, (Wc - GUT) / 8), Math.max(20, (Wc - GUT - 24) / Math.max(2, recEnd)));
@@ -2019,8 +2087,8 @@ function accColor(e) { const a = Math.abs(e.cents), T = tol(); return a <= T ? '
 function recColorOf(e) { return $('recColor').value === 'note' ? `hsl(${(((e.midi % 12) + 12) % 12) * 30},85%,62%)` : accColor(e); }
 function liveEvent() {
   const c = seg.cur; if (!recording || !c) return null;
-  const hz = median(c.f), ref = noteToFreq(c.midi, a4());
-  return { midi: c.midi, note: midiName(c.midi), hz, cents: centsBetween(hz, ref), start: c.start - recT0, dur: (c.last - c.start) * 1000, lvl: 20 * Math.log10(Math.max(1e-6, median(c.l))), live: true };
+  const sm = seg.summary(c), hz = sm.hz;
+  return { midi: sm.midi, note: midiName(sm.midi), hz, cents: sm.cents, start: c.start - recT0, dur: (c.last - c.start) * 1000, lvl: 20 * Math.log10(Math.max(1e-6, median(c.l))), live: true };
 }
 function niceStep(pps) { for (const s of [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600]) if (s * pps >= 76) return s; return 600; }
 const fmtTick = (t, s) => s < 1 ? t.toFixed(1) + 's' : `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}`;
@@ -2411,7 +2479,7 @@ async function openMic() {
   lpA.frequency.value = lpB.frequency.value = 6000; lpCut = 6000;
   srcNode.connect(hpNode); hpNode.connect(boostNode); boostNode.connect(lpA); lpA.connect(lpB); lpB.connect(analyser);
   // tap the (boosted) mic signal so a recording can be replayed as real sound
-  cap.k = Math.max(1, Math.floor(c.sampleRate / 16000)); cap.rate = c.sampleRate / cap.k;
+  cap.k = Math.max(1, Math.round(c.sampleRate / 22050)); cap.rate = c.sampleRate / cap.k;
   capNode = c.createScriptProcessor(4096, 1, 1); capSink = c.createGain(); capSink.gain.value = 0;
   capNode.onaudioprocess = ev => { if (recording) capPush(ev.inputBuffer.getChannelData(0)); };
   boostNode.connect(capNode); capNode.connect(capSink); capSink.connect(c.destination);
@@ -2550,12 +2618,12 @@ syncQuick();
 // ----- instrument profile: one choice sets the tuner, practice, recorder and pitch range together -----
 const INST_PROFILES = [
   { k: 'all',      name: 'All',      fam: null,        range: [60, 1500], rec: 'auto' },
-  { k: 'guitar',   name: 'Guitar',   fam: 'guitar',    range: [70, 1400], rec: 'auto' },
+  { k: 'guitar',   name: 'Guitar',   fam: 'guitar',    range: [70, 1500], rec: 'auto' },
   { k: 'bass',     name: 'Bass',     fam: 'bass',      range: [30, 400],  rec: 'auto' },
-  { k: 'violin',   name: 'Violin',   fam: 'violin',    range: [180, 1800], rec: 'auto' },
+  { k: 'violin',   name: 'Violin',   fam: 'violin',    range: [180, 2800], rec: 'auto' },
   { k: 'viola',    name: 'Viola',    fam: 'viola',     range: [120, 1500], rec: 'auto' },
   { k: 'cello',    name: 'Cello',    fam: 'cello',     range: [55, 1200], rec: 'auto' },
-  { k: 'ukulele',  name: 'Ukulele',  fam: 'ukulele',   range: [140, 1000], rec: 'auto' },
+  { k: 'ukulele',  name: 'Ukulele',  fam: 'ukulele',   range: [140, 1400], rec: 'auto' },
   { k: 'mandolin', name: 'Mandolin', fam: 'mandolin',  range: [180, 1800], rec: 'auto' },
   { k: 'voice',    name: 'Voice',    fam: null,        range: [80, 1100], rec: 'auto' },
 ];
@@ -2589,7 +2657,7 @@ profReady = true;
 if (prof.k !== 'all') { inst = FAMILIES.some(f => f[2].includes(prof.t)) ? prof.t : 'chromatic'; resetTuner(); buildInstChips(); }   // remember the instrument between visits
 syncProf(); renderSet();
 $('defaults').onclick = () => { applySettings(SET_DEFAULTS); applyProfile('all'); saveSettings(); calMsg('Defaults restored.'); $('calibOut').classList.add('hide'); };
-let gateOn = false, trkF = 0, trkT = -9, hpCut = 70;
+let gateOn = false, trkF = 0, trkT = -9, hpCut = 70, recTickT = -1;
 function loop() {
   rafId = requestAnimationFrame(loop);
   analyser.getFloatTimeDomainData(buf);
@@ -2613,7 +2681,8 @@ function loop() {
     if (sc.running && !recording && tab !== 'tuner' && sc.seq.length) {   // Practice knows its scale: search only around it (plus room for wrong notes)
       lo = Math.max(25, noteToFreq(Math.min(...sc.seq) - 5, a4())); hi = noteToFreq(Math.max(...sc.seq) + 5, a4());
     }
-    const hp = lo < 50 ? Math.max(20, lo * 0.7) : 70;   // only low instruments (bass) need a lower cut-off if (Math.abs(hp - hpCut) > 3) { hpCut = hp; hpNode.frequency.value = hp; }
+    const hp = lo < 50 ? Math.max(20, lo * 0.7) : 70;   // only low instruments (bass) need a lower cut-off
+    if (Math.abs(hp - hpCut) > 3) { hpCut = hp; hpNode.frequency.value = hp; }
     const cut = Math.min(6000, Math.max(1000, hi * 3));
     if (lpA && Math.abs(cut - lpCut) > lpCut * 0.1) { lpCut = cut; lpA.frequency.value = lpB.frequency.value = cut; }
     const rm = recording ? recModeCfg() : null, yb = rm && rm.win && lo >= 80 ? buf.subarray(buf.length - rm.win) : buf;   // fast mode: only the newest 2048 samples, so a quick note change is not smeared
@@ -2623,7 +2692,13 @@ function loop() {
     if (recording && gateOn) { fR = recPitch(r, rms, pk, conf); rA = r; }   // the recorder is stricter than the tuner: fewer wrong notes from noise
   }
   if (f) { trkF = f; trkT = t; }
-  if (recording) { if ($('recMode').value === 'auto') { autoM.frame(rms, gateOn ? rA : null); autoUi(); } const m = recModeCfg(); seg.a4 = a4(); seg.minDur = m.own ? m.minDur : Math.max(+$('mindur').value, m.minDur); seg.confirm = m.confirm; seg.maxMiss = m.miss || 5; seg.gap = m.gap || 0; seg.frame(t, fR, rms); }
+  // The recorder's timing rules count frames and assume 60 per second, so a 120 Hz screen must not feed it twice as fast.
+  // Frames are stamped at the middle of the audio they analysed (not the end), which is where the sound really is on the replay timeline.
+  if (recording && t - recTickT >= 0.0155) {
+    recTickT = t; if ($('recMode').value === 'auto') { autoM.frame(rms, gateOn ? rA : null); autoUi(); }
+    const m = recModeCfg(); seg.a4 = a4(); seg.minDur = m.own ? m.minDur : Math.max(+$('mindur').value, m.minDur); seg.confirm = m.confirm; seg.maxMiss = m.miss || 5; seg.gap = m.gap || 0;
+    seg.frame(t - (m.win && +$('fmin').value >= 80 ? m.win : buf.length) / 2 / ctx.sampleRate, fR, rms);
+  }
   liveFrame(f, gateOn);
   if (tab === 'tuner') tunerFrame(t, f);
   if (demoIdx < 0) collectHold(f);                   // keep scoring the note that is still sounding

@@ -1,0 +1,32 @@
+{
+ "summary": {
+  "violin": 0.982,
+  "guitar": 0.998,
+  "ukulele": 0.997,
+  "overall": 0.992
+ },
+ "cases": {
+  "violin mid clean": 1,
+  "violin fast clean": 0.984,
+  "violin border clean": 0.933,
+  "violin high clean": 0.978,
+  "violin repeat clean": 1,
+  "violin mid mic-hp+reverb": 0.978,
+  "violin mid chatter": 1,
+  "guitar mid clean": 1,
+  "guitar fast clean": 0.985,
+  "guitar border clean": 1,
+  "guitar high clean": 1,
+  "guitar repeat clean": 1,
+  "guitar mid mic-hp+reverb": 1,
+  "guitar mid chatter": 1,
+  "ukulele mid clean": 1,
+  "ukulele fast clean": 1,
+  "ukulele border clean": 0.977,
+  "ukulele high clean": 1,
+  "ukulele repeat clean": 1,
+  "ukulele mid mic-hp+reverb": 1,
+  "ukulele mid chatter": 1
+ },
+ "cents": 1.58
+}

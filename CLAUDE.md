@@ -22,6 +22,16 @@ Whenever you change any file in this project, back it up to GitHub without being
 3. If it improved, run `node tests/bench.js --update`. The baseline only ever goes up.
 4. When you add a new detection feature, add a benchmark case for it first.
 
+## String-instrument accuracy (violin, guitar, ukulele)
+
+Known-truth synthetic phrases (`tests/synth.js`: bowed, plucked, nylon; with vibrato, scoops, detune, reverb, hum, chatter, clipping, ringing, beating):
+
+- `node tests/strings.js` is the Live path. Ratchet like `bench.js` (`--update` only when nothing got worse). It reads each instrument's pitch range from `INST_PROFILES`.
+- `node tests/detailed-strings.js` is the Detailed path with the real Basic Pitch model in Node (needs `tools/node_modules`, takes about 5 min). It scores notes and cents error. `KIND=repeat`, `ONLY=ukulele` and `DBG="guitar mid clean"` narrow or print a run.
+- `node tests/pitch-sweep.js` checks raw YIN accuracy per semitone and sample rate.
+- Run the Live one after any change to `yin`, `Segmenter`, `recPitchCore`, `AutoMode` or the Recorder loop, and the Detailed one after any change to `bpToEvents`, `markAttacks`, `refineEvents`, `extractMelody` or `BP_PARAMS`.
+- Basic Pitch pitch bends in this build are centred on 1 (1.0 = exactly on the note), not 0. `bpToEvents` subtracts 1. `refineEvents` then re-measures every note's pitch with YIN, because the model's bends only have 1/3-semitone steps.
+
 ## Detailed analysis (Basic Pitch) and tests
 
 - `vendor/` holds the offline Detailed-analysis files (Basic Pitch model + TensorFlow.js, Apache-2.0). Rebuild with `cd tools && npm install && npm run build`. They are loaded only when Detailed mode is used, and cached by the service worker in its own `tuner-vendor-v1` cache.
@@ -32,6 +42,6 @@ Whenever you change any file in this project, back it up to GitHub without being
 
 ## Other conventions
 
-- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v27`) so installed copies update.
+- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v33`) so installed copies update.
 - Netlify is no longer used and its folder was deleted. GitHub Pages is the only host.
 - Before committing, run `node tests/smoke.js` (loads the page in headless Edge, checks for script errors and clicks through the Recorder). A script error at load silently kills every button.
