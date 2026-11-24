@@ -4,8 +4,7 @@
 const fs = require('fs'), path = require('path');
 const src = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const script = src.slice(src.indexOf('<script>') + 8, src.indexOf('// ---------- APP ----------'));
-const modes = src.match(/const REC_MODES = \{[\s\S]*?\n\};/)[0];
-const lib = new Function(script + '\n' + modes + '\nreturn { analyseSamples, REC_MODES, noteToFreq };')();
+const lib = new Function(script + '\nreturn { analyseSamples, REC_MODES, noteToFreq };')();
 const SR = 44100;
 
 // ---- synthetic instruments ----
@@ -36,6 +35,8 @@ const cases = [];
   [[48, 0], [55, 1.1], [52, 2.2], [57, 3.3]].forEach(([m, t]) => { tone(b, m, t, 1.4, { amp: 0.12, decay: 2.5, harm: [1, 0.5, 0.3, 0.2], attack: 0.003 }); tone(b, m + 7, t, 1.4, { amp: 0.09, decay: 2.5, harm: [1, 0.5, 0.3], attack: 0.003 }); });
   noise(b, 0.002); cases.push({ name: 'violin melody over soft piano', b, exp }); }
 
+{ const b = mk(5), exp = []; [67, 72, 76, 72].forEach((m, i) => { tone(b, m, 0.6 + i * 1.0, 0.9, { vib: 1, amp: 0.3, attack: 0.04, rel: 0.05 }); exp.push({ midi: m, start: 0.6 + i * 1.0 }); }); noise(b, 0.09); cases.push({ name: 'melody in loud room noise', b, exp }); }
+
 function score(found, exp) {
   const used = new Set(); let tp = 0;
   for (const e of exp) { const k = found.findIndex((f, i) => !used.has(i) && f.midi === e.midi && Math.abs(f.start - e.start) < 0.12); if (k >= 0) { used.add(k); tp++; } }
@@ -44,8 +45,8 @@ function score(found, exp) {
 }
 
 const res = {};
-for (const mode of ['fast', 'normal']) for (const c of cases) {
-  const m = lib.REC_MODES[mode], found = lib.analyseSamples(c.b, SR, { m, fmin: 180, fmax: 2400, conf: 0.85, a4: 440 });
+for (const mode of ['auto', 'fast', 'normal']) for (const c of cases) {
+  const m = lib.REC_MODES[mode === 'auto' ? 'fast' : mode], found = lib.analyseSamples(c.b, SR, { m, auto: mode === 'auto', fmin: 180, fmax: 2400, conf: 0.85, a4: 440 });
   res[mode + ' | ' + c.name] = score(found, c.exp);
 }
 const keys = Object.keys(res), mean = +(keys.reduce((a, k) => a + res[k].f1, 0) / keys.length).toFixed(3);

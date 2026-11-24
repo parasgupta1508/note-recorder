@@ -24,5 +24,5 @@ Whenever you change any file in this project, back it up to GitHub without being
 
 ## Other conventions
 
-- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v24`) so installed copies update.
+- When you change `index.html` or any other cached file, bump `CACHE` in `sw.js` (currently `tuner-v25`) so installed copies update.
 - The `netlify-upload` folder is a copy of the deployable files. After changes, tell the user it needs re-uploading to Netlify, or sync it if asked.

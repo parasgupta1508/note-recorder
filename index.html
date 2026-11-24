@@ -15,19 +15,19 @@
 <title>Tuner & Scale Trainer</title>
 <style>
   :root{
-    --bg:#0b0d12;--surface:#141821;--surface2:#1a1f2b;--raise:#222938;--line:#262c3a;
-    --fg:#eceff6;--mut:#b9c1d5;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--acc:#6c8dff;
+    --bg:#0b0d12;--surface:#141821;--surface2:#1a1f2b;--raise:#222938;--line:#3a4358;
+    --fg:#f7f9fd;--mut:#d3dbed;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--acc:#6c8dff;
     --r:14px;--sab:env(safe-area-inset-bottom,0px);
   }
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
-  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
        padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left))}
   .wrap{max-width:1080px;margin:0 auto}
   .hide{display:none!important}
   .mut{color:var(--mut)} .center{text-align:center}
   .ok-t{color:var(--ok)} .warn-t{color:var(--warn)} .bad-t{color:var(--bad)}
-  b{font-weight:600}
+  b{font-weight:700}
 
   /* ---------- app bar (sticky) ---------- */
   .appbar{position:sticky;top:0;z-index:20;margin:0 calc(-1 * max(14px,env(safe-area-inset-left))) 0 calc(-1 * max(14px,env(safe-area-inset-right)));
@@ -42,12 +42,12 @@
   .bar{display:grid;grid-template-columns:minmax(0,1fr) auto;row-gap:2px}
   .bar-r{display:contents}
   #start{white-space:nowrap;grid-column:2;grid-row:1}
-  #status{grid-column:1/-1;grid-row:2;color:var(--mut);font-size:12.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #status{grid-column:1/-1;grid-row:2;color:var(--mut);font-size:13.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   @media (min-width:560px){
     .bar{display:flex} .bar-r{display:flex;align-items:center;gap:12px;min-width:0}
-    #status{font-size:12.5px;max-width:40vw}
+    #status{font-size:13.5px;max-width:40vw}
   }
-  .level{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;color:var(--mut)}
+  .level{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13.5px;color:var(--mut)}
   .lvl-track{position:relative;flex:1;height:6px;background:var(--raise);border-radius:3px;overflow:hidden}
   #lvlDb{min-width:60px;text-align:right;font-variant-numeric:tabular-nums}
 
@@ -73,7 +73,7 @@
   .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);
         background:rgba(20,24,33,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
         border-top:1px solid var(--line);padding:6px 6px calc(6px + var(--sab))}
-  .tabs button{background:none;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:12px;font-size:12px;font-weight:550}
+  .tabs button{background:none;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:12px;font-size:13px;font-weight:550}
   .tabs button svg{width:22px;height:22px}
   .tabs button.on{color:var(--fg);background:var(--surface2)}
   .tabs button.on svg{color:var(--acc)}
@@ -91,7 +91,7 @@
   .chip.ok{background:#17402f;color:#b8f5d9} .chip.close{background:#52410f;color:#fde8a6} .chip.bad{background:#552222;color:#fecaca}
   .chip.cur{border-color:var(--acc);background:#26325a} .chip.pend{color:var(--mut)}
   .chip.mini{min-width:42px;padding:5px 10px;font-size:13px}
-  .chip .play{background:#2f3850;color:var(--fg);padding:2px 8px;border-radius:999px;font-size:12.5px;min-height:0}
+  .chip .play{background:#2f3850;color:var(--fg);padding:2px 8px;border-radius:999px;font-size:13.5px;min-height:0}
 
   /* tuner */
   .tuner{display:flex;flex-direction:column;gap:16px}
@@ -118,7 +118,7 @@
   #autoBtn.on{color:#f4f6fb;border-color:#aeb8d0;background:#1a2030;box-shadow:none}
   #strChips{display:flex;gap:6px;justify-content:center}
   .sp{flex:1 1 0;min-width:0;max-width:76px;padding:9px 4px 8px;border-radius:12px;background:transparent;border:1px solid var(--line);color:#f4f6fb;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1;position:relative}
-  .sp b{font-size:19px;font-weight:600} .sp small{font-size:11.5px;color:var(--mut);font-weight:500}
+  .sp b{font-size:19px;font-weight:600} .sp small{font-size:13px;color:var(--mut);font-weight:500}
   .sp.on{border-color:#aeb8d0;background:#1a2030}
   .sp.lock{border-color:var(--acc)}
   .sp.done{color:var(--ok);border-color:#1f6b50} .sp.done small{color:#4fae8c}
@@ -136,7 +136,7 @@
   .qk button.on,.seg button.on{color:#f4f6fb;border-color:#aeb8d0;background:#1a2030}
   .seg{display:flex;gap:6px} .seg button{flex:1;border-radius:10px}
   details.adv{margin-top:10px}
-  .kv{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px} .kv>div{border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:12.5px;color:var(--mut);min-width:84px} .kv b{display:block;color:#f4f6fb;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+  .kv{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px} .kv>div{border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:13.5px;color:var(--mut);min-width:84px} .kv b{display:block;color:#f4f6fb;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
   .kv .ok b{color:var(--ok)} .kv .warn b{color:var(--warn)} .kv .bad b{color:var(--bad)}
 
   /* settings layouts */
@@ -166,22 +166,22 @@
   details>summary::before{content:"▸";transition:transform .15s;display:inline-block}
   details[open]>summary::before{transform:rotate(90deg)}
   #scRow1{display:flex;flex-wrap:nowrap;gap:4px}
-  #scRow1 .chip{flex:1 1 0;min-width:0;padding:6px 0;font-size:12.5px}
+  #scRow1 .chip{flex:1 1 0;min-width:0;padding:6px 0;font-size:13.5px}
   #scRow1.wrap{flex-wrap:wrap} #scRow1.wrap .chip{flex:0 0 calc(12.5% - 4px);padding:6px 0}
-  #scRow1.dense .chip{font-size:10.5px;letter-spacing:-.2px}
+  #scRow1.dense .chip{font-size:12px;letter-spacing:-.2px}
   .livecard{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:16px 14px}
   .srow{margin-top:14px}
   .dev-bar{position:relative;height:26px;border-radius:13px;overflow:hidden;background:var(--raise)}
   .dev-mid{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.4);z-index:1}
   .dev-marker{position:absolute;top:3px;bottom:3px;width:9px;border-radius:5px;background:#fff;left:50%;transform:translateX(-50%);transition:left .06s;box-shadow:0 0 0 2px rgba(0,0,0,.35);z-index:2}
   .dev-marker.ok{box-shadow:0 0 0 3px var(--ok)} .dev-marker.warn{box-shadow:0 0 0 3px var(--warn)} .dev-marker.bad{box-shadow:0 0 0 3px var(--bad)}
-  .dev-labels{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--mut);margin-top:6px;gap:6px}
+  .dev-labels{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:var(--mut);margin-top:6px;gap:6px}
   #devRead{font-size:19px;font-weight:650;color:var(--fg);font-variant-numeric:tabular-nums}
   #scAcc{font-size:14px;font-weight:550;min-height:22px}
   #cardTiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:8px;margin-top:10px}
   #cardTiles>.mut{grid-column:1/-1}
-  .tile{display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-radius:12px;cursor:pointer;background:var(--raise);border:1.5px solid transparent;font-size:12.5px;line-height:1.25}
-  .tile b{font-size:14px} .tile span{font-size:19px;font-weight:650;font-variant-numeric:tabular-nums} .tile .tb{font-size:11px;font-weight:500;opacity:.85}
+  .tile{display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-radius:12px;cursor:pointer;background:var(--raise);border:1.5px solid transparent;font-size:13.5px;line-height:1.25}
+  .tile b{font-size:14px} .tile span{font-size:19px;font-weight:650;font-variant-numeric:tabular-nums} .tile .tb{font-size:12.5px;font-weight:500;opacity:.85}
   .tile.ok{background:#17402f} .tile.mid{background:#52410f} .tile.bad{background:#552222} .tile.na{color:var(--mut)}
   .tile.sel{border-color:var(--acc)}
   .cardbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
@@ -211,15 +211,15 @@
   .tiles2 .t{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
   .tiles2 .t b{display:block;font-size:22px;font-variant-numeric:tabular-nums} .tiles2 .t span{font-size:13px;color:var(--mut)}
   .legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-  .legend button{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--raise);color:var(--fg);font-size:12.5px;min-height:0}
+  .legend button{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--raise);color:var(--fg);font-size:13.5px;min-height:0}
   .legend button.off{opacity:.38} .legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
   svg.ch{width:100%;height:auto;display:block}
-  svg.ch text{fill:var(--mut);font-size:12px}
+  svg.ch text{fill:var(--mut);font-size:13px}
   .two{display:grid;gap:14px}
   .set-group{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:14px}
   .set-group h3{margin:0 0 2px;font-size:15px} .set-group>p{margin:0 0 12px;font-size:13.5px;color:var(--mut)}
   .hint2{font-size:13px;color:var(--mut);font-weight:400}
-  .opt-h{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600;margin:14px 0 8px}
+  .opt-h{font-size:13.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600;margin:14px 0 8px}
   @media (min-width:720px){ .two{grid-template-columns:1fr 1fr} .an-head{grid-template-columns:auto 1.6fr 1fr 1fr} .an-head .seg,.an-head .scope{grid-column:auto} }
 
   .tempo{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,.9fr) auto;gap:8px;align-items:end}
@@ -251,6 +251,9 @@
   .segc button{background:none;color:var(--mut);border-radius:999px;padding:7px 10px;font-size:14px}
   .segc button.on{background:var(--raise);color:var(--fg)}
   #roll{aspect-ratio:auto;height:300px;background:#0c0f15;border-radius:12px;box-shadow:0 0 0 1px var(--line);touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
+  .rwrap{position:relative}
+  #fsBtn{position:absolute;right:8px;bottom:8px;width:34px;height:34px;padding:0;border-radius:8px;background:rgba(255,255,255,.08);color:#fff;font-size:19px;line-height:1;opacity:.5;backdrop-filter:blur(2px)}
+  #fsBtn:hover,#fsBtn:focus-visible{opacity:1;background:rgba(255,255,255,.2)} #tab-rec.fs #fsBtn{opacity:.6}
   #tab-rec.fs{position:fixed;inset:0;z-index:60;background:var(--bg,#0c0f15);overflow:auto;padding:10px;margin:0;max-width:none}
   #tab-rec.fs .ropts,#tab-rec.fs .more,#tab-rec.fs #noteInfo{display:none}
   body.fsrec{overflow:hidden}
@@ -275,7 +278,7 @@
   .rstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
   .rstat div{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
   .rstat b{display:block;font-size:17px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rstat span{font-size:12.5px;color:var(--mut)}
+  .rstat span{font-size:13.5px;color:var(--mut)}
   .rlegend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--fg)}
   .rlegend i{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:5px}
   #rows tr{cursor:pointer} #rows tr.sel td{background:rgba(108,141,255,.22)}
@@ -437,7 +440,7 @@
           <button id="cardReset" class="sec">Reset</button><button id="cardCsv" class="sec">Export</button></div></div>
         <div id="cardTrend" class="mut" style="margin-top:8px"></div>
         <div id="cardTable" class="scroll tbl" style="margin-top:8px"></div>
-        <div class="mut" style="font-size:12px;margin-top:6px">Notes follow the chosen scale. Tap a heading to sort. A note needs 3 plays to get a score.</div>
+        <div class="mut" style="font-size:13px;margin-top:6px">Notes follow the chosen scale. Tap a heading to sort. A note needs 3 plays to get a score.</div>
       </div>
     </div>
   </div>
@@ -463,11 +466,10 @@
       <button id="vwSheet" class="on" aria-pressed="true">Sheet</button>
       <button id="vwFall" aria-pressed="false">Falling</button>
     </div>
-    <button id="fsBtn" class="sec" aria-pressed="false" title="Full screen (Esc to exit)">⛶ Full screen</button>
     <button id="clear" class="sec">Clear</button>
   </div>
 
-  <canvas id="roll" aria-label="Recorded notes"></canvas>
+  <div class="rwrap"><canvas id="roll" aria-label="Recorded notes"></canvas><button id="fsBtn" aria-pressed="false" title="Full screen (Esc to exit)" aria-label="Full screen">⛶</button></div>
   <div id="noteInfo" class="mut"></div>
 
   <div class="tport">
@@ -488,7 +490,7 @@
   </div>
 
   <div class="ropts">
-    <label class="field wide" title="This sets how certain the app must be before it records a note.&#10;• Notes missing? Choose Fast tempo or Soft &amp; quiet.&#10;• Notes that you didn't play? Choose Standard or Noisy room."><span>Listening</span><select id="recMode"><option value="fast" selected>Fast tempo</option><option value="normal">Standard</option><option value="relaxed">Soft &amp; quiet</option><option value="strict">Noisy room</option></select></label>
+    <label class="field wide" title="This sets how certain the app must be before it records a note.&#10;• Notes missing? Choose Fast tempo or Soft &amp; quiet.&#10;• Notes that you didn't play? Choose Standard or Noisy room."><span>Listening</span><select id="recMode"><option value="auto" selected>Auto (recommended)</option><option value="fast">Fast tempo</option><option value="normal">Standard</option><option value="relaxed">Soft &amp; quiet</option><option value="strict">Noisy room</option></select></label>
     <div class="wide hint2" id="recModeDesc"></div>
     <label class="field"><span>Colours</span><select id="recColor"><option value="acc" selected>By accuracy</option><option value="note">By note name</option></select></label>
     <label class="field"><span>Tempo (0 = off)</span><input id="recBpm" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
@@ -760,6 +762,43 @@ class AttemptDetector {
   }
 }
 
+// How strict the note listener is. onset/sustain = pitch clarity needed to start / keep a note,
+// p2 = "the pitch must repeat" check that rejects noise, confirm = frames before a note counts.
+const REC_MODES = {
+  fast:    { onset: 0.86, sustain: 0,    p2: 0.4, confirm: 2, minDur: 30,  gateX: 1, miss: 3, gap: 1, win: 2048, own: true },   // quick runs: short analysis window, 2-frame onset
+  relaxed: { onset: 0,    sustain: 0,    p2: 0,   confirm: 3, minDur: 0,   gateX: 1, miss: 5 },
+  normal:  { onset: 0.90, sustain: 0,    p2: 0.5, confirm: 4, minDur: 0,   gateX: 1, miss: 5 },
+  strict:  { onset: 0.92, sustain: 0.88, p2: 0.65, confirm: 4, minDur: 100, gateX: 1.6, miss: 5 },
+};
+
+// Auto listening: watches the sound while it runs and picks the best listening mode for it.
+// It measures the noise floor, how much of the loud sound is NOT a clean pitch (accompaniment, noise, reverb),
+// and how fast the notes come, then switches (with a short hold, so it never flickers).
+class AutoMode {
+  constructor() { this.reset(); }
+  reset() { this.mode = 'fast'; this.why = 'listening…'; this.nf = 0; this.sig = 0; this.dirty = 0.2; this.prev = 0; this.n = 0; this.last = -99; this.ons = []; this.cand = 'fast'; this.hold = 0; }
+  // rms = frame level, r = pitch result (or null), n frame index (60 per second)
+  frame(rms, r) {
+    const n = ++this.n, t = n / 60;
+    this.nf = this.nf ? (rms < this.nf ? this.nf * 0.9 + rms * 0.1 : this.nf * 1.0003 + 1e-7) : rms;
+    this.sig = rms > this.sig ? rms : this.sig * 0.998;
+    const active = rms > Math.max(this.nf * 2.5, this.sig * 0.12, 0.003);
+    if (active) { const bad = !r || r.clarity < 0.8 || (r.p2 != null && r.p2 < 0.5) ? 1 : 0; this.dirty += (bad - this.dirty) * 0.03; }
+    if (active && rms > this.prev * 1.5 && t - this.last > 0.08) { this.last = t; this.ons.push(t); }
+    this.prev = this.prev * 0.7 + rms * 0.3;
+    while (this.ons.length && this.ons[0] < t - 2) this.ons.shift();
+    if (n < 45) return this.mode;
+    const snr = this.sig / Math.max(this.nf, 1e-6), rate = this.ons.length / 2;
+    let c, why;
+    if (snr < 3 || this.dirty > 0.75) { c = 'strict'; why = 'noisy or busy sound'; }
+    else if (snr < 7 || this.dirty > 0.45) { c = 'normal'; why = 'some background sound'; }
+    else if (this.sig < 0.02 && snr > 12 && this.dirty < 0.3) { c = 'relaxed'; why = 'soft and quiet'; }
+    else { c = 'fast'; why = rate > 3 ? 'fast notes, clean sound' : 'clean sound'; }
+    if (c === this.cand) { if (++this.hold >= 30 && c !== this.mode) { this.mode = c; this.why = why; } } else { this.cand = c; this.hold = 0; }
+    return this.mode;
+  }
+}
+
 // Decides whether one analysed frame is a clean note. m = listening-mode settings (REC_MODES entry).
 function recPitchCore(r, rms, pk, conf, m, sg, gate, a4, relaxed) {
   if (!r) return null;
@@ -777,8 +816,8 @@ function recPitchCore(r, rms, pk, conf, m, sg, gate, a4, relaxed) {
 // opts: { fmin, fmax, conf, a4, m (REC_MODES entry), relaxed, onProgress }  ->  array of notes.
 // Runs synchronously unless opts.chunk is set, in which case it returns a Promise and yields to the UI between chunks.
 function analyseSamples(x, sr, opts = {}) {
-  const m = opts.m, a4 = opts.a4 || 440, conf = opts.conf || 0.85, lo = opts.fmin || 70, hi = opts.fmax || 2000;
-  const win = lo < 60 ? 8192 : (m.win && lo >= 80 ? m.win : 4096), hop = Math.round(sr / 60), n = Math.max(0, Math.floor((x.length - win) / hop));
+  let m = opts.m; const auto = opts.auto ? new AutoMode() : null, a4 = opts.a4 || 440, conf = opts.conf || 0.85, lo = opts.fmin || 70, hi = opts.fmax || 2000;
+  const win = lo < 60 ? 8192 : 4096, hop = Math.round(sr / 60), n = Math.max(0, Math.floor((x.length - win) / hop));
   const out = [], sg = new Segmenter(ev => out.push(ev));
   sg.a4 = a4; sg.minDur = m.minDur || 30; sg.confirm = m.confirm; sg.maxMiss = m.miss || 5; sg.gap = m.gap || 0;
   const rmsAt = f => { let s = 0, o = f * hop + win - 1024; for (let i = 0; i < 1024; i++) s += x[o + i] * x[o + i]; return Math.sqrt(s / 1024); };
@@ -788,10 +827,11 @@ function analyseSamples(x, sr, opts = {}) {
   let f = 0;
   const step = lim => {
     for (; f < n && f < lim; f++) {
-      const o = f * hop, b = x.subarray(o, o + win);
+      const o = f * hop, w = m.win && lo >= 80 ? m.win : win, b = x.subarray(o + win - w, o + win);   // fast mode looks at only the newest 2048 samples, like the live Recorder
       let pk = 0; for (let i = 0; i < b.length; i += 4) { const a = Math.abs(b[i]); if (a > pk) pk = a; }
-      let fR = null;
-      if (lv[f] > gate * 0.6) { const r = yin(b, sr, lo, hi); fR = recPitchCore(r, lv[f], pk, conf, m, sg, gate, a4, opts.relaxed); }
+      let fR = null, rAuto = null;
+      if (lv[f] > gate * 0.6) { const r = yin(b, sr, lo, hi); rAuto = r; fR = recPitchCore(r, lv[f], pk, conf, m, sg, gate, a4, m === REC_MODES.relaxed); }
+      if (auto) { auto.frame(lv[f], rAuto); if (REC_MODES[auto.mode] !== m) { m = REC_MODES[auto.mode]; sg.minDur = m.minDur || 30; sg.confirm = m.confirm; sg.maxMiss = m.miss || 5; sg.gap = m.gap || 0; } }
       sg.frame((o + win / 2) / sr, fR, lv[f]);
     }
   };
@@ -946,22 +986,22 @@ function tunerFrame(t, f) {
 function drawTMeter() {
   if (tab !== 'tuner') return;
   const W = tcv.clientWidth, H = tcv.clientHeight; if (!W || !H) return;
-  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  const dpr = Math.min(3, Math.max(2, window.devicePixelRatio || 1));
   if (tcv.width !== Math.round(W * dpr) || tcv.height !== Math.round(H * dpr)) { tcv.width = Math.round(W * dpr); tcv.height = Math.round(H * dpr); }
   const g = tg2; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H); g.lineCap = 'round'; g.textBaseline = 'alphabetic';
-  const INK = '#f4f6fb', MUT = '#8f9ab3', T = tol(), idle = tm.idle, FONT = 'system-ui,-apple-system,"Segoe UI",sans-serif';
+  const INK = '#f4f6fb', MUT = '#c9d2e6', T = tol(), idle = tm.idle, FONT = 'system-ui,-apple-system,"Segoe UI",sans-serif';
   const a = idle ? 0 : Math.abs(tm.disp), inTune = !idle && a <= T, tunedNow = !idle && tm.confirmed;
   const col = idle ? MUT : inTune ? SC.ok : INK, cx = W / 2;
   // note name
   const y0 = H * 0.38;
   g.textAlign = 'center';
-  if (idle) { g.fillStyle = '#4b546b'; g.font = '300 88px ' + FONT; g.fillText('–', cx, y0); }
+  if (idle) { g.fillStyle = '#7a86a3'; g.font = '400 88px ' + FONT; g.fillText('–', cx, y0); }
   else {
     const L = tm.letter[0], acc = tm.letter.slice(1);
-    g.font = '300 96px ' + FONT; const wl = g.measureText(L).width;
+    g.font = '500 96px ' + FONT; const wl = g.measureText(L).width;
     g.font = '400 30px ' + FONT; const wa = acc ? g.measureText(acc).width + 2 : 0, wo = g.measureText(tm.oct).width + 4;
     const x = cx - (wl + wa + wo) / 2; g.textAlign = 'left';
-    g.fillStyle = tunedNow ? SC.ok : INK; g.font = '300 96px ' + FONT; g.fillText(L, x, y0);
+    g.fillStyle = tunedNow ? SC.ok : INK; g.font = '500 96px ' + FONT; g.fillText(L, x, y0);
     g.font = '400 30px ' + FONT; g.fillStyle = tunedNow ? SC.ok : INK; if (acc) g.fillText(acc, x + wl + 2, y0 - 50);
     g.fillStyle = MUT; g.fillText(tm.oct, x + wl + wa + 4, y0);
   }
@@ -973,9 +1013,9 @@ function drawTMeter() {
   g.fillStyle = idle ? 'rgba(52,211,153,.07)' : 'rgba(52,211,153,.22)'; rr(g, pos(-T), my - 22, pos(T) - pos(-T), 44, 6); g.fill();
   for (let c = -50; c <= 50; c += 5) {
     const h = c === 0 ? 22 : c % 10 === 0 ? 12 : 7;
-    g.strokeStyle = c === 0 ? '#c9d1e4' : '#4b546b'; g.lineWidth = c === 0 ? 2 : 1.2; g.beginPath(); g.moveTo(pos(c), my - h); g.lineTo(pos(c), my + h); g.stroke();
+    g.strokeStyle = c === 0 ? '#c9d1e4' : '#7a86a3'; g.lineWidth = c === 0 ? 2 : 1.2; g.beginPath(); g.moveTo(pos(c), my - h); g.lineTo(pos(c), my + h); g.stroke();
   }
-  g.font = '500 12.5px ' + FONT; g.fillStyle = MUT; g.textAlign = 'center';
+  g.font = '600 14px ' + FONT; g.fillStyle = MUT; g.textAlign = 'center';
   g.fillText('−50', pos(-50), my + 42); g.fillText('0', pos(0), my + 42); g.fillText('+50', pos(50), my + 42);
   g.font = '400 18px ' + FONT; g.fillText('♭', x0 - 8, my - 30); g.fillText('♯', x1 + 8, my - 30);
   if (!idle) {
@@ -1639,15 +1679,8 @@ const cap = { chunks: [], n: 0, k: 1, rate: 16000, acc: 0, cnt: 0 };   // record
 let capNode = null, capSink = null;
 const seg = new Segmenter(ev => { if (recording) addEvent(ev); });
 
-// How strict the note listener is. onset/sustain = pitch clarity needed to start / keep a note,
-// p2 = "the pitch must repeat" check that rejects noise, confirm = frames before a note counts.
-const REC_MODES = {
-  fast:    { onset: 0.86, sustain: 0,    p2: 0.4, confirm: 2, minDur: 30,  gateX: 1, miss: 3, gap: 1, win: 2048, own: true },   // quick runs: short analysis window, 2-frame onset
-  relaxed: { onset: 0,    sustain: 0,    p2: 0,   confirm: 3, minDur: 0,   gateX: 1, miss: 5 },
-  normal:  { onset: 0.90, sustain: 0,    p2: 0.5, confirm: 4, minDur: 0,   gateX: 1, miss: 5 },
-  strict:  { onset: 0.92, sustain: 0.88, p2: 0.65, confirm: 4, minDur: 100, gateX: 1.6, miss: 5 },
-};
-const recModeCfg = () => REC_MODES[$('recMode').value] || REC_MODES.fast;
+const autoM = new AutoMode();
+const recModeCfg = () => $('recMode').value === 'auto' ? REC_MODES[autoM.mode] : (REC_MODES[$('recMode').value] || REC_MODES.fast);
 const recPitch = (r, rms, pk, conf) => recPitchCore(r, rms, pk, conf, recModeCfg(), seg, +$('gate').value, a4(), recModeCfg() === REC_MODES.relaxed);
 
 const infoHint = () => view.mode === 'fall' ? 'Drag up/down to scrub · pinch to zoom · tap a note to hear it' : 'Drag to scroll · pinch to zoom · tap a note to hear it · tap the ruler to jump';
@@ -1687,7 +1720,7 @@ function setRecording(on) {
   if (on && !recording) {
     pbStop(); newRecording();                            // a new recording replaces the previous one
     cap.k = Math.max(1, Math.floor(ctx.sampleRate / 16000)); cap.rate = ctx.sampleRate / cap.k;   // a loaded file may have changed these
-    recT0 = ctx.currentTime - t0; seg.reset(); view.follow = true;
+    recT0 = ctx.currentTime - t0; seg.reset(); autoM.reset(); view.follow = true;
   }
   if (!on && recording) {
     seg.end(); recEnd = Math.max(0, ctx.currentTime - t0 - recT0);
@@ -1708,8 +1741,7 @@ $('recFile').addEventListener('change', async e => {
     const n = ab.length, x = new Float32Array(n), nc = ab.numberOfChannels;
     for (let c = 0; c < nc; c++) { const d = ab.getChannelData(c); for (let i = 0; i < n; i++) x[i] += d[i] / nc; }
     pbStop(); newRecording(); recT0 = 0;
-    const m = recModeCfg();
-    const notes = await analyseSamples(x, ab.sampleRate, { m, fmin: +$('fmin').value, fmax: +$('fmax').value, conf: +$('conf').value, a4: a4(), relaxed: m === REC_MODES.relaxed, chunk: true, onProgress: p => { info.textContent = 'Analysing… ' + Math.round(p * 100) + '%'; } });
+    const notes = await analyseSamples(x, ab.sampleRate, { auto: $('recMode').value === 'auto', m: REC_MODES[$('recMode').value] || REC_MODES.fast, fmin: +$('fmin').value, fmax: +$('fmax').value, conf: +$('conf').value, a4: a4(), chunk: true, onProgress: p => { info.textContent = 'Analysing… ' + Math.round(p * 100) + '%'; } });
     notes.forEach(addEvent);
     const k = Math.max(1, Math.floor(ab.sampleRate / 16000)); cap.k = k; cap.rate = ab.sampleRate / k;       // keep the sound for Replay
     for (let o = 0; o < n; o += 65536) capPush(x.subarray(o, Math.min(n, o + 65536)));
@@ -1842,7 +1874,7 @@ const durText = (e, bpm) => {
   return s < 1 ? Math.round(s * 1000) + ' ms' : s.toFixed(2) + ' s';
 };
 function sizeCanvas(Wc, H) {
-  const dpr = Math.min(3, window.devicePixelRatio || 1), pw = Math.round(Wc * dpr), ph = Math.round(H * dpr);
+  const dpr = Math.min(3, Math.max(2, window.devicePixelRatio || 1)), pw = Math.round(Wc * dpr), ph = Math.round(H * dpr);
   if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
   if (cv._h !== H) { cv.style.height = H + 'px'; cv._h = H; }
   g2.setTransform(dpr, 0, 0, dpr, 0, 0); g2.textBaseline = 'alphabetic';
@@ -1855,7 +1887,7 @@ function syncCtl(pos, max) {      // slider + follow button
 const FS = () => $('tab-rec').classList.contains('fs');
 function setFS(on) {
   $('tab-rec').classList.toggle('fs', on); document.body.classList.toggle('fsrec', on);
-  $('fsBtn').textContent = on ? '✕ Exit full screen' : '⛶ Full screen'; $('fsBtn').setAttribute('aria-pressed', on);
+  $('fsBtn').textContent = on ? '✕' : '⛶'; $('fsBtn').title = on ? 'Exit full screen (Esc)' : 'Full screen'; $('fsBtn').setAttribute('aria-pressed', on);
   try { if (on && !document.fullscreenElement) $('tab-rec').requestFullscreen?.().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen(); } catch {}
   requestDraw(); setTimeout(requestDraw, 120);
 }
@@ -1872,7 +1904,7 @@ function drawRoll() {
 // ----- view 1: the music sheet (time runs left → right) -----
 function drawSheet() {
   const Wc = cv.clientWidth;
-  const BG = '#0c0f15', INK = '#cfd6e6', TXT = '#f1f4fb', MUT = '#8e98b0';
+  const BG = '#0c0f15', INK = '#eef2fb', TXT = '#f1f4fb', MUT = '#c9d2e6';
   if (!view.pps) view.pps = Math.max(8, (Wc - GUT) / 8);
   const live = liveEvent(), all = live ? events.concat([live]) : events, len = recLen(), bpm = bpmVal();
   const vw = (Wc - GUT) / view.pps;
@@ -1892,21 +1924,21 @@ function drawSheet() {
 
   // time grid + ruler
   const step = niceStep(view.pps), tA = Math.max(0, Math.floor(view.vs / step) * step);
-  g2.font = '500 11px system-ui,sans-serif'; g2.textAlign = 'left';
+  g2.font = '600 13px system-ui,sans-serif'; g2.textAlign = 'left';
   for (let t = tA; t <= view.vs + vw + step; t += step) {
     const x = tx(t); if (x < GUT - 1 || x > Wc) continue;
-    g2.strokeStyle = 'rgba(255,255,255,.05)'; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(x, padTop - 6); g2.lineTo(x, laneTop + laneH); g2.stroke();
+    g2.strokeStyle = 'rgba(255,255,255,.18)'; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(x, padTop - 6); g2.lineTo(x, laneTop + laneH); g2.stroke();
     g2.strokeStyle = MUT; g2.beginPath(); g2.moveTo(x, rulerTop); g2.lineTo(x, rulerTop + 5); g2.stroke();
     g2.fillStyle = MUT; g2.fillText(fmtTick(t, step), x + 3, rulerTop + 17);
   }
-  g2.strokeStyle = 'rgba(255,255,255,.18)'; g2.beginPath(); g2.moveTo(GUT, rulerTop + 0.5); g2.lineTo(Wc, rulerTop + 0.5); g2.stroke();
+  g2.strokeStyle = 'rgba(255,255,255,.3)'; g2.beginPath(); g2.moveTo(GUT, rulerTop + 0.5); g2.lineTo(Wc, rulerTop + 0.5); g2.stroke();
   if (bpm > 0) {
     const beat = 60 / bpm, bar = beat * 4;
     for (let b = Math.floor(view.vs / beat); b <= (view.vs + vw) / beat + 1; b++) {
       const x = tx(b * beat), isBar = b % 4 === 0; if (x < GUT || x > Wc || (!isBar && beat * view.pps < 14)) continue;
       g2.strokeStyle = isBar ? 'rgba(160,185,255,.5)' : 'rgba(160,185,255,.14)'; g2.lineWidth = isBar ? 1.3 : 1;
       g2.beginPath(); g2.moveTo(x, padTop - 6); g2.lineTo(x, laneTop + laneH); g2.stroke();
-      if (isBar && bar * view.pps >= 46) { g2.fillStyle = '#9db4ff'; g2.font = '600 10px system-ui,sans-serif'; g2.fillText('bar ' + (b / 4 + 1), x + 3, rulerTop + 36); }
+      if (isBar && bar * view.pps >= 46) { g2.fillStyle = '#9db4ff'; g2.font = '700 12px system-ui,sans-serif'; g2.fillText('bar ' + (b / 4 + 1), x + 3, rulerTop + 36); }
     }
   }
 
@@ -1942,12 +1974,12 @@ function drawSheet() {
     g2.fillStyle = col; g2.fill(); g2.lineWidth = sel || e.live ? 2 : 1; g2.strokeStyle = sel || e.live ? '#fff' : BG; g2.stroke();
     if (SHARPPC[((e.midi % 12) + 12) % 12]) { g2.font = `700 ${Math.round(sp * 1.3)}px system-ui,sans-serif`; g2.textAlign = 'right'; haloText('♯', xs - sp * 0.8, y + sp * 0.45, TXT, BG); }
     // note name: two rows so close notes do not hide each other
-    g2.textAlign = 'center'; g2.font = `700 ${sp + 1}px system-ui,sans-serif`;
+    g2.textAlign = 'center'; g2.font = `700 ${sp + 2}px system-ui,sans-serif`;
     const t1 = nm(e.note), w1 = g2.measureText(t1).width; let row = -1;
     for (let r = 0; r < 2; r++) if (sel || xs - w1 / 2 > endA[r] + 3) { row = r; break; }
     if (row >= 0) { haloText(t1, xs, y - sp * 0.85 - row * (sp + 2), TXT, BG); endA[row] = Math.max(endA[row], xs + w1 / 2); }
     // cents + length (only when there is room)
-    g2.font = `600 ${sp - 1}px system-ui,sans-serif`;
+    g2.font = `600 ${sp}px system-ui,sans-serif`;
     let t2 = fmtC(e.cents); if (bpm > 0) { const dn = durName(e.dur / 1000 * bpm / 60); if (dn) t2 += ' · ' + dn; }
     const w2 = g2.measureText(t2).width;
     if (sel || xs - w2 / 2 > lastB + 6) { haloText(t2, xs, y + sp * 1.55, accColor(e), BG); lastB = xs + w2 / 2; }
@@ -1958,8 +1990,8 @@ function drawSheet() {
   g2.restore();
 
   // lane frame + left gutter (clefs)
-  g2.strokeStyle = 'rgba(255,255,255,.1)'; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(GUT, laneTop + laneH - 1.5); g2.lineTo(Wc, laneTop + laneH - 1.5); g2.stroke();
-  g2.fillStyle = MUT; g2.font = '500 10px system-ui,sans-serif'; g2.textAlign = 'left'; g2.fillText('vol', 5, laneTop + laneH - 5);
+  g2.strokeStyle = 'rgba(255,255,255,.18)'; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(GUT, laneTop + laneH - 1.5); g2.lineTo(Wc, laneTop + laneH - 1.5); g2.stroke();
+  g2.fillStyle = MUT; g2.font = '600 12px system-ui,sans-serif'; g2.textAlign = 'left'; g2.fillText('vol', 5, laneTop + laneH - 5);
   g2.fillStyle = 'rgba(207,214,230,.85)'; g2.textAlign = 'left';
   const cg = clefGlyphs(), FF = "'Segoe UI Symbol','Noto Music','Noto Sans Symbols 2','Apple Symbols',serif";
   if (showT) { if (cg) { g2.font = `${Math.round(sp * 3.1)}px ${FF}`; g2.fillText('\u{1D11E}', 5, Y(37) + 0.1 * sp); } else { g2.font = `700 ${sp * 2.4}px Georgia,serif`; g2.fillText('G', 8, Y(39) + sp * 0.8); } }
@@ -1976,7 +2008,7 @@ function drawSheet() {
 
 // ----- view 2: falling notes (one lane per note that was played; time runs top → bottom) -----
 function drawFall() {
-  const Wc = cv.clientWidth, BG = '#0c0f15', TXT = '#f1f4fb', MUT = '#8e98b0', hdr = 32;
+  const Wc = cv.clientWidth, BG = '#0c0f15', TXT = '#f1f4fb', MUT = '#c9d2e6', hdr = 32;
   const live = liveEvent(), all = live ? events.concat([live]) : events, len = recLen(), bpm = bpmVal();
   const H = FS() ? Math.max(260, innerHeight - 170) : Math.round(Math.min(540, Math.max(320, Wc * 0.9)));
   sizeCanvas(Wc, H); g2.fillStyle = BG; g2.fillRect(0, 0, Wc, H);
@@ -1989,15 +2021,15 @@ function drawFall() {
 
   // lanes + time grid
   for (let i = 0; i < used.length; i++) {
-    if (i % 2) { g2.fillStyle = 'rgba(255,255,255,.025)'; g2.fillRect(i * laneW, hdr, laneW, H - hdr); }
-    if (i) { g2.fillStyle = 'rgba(255,255,255,.06)'; g2.fillRect(Math.round(i * laneW), hdr, 1, H - hdr); }
+    if (i % 2) { g2.fillStyle = 'rgba(255,255,255,.05)'; g2.fillRect(i * laneW, hdr, laneW, H - hdr); }
+    if (i) { g2.fillStyle = 'rgba(255,255,255,.12)'; g2.fillRect(Math.round(i * laneW), hdr, 1, H - hdr); }
   }
   let step = 0.1; for (const s of [0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60, 120]) { step = s; if (s * fps >= 46) break; }
   const tTop = now + (nowY - hdr) / fps, tBot = now - (H - nowY) / fps;
-  g2.font = '500 10px system-ui,sans-serif'; g2.textAlign = 'left';
+  g2.font = '600 12px system-ui,sans-serif'; g2.textAlign = 'left';
   for (let t = Math.max(0, Math.ceil(tBot / step) * step); t <= tTop; t += step) {
     const y = Math.round(Y(t)) + 0.5; if (y < hdr || y > H) continue;
-    g2.fillStyle = 'rgba(255,255,255,.06)'; g2.fillRect(0, y, Wc, 1);
+    g2.fillStyle = 'rgba(255,255,255,.12)'; g2.fillRect(0, y, Wc, 1);
     g2.fillStyle = MUT; g2.fillText(fmtTick(t, step), 4, y - 3);
   }
 
@@ -2013,19 +2045,19 @@ function drawFall() {
     g2.globalAlpha = past ? 0.5 : 1; rrect(x, top, bw, h, Math.min(7, h / 2)); g2.fillStyle = col; g2.fill();
     if (isAct || sel) { g2.lineWidth = 2; g2.strokeStyle = '#fff'; g2.stroke(); } else { g2.lineWidth = 1; g2.strokeStyle = 'rgba(255,255,255,.28)'; g2.stroke(); }
     g2.globalAlpha = past ? 0.75 : 1; g2.fillStyle = '#0b0d12';
-    const fs = Math.max(9, Math.min(15, Math.round(bw * 0.26)));
+    const fs = Math.max(11, Math.min(18, Math.round(bw * 0.28)));
     if (h >= 34) {
       g2.font = `700 ${fs}px system-ui,sans-serif`; g2.fillText(nm(e.note), x + bw / 2, top + h / 2 + 1, bw - 6);
-      g2.font = `600 ${Math.max(9, fs - 3)}px system-ui,sans-serif`; g2.fillText(durText(e, bpm), x + bw / 2, top + h / 2 + fs + 2, bw - 6);
+      g2.font = `600 ${Math.max(11, fs - 2)}px system-ui,sans-serif`; g2.fillText(durText(e, bpm), x + bw / 2, top + h / 2 + fs + 2, bw - 6);
     } else if (h >= 15) { g2.font = `700 ${fs}px system-ui,sans-serif`; g2.fillText(nm(e.note), x + bw / 2, top + h / 2 + fs * 0.35, bw - 6); }
-    else if (h >= 10) { g2.font = '700 9px system-ui,sans-serif'; g2.fillText(nm(e.note), x + bw / 2, top + h / 2 + 3, bw - 4); }
+    else if (h >= 10) { g2.font = '700 11px system-ui,sans-serif'; g2.fillText(nm(e.note), x + bw / 2, top + h / 2 + 3, bw - 4); }
     g2.globalAlpha = 1;
   }
   g2.restore();
 
   // lane header: the note names, lit while that note sounds
   g2.fillStyle = '#111620'; g2.fillRect(0, 0, Wc, hdr); g2.fillStyle = 'rgba(255,255,255,.08)'; g2.fillRect(0, hdr - 1, Wc, 1);
-  const hf = Math.max(10, Math.min(15, Math.round(laneW * 0.32)));
+  const hf = Math.max(12, Math.min(17, Math.round(laneW * 0.34)));
   for (let i = 0; i < used.length; i++) {
     const lit = act.has(i), cx = i * laneW + laneW / 2, c = $('recColor').value === 'note' ? `hsl(${(((used[i] % 12) + 12) % 12) * 30},85%,62%)` : '#6c8dff';
     if (lit) { rrect(i * laneW + 3, 4, laneW - 6, hdr - 9, 7); g2.fillStyle = c; g2.fill(); }
@@ -2113,14 +2145,17 @@ $('rvLive').onclick = () => { view.follow = !view.follow; requestDraw(); };
 $('rvPos').oninput = () => { if (view.mode === 'fall') { if (!recording) pbSeek(+$('rvPos').value / 1000 * recLen()); return; } const Wc = cv.clientWidth, vsMax = Math.max(0, recLen() - (Wc - GUT) / view.pps * 0.2); view.follow = false; view.vs = +$('rvPos').value / 1000 * vsMax; requestDraw(); };
 window.addEventListener('resize', requestDraw);
 const MODE_DESC = {
+  auto: ['Listens to the room and the music, then picks the best mode by itself.', 'Switches live between Fast, Standard, Noisy room and Soft as the sound changes.'],
   fast: ['Follows rapid note changes, even notes as short as 30 ms.', 'Best for violin runs and quick melodies. Occasionally adds a stray note.'],
   normal: ['Balanced accuracy for music at an ordinary pace.', "The best starting point if you're unsure."],
   relaxed: ['Listens closely for faint or delicate notes.', 'Best in a silent room, since it will also pick up background sound.'],
   strict: ['Accepts only clear, confident notes and ignores everything else.', 'Best with fans, traffic or other people nearby. Very short notes may be skipped.'],
 };
+let autoShown = '';
+function autoUi() { const k = autoM.mode + autoM.why; if (k === autoShown) return; autoShown = k; modeDesc(); }
 function modeDesc() {
   const v = $('recMode').value, d = MODE_DESC[v] || MODE_DESC.fast;
-  $('recModeDesc').innerHTML = `${d[0]} <i>${d[1]}</i>` + (v === 'fast' && +$('fmin').value < 80 ? '<br>Tip: for violin, choose the Violin range in Settings → Detection → Pitch range. It makes fast passages more accurate.' : '');
+  $('recModeDesc').innerHTML = `${d[0]} <i>${d[1]}</i>` + (v === 'auto' ? `<br><b>Now using: ${REC_NAMES[autoM.mode] || autoM.mode}</b> (${autoM.why})` : '') + (v === 'fast' && +$('fmin').value < 80 ? '<br>Tip: for violin, choose the Violin range in Settings → Detection → Pitch range. It makes fast passages more accurate.' : '');
 }
 $('recMode').addEventListener('change', modeDesc); $('fmin').addEventListener('input', modeDesc); $('fmin').addEventListener('change', modeDesc); modeDesc();
 function setView(m) {
@@ -2134,7 +2169,7 @@ $('vwSheet').onclick = () => setView('sheet'); $('vwFall').onclick = () => setVi
 try { if (localStorage.getItem('tuner-recview') === 'fall') setView('fall'); else $('noteInfo').textContent = infoHint(); } catch { $('noteInfo').textContent = infoHint(); }
 ['recColor', 'recBpm'].forEach(id => $(id).addEventListener('input', () => { renderLegend(); requestDraw(); }));
 $('tol').addEventListener('input', () => { renderLegend(); updateStats(); requestDraw(); });
-const RP_KEY = 'tuner-recprefs-v1', RP_IDS = ['recMode', 'recColor', 'recBpm'];   // only these three options are remembered, never any recording
+const RP_KEY = 'tuner-recprefs-v2', RP_IDS = ['recMode', 'recColor', 'recBpm'];   // only these three options are remembered, never any recording
 try { const o = JSON.parse(localStorage.getItem(RP_KEY)); if (o) RP_IDS.forEach(id => { if (o[id] != null) $(id).value = o[id]; }); } catch {}
 modeDesc();
 RP_IDS.forEach(id => $(id).addEventListener('change', () => { const o = {}; RP_IDS.forEach(k => o[k] = $(k).value); try { localStorage.setItem(RP_KEY, JSON.stringify(o)); } catch {} }));
@@ -2302,17 +2337,17 @@ syncQuick();
 
 // ----- instrument profile: one choice sets the tuner, practice, recorder and pitch range together -----
 const INST_PROFILES = [
-  { k: 'all',      name: 'All',      fam: null,        range: [60, 1500], rec: 'fast' },
-  { k: 'guitar',   name: 'Guitar',   fam: 'guitar',    range: [70, 1400], rec: 'normal' },
-  { k: 'bass',     name: 'Bass',     fam: 'bass',      range: [30, 400],  rec: 'normal' },
-  { k: 'violin',   name: 'Violin',   fam: 'violin',    range: [180, 1800], rec: 'fast' },
-  { k: 'viola',    name: 'Viola',    fam: 'viola',     range: [120, 1500], rec: 'fast' },
-  { k: 'cello',    name: 'Cello',    fam: 'cello',     range: [55, 1200], rec: 'normal' },
-  { k: 'ukulele',  name: 'Ukulele',  fam: 'ukulele',   range: [140, 1000], rec: 'fast' },
-  { k: 'mandolin', name: 'Mandolin', fam: 'mandolin',  range: [180, 1800], rec: 'fast' },
-  { k: 'voice',    name: 'Voice',    fam: null,        range: [80, 1100], rec: 'normal' },
+  { k: 'all',      name: 'All',      fam: null,        range: [60, 1500], rec: 'auto' },
+  { k: 'guitar',   name: 'Guitar',   fam: 'guitar',    range: [70, 1400], rec: 'auto' },
+  { k: 'bass',     name: 'Bass',     fam: 'bass',      range: [30, 400],  rec: 'auto' },
+  { k: 'violin',   name: 'Violin',   fam: 'violin',    range: [180, 1800], rec: 'auto' },
+  { k: 'viola',    name: 'Viola',    fam: 'viola',     range: [120, 1500], rec: 'auto' },
+  { k: 'cello',    name: 'Cello',    fam: 'cello',     range: [55, 1200], rec: 'auto' },
+  { k: 'ukulele',  name: 'Ukulele',  fam: 'ukulele',   range: [140, 1000], rec: 'auto' },
+  { k: 'mandolin', name: 'Mandolin', fam: 'mandolin',  range: [180, 1800], rec: 'auto' },
+  { k: 'voice',    name: 'Voice',    fam: null,        range: [80, 1100], rec: 'auto' },
 ];
-const REC_NAMES = { fast: 'Fast tempo', normal: 'Standard' }, PROF_KEY = 'tuner-instprofile';
+const REC_NAMES = { auto: 'Auto', fast: 'Fast tempo', normal: 'Standard', strict: 'Noisy room', relaxed: 'Soft & quiet' }, PROF_KEY = 'tuner-instprofile';
 let prof = { k: 'all', t: 'chromatic' }; try { const o = JSON.parse(localStorage.getItem(PROF_KEY)); if (o && INST_PROFILES.some(p => p.k === o.k)) prof = o; } catch {}
 const profOf = k => INST_PROFILES.find(p => p.k === k) || INST_PROFILES[0];
 const profFam = p => FAMILIES.find(f => f[0] === p.fam) || FAMILIES[0];
@@ -2349,7 +2384,7 @@ function loop() {
   const t = ctx.currentTime - t0;
   let rms = 0, pk = 0; for (let i = 0; i < buf.length; i++) { rms += buf[i] * buf[i]; const a = Math.abs(buf[i]); if (a > pk) pk = a; } rms = Math.sqrt(rms / buf.length);
   updateLevel(rms, pk); calibFrame(rms, pk);
-  let f = null, fR = null;
+  let f = null, fR = null, rA = null;
   const G = +$('gate').value;
   gateOn = rms > G || (gateOn && rms > G * 0.6);   // hysteresis: a fading note does not chatter the gate
   // Sustain tracking: once the tuner has a note, a decaying string keeps reading (down to about -14 dB under the gate)
@@ -2373,10 +2408,10 @@ function loop() {
     const r = yin(yb, ctx.sampleRate, lo, hi), conf = +$('conf').value;
     const near = r && track && Math.abs(centsBetween(r.freq, trkF)) < 45;
     if (r && (gateOn ? r.clarity > conf : near && r.clarity > 0.5) || (near && r.clarity > 0.5)) f = r.freq;
-    if (recording && gateOn) fR = recPitch(r, rms, pk, conf);   // the recorder is stricter than the tuner: fewer wrong notes from noise
+    if (recording && gateOn) { fR = recPitch(r, rms, pk, conf); rA = r; }   // the recorder is stricter than the tuner: fewer wrong notes from noise
   }
   if (f) { trkF = f; trkT = t; }
-  if (recording) { const m = recModeCfg(); seg.a4 = a4(); seg.minDur = m.own ? m.minDur : Math.max(+$('mindur').value, m.minDur); seg.confirm = m.confirm; seg.maxMiss = m.miss || 5; seg.gap = m.gap || 0; seg.frame(t, fR, rms); }
+  if (recording) { if ($('recMode').value === 'auto') { autoM.frame(rms, gateOn ? rA : null); autoUi(); } const m = recModeCfg(); seg.a4 = a4(); seg.minDur = m.own ? m.minDur : Math.max(+$('mindur').value, m.minDur); seg.confirm = m.confirm; seg.maxMiss = m.miss || 5; seg.gap = m.gap || 0; seg.frame(t, fR, rms); }
   liveFrame(f, gateOn);
   if (tab === 'tuner') tunerFrame(t, f);
   if (demoIdx < 0) collectHold(f);                   // keep scoring the note that is still sounding
