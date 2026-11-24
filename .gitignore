@@ -8,3 +8,4 @@ tests/_probe.html
 _probe.html
 _*.html
 tests/pitch-sweep.out.json
+tests/_shots/
