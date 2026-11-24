@@ -60,22 +60,22 @@ The owner liked the input pattern of songscription.ai: one card, one drop target
 +--------------------------------------------------+
 |  +--------------------------------------------+  |
 |  |  Drop a recording or sheet music here      |  |   big dashed drop zone
-|  |  Audio, video, PDF, photos, MusicXML, MIDI |  |
+|  |  Audio, video, PDF, MusicXML or MIDI       |  |
 |  |            [ Upload a song ]               |  |   opens the file picker (accept = all of those)
 |  +--------------------------------------------+  |
 |  [ link icon  Paste a link          (YouTube) ]  |   paste field; detects the source
 +--------------------------------------------------+
-[ note icon  Upload MIDI or MusicXML  Best quality > ]  "Exact notes from a .mid, .midi, .musicxml, .xml or .mxl file"
 [ mic icon   Record audio                       > ]   "Play into your microphone"  (mic check first)
-[ camera     Take a photo   Experimental        > ]   "Photograph printed sheet music"
 ```
 
+Decisions: there is **no separate MIDI row and no photo input**. MIDI and MusicXML go through the same drop zone as everything else. Photos of printed music are left out on purpose because they are the least accurate input; PDF stays but is experimental.
+
 Behaviour:
-- **Auto-detect.** Whatever arrives (dropped file, picked file, pasted link, recording, photo) is classified and shown as one line under the card: "Detected: MusicXML, exact notes", "Detected: MIDI, exact notes", "Detected: audio, will be a Draft", "Detected: PDF or photo, will be a Draft (experimental)", "Detected: YouTube link, needs the helper". The player never chooses a type.
-- **Upload accepts** audio, video (the audio track is used), PDF, images, `.musicxml`/`.xml`/`.mxl`, `.mid`/`.midi`. In-page decoding is used where the browser can do it; otherwise the helper (ffmpeg) does it and the screen says so.
-- **Upload MIDI or MusicXML (dedicated row, not in the reference design).** Opens a file picker limited to `.mid`, `.midi`, `.musicxml`, `.xml`, `.mxl`, and accepts several files at once (each becomes a piece; a multi-select can also be saved into one category). Marked "Best quality" because the notes are exact and the piece is Verified by default (no Draft step, no engine involved). MIDI files then show the part picker, transposition and bar-grid check from section 3b; MusicXML files show the part picker and the engraved sheet. Files dropped on the big drop zone are routed the same way, so both paths give the same result.
+- **Auto-detect.** Whatever arrives (dropped file, picked file, pasted link, recording) is classified and shown as one line under the card: "Detected: MusicXML, exact notes", "Detected: MIDI, exact notes", "Detected: audio, will be a Draft", "Detected: PDF, will be a Draft (experimental)", "Detected: YouTube link, needs the helper". The player never chooses a type.
+- **Upload accepts** audio, video (the audio track is used), PDF, `.musicxml`/`.xml`/`.mxl`, `.mid`/`.midi`. It takes several files at once (each becomes a piece; a multi-select can be saved into one category). In-page decoding is used where the browser can do it; otherwise the helper (ffmpeg) does it and the screen says so.
+- **MIDI and MusicXML** are recognised automatically and labelled "exact notes": Verified by default, no Draft step, no engine involved. MIDI then shows the part picker, transposition and bar-grid check from section 3b; MusicXML shows the part picker and the engraved sheet.
 - **Paste a link.** YouTube first (the helper already fetches it). Other sites only if the helper's downloader handles them; do not show their icons until they work.
-- **Take a photo / PDF** needs a new engine role, `omr` (optical music recognition), see 4.1. Treat it as experimental: photographed printed music is the least accurate input in the whole app, always a Draft, always shows the Review screen with the original image beside the result, and the Review screen must make fixing in MuseScore the easy path. Do not hide this limit.
+- **PDF** needs an engine role, `omr` (optical music recognition), see 4.1. Treat it as experimental: always a Draft, always shows the Review screen with the original page beside the result, and the Review screen must make fixing in MuseScore the easy path. Do not hide this limit. Photo input is deliberately not offered.
 - **Record audio** here means a demo performance (a teacher or the student playing the piece to turn into a reference). Practice takes are recorded inside the Piece view.
 - After detection the flow continues as before: questions (what is it, which part, melody or chords), the stepper with real stage names, then Review draft for anything audio-derived.
 
@@ -118,7 +118,7 @@ Behaviour:
 | `segmenter` | f0 frames to notes `{midi, start, dur, cents, lvl, pts, vib, ...}` | live and offline | `Segmenter` and `analyseSamples` (listening.js) |
 | `transcriber` | audio to notes (mono or polyphonic) | offline | Basic Pitch plus `refineEvents` (detailed.js), Lab engines |
 | `separator` | audio to stems | offline, helper only | Demucs `separate.py` |
-| `omr` | PDF or photo of printed music to MusicXML | offline, helper only, experimental | none yet (Audiveris through the helper is the first candidate; measure before trusting) |
+| `omr` | PDF of printed music to MusicXML | offline, helper only, experimental | none yet (Audiveris through the helper is the first candidate; measure before trusting) |
 | `aligner` | reference plus events to alignment | offline | new (product plan, section 6) |
 | `scorer` | alignment to note results and bar scores | offline | new |
 | `verifier` | reference plus audio to "expected notes present?" for chords and piano | offline | new (product plan, decision 14) |
@@ -186,7 +186,7 @@ Each package: small commits, run `node tests/structure.js`, `node tests/smoke.js
 
 **UI5. Screen declutter (M).** Practice home, Tuner chips and layout, Free record simplification with "More", Scale drills naming, Progress merge. Gate: screenshot review on phone, tablet and desktop; one-hand reachability of the primary action on a phone; no screen needs more than two taps to start.
 
-**UI6. Add a piece shell (M).** The single input screen in the layout of section 3a (drop zone with Upload a song, paste-link field, Record audio row, Take a photo row, instrument chips, auto-detect line, mic check, stepper), wired to the engines it can already run (score file, audio file, Record). YouTube and Separating show "needs the helper" until the helper engines are plugged in. Gate: a MusicXML fixture and a MIDI fixture import end to end into the library (this depends on Phase 1 of the product plan, so build the shell and a stubbed importer first and connect it when Phase 1 lands).
+**UI6. Add a piece shell (M).** The single input screen in the layout of section 3a (drop zone with Upload a song, paste-link field, Record audio row, instrument chips, auto-detect line, mic check, stepper), wired to the engines it can already run (score file, audio file, Record). YouTube and Separating show "needs the helper" until the helper engines are plugged in. Gate: a MusicXML fixture and a MIDI fixture import end to end into the library (this depends on Phase 1 of the product plan, so build the shell and a stubbed importer first and connect it when Phase 1 lands).
 
 **UI7. Library and instrument tabs (M; needs the reference timeline from Phase 1 of the product plan).** `js/core/schema.js` additions, `js/core/library.js` with tests, the scale and arpeggio generator for all four instruments, folder and zip pack import into IndexedDB, the browsing screen of section 3b with the instrument switch, search and filters, Listen and Practise buttons, the MIDI part picker, transposition and range check, bar grid from MIDI. Built-in pieces limited to files whose licence allows redistribution (manifest records it); keep the shipped set small enough for the offline cache. Gate: importing a fixture folder `Violin/Mozart/Volume 1/*.mid` produces the expected category tree; every generated scale plays and is practisable through the same Piece view as an imported file; switching the instrument tab changes the library, the tuner defaults and the scale drills together; a MIDI piece can be listened to and looped by bar on a phone.
 
