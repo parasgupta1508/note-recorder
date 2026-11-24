@@ -12,10 +12,10 @@ var tabBtn=[].find.call(document.querySelectorAll('button,a,[role=tab]'),functio
 if(tabBtn)tabBtn.click(); ck('recorder tab opens',!$('tab-rec').classList.contains('hide'));
 $('vwFall').click(); ck('Falling view',$('tab-rec').dataset.view==='fall'&&$('vwFall').classList.contains('on'));
 $('vwSheet').click(); ck('Sheet view',$('tab-rec').dataset.view==='sheet');
-$('fsBtn').click(); ck('full screen on',$('tab-rec').classList.contains('fs')&&getComputedStyle(document.querySelector('#tab-rec .rbar')).display==='none'&&getComputedStyle(document.querySelector('#tab-rec .tport')).display!=='none');
+$('fsBtn').click(); ck('full screen on',$('tab-rec').classList.contains('fs')&&getComputedStyle(document.querySelector('#tab-rec .rbar')).display!=='none'&&$('rec').offsetHeight>0&&getComputedStyle($('recMode').closest('.ropts')).display==='none'&&getComputedStyle(document.querySelector('#tab-rec .tport')).display!=='none');
 var cv=$('roll');ck('full screen canvas is tall',cv.clientHeight>200);
 $('fsBtn').click(); ck('full screen off',!$('tab-rec').classList.contains('fs'));
-ck('Auto is default',$('recMode').value==='auto'); ck('no upload control',!$('recFile'));
+ck('ms toggle exists, off by default',!!$('msBtn')&&$('msBtn').getAttribute('aria-pressed')==='false'); ck('Auto has no helper text',!/picks the best mode/.test($('recModeDesc').textContent)); ck('Auto is default',$('recMode').value==='auto'); ck('no upload control',!$('recFile'));
 }catch(e){ck('exception '+e.message,false)}
 
 document.title='RESULT|'+r.join('|')},1500)</script>`;

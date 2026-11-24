@@ -15,7 +15,7 @@ function tone(buf, midi, t0, dur, o = {}) {
   for (let i = 0; i < n && s0 + i < buf.length; i++) {
     const t = i / SR, f = f0 * (1 + vib * 0.0087 * Math.sin(2 * Math.PI * 5.5 * t));
     ph += 2 * Math.PI * f / SR;
-    let env = Math.min(1, t / a) * Math.min(1, (dur - t) / rel) * Math.exp(-decay * t), v = 0;
+    let env = Math.min(1, t / a) * Math.min(1, (dur - t) / rel) * Math.exp(-decay * t) * (1 - (o.am ?? 0) * 0.5 * (1 - Math.cos(2 * Math.PI * (o.amHz ?? 5.5) * t))), v = 0;
     for (let h = 0; h < harm.length; h++) v += harm[h] * Math.sin(ph * (h + 1));
     buf[s0 + i] += amp * env * v;
   }
@@ -36,6 +36,9 @@ const cases = [];
   noise(b, 0.002); cases.push({ name: 'violin melody over soft piano', b, exp }); }
 
 { const b = mk(5), exp = []; [67, 72, 76, 72].forEach((m, i) => { tone(b, m, 0.6 + i * 1.0, 0.9, { vib: 1, amp: 0.3, attack: 0.04, rel: 0.05 }); exp.push({ midi: m, start: 0.6 + i * 1.0 }); }); noise(b, 0.09); cases.push({ name: 'melody in loud room noise', b, exp }); }
+
+{ const b = mk(4), exp = [{ midi: 76, start: 0.3 }]; tone(b, 76, 0.3, 3, { vib: 2.5, am: 0.5, attack: 0.04, rel: 0.05 }); noise(b, 0.002); cases.push({ name: 'vibrato held note, volume wobbles = ONE note', b, exp }); }
+{ const b = mk(5), exp = [{ midi: 76, start: 0.3 }, { midi: 76, start: 1.7 }]; tone(b, 76, 0.3, 1.4, { vib: 2.5, am: 0.4, attack: 0.04, rel: 0.05 }); tone(b, 76, 1.74, 1.5, { vib: 2.5, am: 0.4, attack: 0.05, rel: 0.05 }); noise(b, 0.002); cases.push({ name: 'vibrato + bow change on same note = TWO notes', b, exp }); }
 
 function score(found, exp) {
   const used = new Set(); let tp = 0;

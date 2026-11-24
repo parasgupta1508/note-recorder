@@ -26,6 +26,7 @@ Whenever you change any file in this project, back it up to GitHub without being
 
 - `vendor/` holds the offline Detailed-analysis files (Basic Pitch model + TensorFlow.js, Apache-2.0). Rebuild with `cd tools && npm install && npm run build`. They are loaded only when Detailed mode is used, and cached by the service worker in its own `tuner-vendor-v1` cache.
 - `node tests/smoke-detailed.js` runs a synthetic recording through the Detailed path in headless Edge (about 30 s). Run it after changing `analyseDetailed`, `extractMelody` or `vendor/`.
+- `node tests/shot.js <folder>` renders the Recorder (Falling, Sheet, full screen; phone and tablet sizes) with sample notes and saves screenshots. Look at them after any display change.
 - Audio test clips (`tests/audio/`, `*.mp3`) are copyrighted and git-ignored. Never commit them.
 - Design background and roadmap: `docs/intelligence-plan.md`.
 

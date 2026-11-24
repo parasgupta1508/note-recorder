@@ -109,3 +109,27 @@ Ordered by value for a student:
 - **It will not remove piano sound,** only decide which notes are violin. Real separation (Demucs, UVR5) stays a desktop step.
 - **Accuracy claims** need the gold reference first. Until then, "better" means "better against Basic Pitch", not "correct".
 - **Licences:** Basic Pitch TypeScript is Apache-2.0 and pretty-midi is MIT, so both are fine for a public app. Keep the licence notice with the model if it is bundled.
+
+## 9. Status after the first build (what exists now)
+
+- **Built:** Live | Detailed modes; Basic Pitch bundled offline (`vendor/`); melody extraction (`extractMelody`) with a chord option for guitar and ukulele; vibrato detection (`vibratoOf`) that keeps a vibrato note as one note and still splits on a real bow change; adaptive display size; Falling view that shows the active note plus 4 lanes either side (zoom changes how many); install button; browser tests.
+- **Checked against the repos:** Basic Pitch is used as designed (22.05 kHz mono, its own note post-processing, pitch bends kept as the contour). pretty-midi's note model is mirrored by our note shape. MIDI file writing (mido's job) is **not built yet**. libremidi / Web MIDI is not used.
+- **Known limits:** the Live detector still fragments notes on real violin-with-piano audio (detector dropouts, not vibrato). Detailed is the answer for that. Vibrato notes split across a semitone border in Basic Pitch are not merged yet.
+
+## 10. Broader music aspects not yet covered (candidates)
+
+| Area | Idea |
+|---|---|
+| Rhythm | Beat and tempo tracking, snap to a grid, "rushing / dragging" graph, built-in metronome and count-in, tempo-matched replay. |
+| Intonation | Cents error per note and per pitch, drift over long notes, choice of tuning system (equal, just, Pythagorean) because a violinist's "in tune" is not equal temperament. |
+| Violin specifics | String and finger-position hints, open-string detection, double stops and chords, shifts and glissando (slides between notes, which now look like fragments), harmonics. |
+| Tone and dynamics | Loudness contour per phrase, crescendo and diminuendo, attack sharpness, a brightness measure (spectral centroid) as a simple tone-quality cue. |
+| Bowing and articulation | Bow-change count, détaché / legato / staccato / spiccato labels, even-bow-speed check using steady loudness. |
+| Pitch ornaments | Trill, mordent, grace-note detection (fast alternations between neighbours), vibrato rate and width trends over time. |
+| Harmony | Chord naming for guitar and ukulele, key and mode detection (major, minor, church modes), transposition for transposing instruments. |
+| Notation | Proper note durations and rests on the sheet, key signature and accidentals, clef choice, MusicXML and MIDI export, print view. |
+| Learning flow | Follow-along scoring, wait mode, loop a bar, slow-down without changing pitch, spaced repetition of weak bars, practice streaks and goals, teacher sharing of a session. |
+| Ear training | Interval and chord quiz, "play back what you heard", sight-reading prompts. |
+| Accessibility | Colour-blind-safe palette and shape cues, dyslexia-friendly font option, large-text mode, audio feedback for low-vision users. |
+| Recording quality | Input level and room-noise coach before recording, clipping warning, per-session mic calibration. |
+| Data | Per-piece history and progress charts, side-by-side take comparison, backup and restore (exists), optional cloud-free sharing by file. |

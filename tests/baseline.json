@@ -1,5 +1,5 @@
 {
- "overall": 0.983,
+ "overall": 0.984,
  "cases": {
   "auto | legato scale (violin, vibrato)": 1,
   "auto | detache: repeated E5 (level dips only)": 1,
@@ -9,6 +9,8 @@
   "auto | noise only (expect nothing)": 1,
   "auto | violin melody over soft piano": 1,
   "auto | melody in loud room noise": 1,
+  "auto | vibrato held note, volume wobbles = ONE note": 1,
+  "auto | vibrato + bow change on same note = TWO notes": 1,
   "fast | legato scale (violin, vibrato)": 1,
   "fast | detache: repeated E5 (level dips only)": 1,
   "fast | staccato: repeated A4 (clear gaps)": 1,
@@ -17,14 +19,18 @@
   "fast | noise only (expect nothing)": 1,
   "fast | violin melody over soft piano": 1,
   "fast | melody in loud room noise": 1,
+  "fast | vibrato held note, volume wobbles = ONE note": 1,
+  "fast | vibrato + bow change on same note = TWO notes": 1,
   "normal | legato scale (violin, vibrato)": 0.696,
   "normal | detache: repeated E5 (level dips only)": 1,
   "normal | staccato: repeated A4 (clear gaps)": 1,
-  "normal | fast run (5 notes/s)": 0.889,
+  "normal | fast run (5 notes/s)": 1,
   "normal | one note in room noise (no false notes)": 1,
   "normal | noise only (expect nothing)": 1,
   "normal | violin melody over soft piano": 1,
   "normal | melody in loud room noise": 1,
+  "normal | vibrato held note, volume wobbles = ONE note": 1,
+  "normal | vibrato + bow change on same note = TWO notes": 0.8,
   "melody | violin out of piano + overtones": 1
  }
 }

@@ -254,9 +254,12 @@
   #noteInfo:empty{display:none}
   .rwrap{position:relative}
   #fsBtn{position:absolute;right:8px;bottom:8px;width:34px;height:34px;padding:0;border-radius:8px;background:rgba(255,255,255,.08);color:#fff;font-size:19px;line-height:1;opacity:.5;backdrop-filter:blur(2px)}
+  #msBtn{position:absolute;right:48px;bottom:8px;height:34px;min-width:34px;padding:0 8px;border-radius:8px;background:rgba(255,255,255,.08);color:#fff;font-size:13px;font-weight:700;opacity:.5}
+  #msBtn:hover,#msBtn[aria-pressed=true]{opacity:1;background:rgba(255,255,255,.2)}
   #fsBtn:hover,#fsBtn:focus-visible{opacity:1;background:rgba(255,255,255,.2)} #tab-rec.fs #fsBtn{opacity:.6}
   #tab-rec.fs{position:fixed;inset:0;z-index:60;background:var(--bg,#0c0f15);overflow:auto;padding:10px;margin:0;max-width:none}
-  #tab-rec.fs .ropts,#tab-rec.fs .more,#tab-rec.fs #noteInfo,#tab-rec.fs .rbar{display:none}
+  #tab-rec.fs .ropts,#tab-rec.fs .more,#tab-rec.fs #noteInfo,#tab-rec.fs #clear{display:none}
+  #tab-rec.fs .rbar{flex:none;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"rec info view";gap:6px 10px} #tab-rec.fs .rbar .segc{width:190px}
   #tab-rec.fs{display:flex;flex-direction:column;gap:6px;padding:6px 8px calc(6px + var(--sab))} #tab-rec.fs .rwrap{flex:1;min-height:0} #tab-rec.fs .tport{flex:none}
   body.fsrec{overflow:hidden}
   #roll.fall{touch-action:none} #roll.drag{cursor:grabbing}
@@ -471,7 +474,7 @@
     <button id="clear" class="sec">Clear</button>
   </div>
 
-  <div class="rwrap"><canvas id="roll" aria-label="Recorded notes"></canvas><button id="fsBtn" aria-pressed="false" title="Full screen (Esc to exit)" aria-label="Full screen">⛶</button></div>
+  <div class="rwrap"><canvas id="roll" aria-label="Recorded notes"></canvas><button id="msBtn" aria-pressed="false" title="Show note lengths in the bars" aria-label="Show note lengths">ms</button><button id="fsBtn" aria-pressed="false" title="Full screen (Esc to exit)" aria-label="Full screen">⛶</button></div>
   <div id="noteInfo" class="mut"></div>
 
   <div class="tport">
@@ -495,10 +498,10 @@
     <div class="field wide" id="engWrap"><span>Analysis</span>
       <div class="seg" id="engSeg" role="group" aria-label="Analysis mode"><button data-e="live" class="on">Live</button><button data-e="det">Detailed</button></div>
       <div class="hint2" id="engHint"></div></div>
-    <label class="field"><span>Display size</span><select id="dispSize" title="How big the notes and text are on the chart"><option value="auto" selected>Auto (fits this screen)</option><option value="large">Large</option><option value="xl">Extra large</option></select></label>
+    <label class="field"><span>Display size</span><select id="dispSize" title="How big the notes and text are on the chart"><option value="auto" selected>Auto</option><option value="large">Large</option><option value="xl">Extra large</option></select></label>
     <div class="field wide hide" id="showWrap"><span>Showing</span>
       <div class="seg" id="showSeg" role="group" aria-label="Which result to show"><button data-s="live" class="on">Live result</button><button data-s="det">Detailed result</button></div></div>
-    <label class="field wide" title="This sets how certain the app must be before it records a note.&#10;• Notes missing? Choose Fast tempo or Soft &amp; quiet.&#10;• Notes that you didn't play? Choose Standard or Noisy room."><span>Listening</span><select id="recMode"><option value="auto" selected>Auto (recommended)</option><option value="fast">Fast tempo</option><option value="normal">Standard</option><option value="relaxed">Soft &amp; quiet</option><option value="strict">Noisy room</option></select></label>
+    <label class="field wide" title="This sets how certain the app must be before it records a note.&#10;• Notes missing? Choose Fast tempo or Soft &amp; quiet.&#10;• Notes that you didn't play? Choose Standard or Noisy room."><span>Listening</span><select id="recMode"><option value="auto" selected>Auto</option><option value="fast">Fast tempo</option><option value="normal">Standard</option><option value="relaxed">Soft &amp; quiet</option><option value="strict">Noisy room</option></select></label>
     <div class="wide hint2" id="recModeDesc"></div>
     <label class="field"><span>Colours</span><select id="recColor"><option value="acc" selected>By accuracy</option><option value="note">By note name</option></select></label>
     <label class="field"><span>Tempo (0 = off)</span><input id="recBpm" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
@@ -695,14 +698,29 @@ function pickTarget(f, a4, strings, lockIdx) {
   return { idx, midi: strings[idx], hz, cents: centsBetween(f, hz) };
 }
 
+// Vibrato: a steady 3.5 to 9 Hz wobble of the pitch (at least about 12 cents wide). pts = [[ms, cents], ...]. Returns { rate (Hz), width (cents peak to peak) } or null.
+function vibratoOf(pts) {
+  if (!pts || pts.length < 8) return null;
+  const t = pts.map(q => q[0]), c = pts.map(q => q[1]), dur = t[t.length - 1] - t[0]; if (dur < 250) return null;
+  const d = c.map((v, i) => { let sum = 0, k = 0; for (let j = 0; j < c.length; j++) if (Math.abs(t[j] - t[i]) <= 140) { sum += c[j]; k++; } return v - sum / k; });   // remove the slow drift
+  let sgn = 0; const cross = [];
+  for (let i = 0; i < d.length; i++) { if (Math.abs(d[i]) < 2) continue; const sg = d[i] > 0 ? 1 : -1; if (sgn && sg !== sgn) cross.push(t[i]); sgn = sg; }
+  if (cross.length < 3) return null;
+  const half = []; for (let i = 1; i < cross.length; i++) half.push(cross[i] - cross[i - 1]);
+  const mean = half.reduce((a, b) => a + b, 0) / half.length, sd = Math.sqrt(half.reduce((a, b) => a + (b - mean) * (b - mean), 0) / half.length);
+  const rate = 500 / mean, width = 2.83 * Math.sqrt(d.reduce((a, b) => a + b * b, 0) / d.length);
+  return rate >= 3.5 && rate <= 9 && width >= 12 && sd / mean < 0.45 ? { rate: +rate.toFixed(1), width: Math.round(width) } : null;
+}
+
 class Segmenter {
-  constructor(onNote) { this.onNote = onNote; this.cur = null; this.cand = null; this.miss = 0; this.minDur = 60; this.a4 = 440; this.confirm = 4; this.maxMiss = 5; this.gap = 0; this.candGap = 0; this.rearticulate = true; }
-  reset() { this.cur = null; this.cand = null; this.miss = 0; this.candGap = 0; }
+  constructor(onNote) { this.onNote = onNote; this.cur = null; this.cand = null; this.miss = 0; this.minDur = 60; this.a4 = 440; this.confirm = 4; this.maxMiss = 5; this.gap = 0; this.candGap = 0; this.rearticulate = true; this.hist = []; }
+  reset() { this.hist = []; this.cur = null; this.cand = null; this.miss = 0; this.candGap = 0; }
   // t = seconds, f = Hz (or null when nothing reliable was heard), lv = signal level (RMS) for the volume lane
   frame(t, f, lv = 0) {
     const MISS = this.maxMiss;
     if (f) {
       this.candGap = 0;
+      this.hist.push([t, f]); if (this.hist.length > 60) this.hist.shift();
       const m = freqToNote(f, this.a4).midi, c = this.cur;
       // Stay on the current note while the pitch is within 65¢ of it: no flicker at semitone borders, vibrato is fine.
       if (c && (m === c.midi || Math.abs(centsBetween(f, noteToFreq(c.midi, this.a4))) < 65)) {
@@ -734,7 +752,16 @@ class Segmenter {
     if (lv < c.dip || t - c.dipT > 0.25) { c.dip = lv; c.dipT = t; c.up = 0; }
     const dipped = c.dip < c.pk * 0.6 && t - c.start > 0.06;
     const rose = lv > Math.max(c.dip * 1.5, c.pk * 0.7);
-    if (age > 0.08 && ((dipped && rose) || (brokeOff && c.dip < c.pk * 0.8 && lv > c.dip * 1.3))) return true;
+    if (age > 0.08 && ((dipped && rose) || (brokeOff && c.dip < c.pk * 0.8 && lv > c.dip * 1.3))) {
+      // A deep dip (under 30% of the peak) is a bow change or a new tongue / pluck: always a new note.
+      if (c.dip < c.pk * 0.3) return true;
+      // A moderate dip may just be vibrato (the volume wobbles with the pitch). Look at the last ~0.8 s of pitch:
+      // if it is a steady wobble it is vibrato (one note); if there is not yet enough history to tell, wait.
+      const h = this.hist, ref = noteToFreq(c.midi, this.a4), w = [];
+      if (h.length < 12 || h[h.length - 1][0] - h[0][0] < 0.3) return false;
+      for (const q of h) w.push([Math.round((q[0] - h[0][0]) * 1000), centsBetween(q[1], ref)]);
+      return !vibratoOf(w);
+    }
     return false;
   }
   end() {
@@ -746,7 +773,7 @@ class Segmenter {
     const step = Math.max(1, Math.ceil(c.f.length / 120)), pts = [];   // pitch contour: [ms from start, cents from the note centre]
     for (let i = 0; i < c.f.length; i += step) pts.push([Math.round((c.t[i] - c.start) * 1000), +centsBetween(c.f[i], ref).toFixed(1)]);
     const lvl = 20 * Math.log10(Math.max(1e-6, median(c.l)));
-    this.onNote({ midi: c.midi, note: midiName(c.midi), hz, cents: centsBetween(hz, ref), start: c.start, dur, lvl: +lvl.toFixed(1), pts });
+    this.onNote({ midi: c.midi, note: midiName(c.midi), hz, cents: centsBetween(hz, ref), start: c.start, dur, lvl: +lvl.toFixed(1), pts, vib: vibratoOf(pts) });
   }
 }
 
@@ -858,7 +885,7 @@ function bpToEvents(bp, a4 = 440) {
     const step = Math.max(1, Math.ceil(b.length / 120)), pts = [];
     for (let i = 0; i < b.length; i += step) pts.push([Math.round(i * 256 / 22050 * 1000), +(b[i] * 100 / 3).toFixed(1)]);
     const ref = noteToFreq(n.pitchMidi, a4);
-    return { midi: n.pitchMidi, note: midiName(n.pitchMidi), hz: ref * Math.pow(2, cents / 1200), cents, start: n.startTimeSeconds, dur: n.durationSeconds * 1000, lvl: +(20 * Math.log10(Math.max(1e-4, n.amplitude))).toFixed(1), pts, amp: n.amplitude, src: 'bp' };
+    return { midi: n.pitchMidi, note: midiName(n.pitchMidi), hz: ref * Math.pow(2, cents / 1200), cents, start: n.startTimeSeconds, dur: n.durationSeconds * 1000, lvl: +(20 * Math.log10(Math.max(1e-4, n.amplitude))).toFixed(1), pts, vib: vibratoOf(pts), amp: n.amplitude, src: 'bp' };
   }).sort((a, b) => a.start - b.start);
 }
 // Picks the melody out of a polyphonic note list (violin over piano). Works on app notes (start s, dur ms).
@@ -870,27 +897,31 @@ function extractMelody(ev, o = {}) {
   const keep = n.map(() => true);
   for (let i = 0; i < n.length; i++) for (let j = 0; j < n.length; j++) {            // pass 1: overtones (an octave / twelfth / double octave above a stronger note that starts with it)
     if (i === j) continue; const a = n[i], b = n[j], d = b.midi - a.midi;
-    if ((d === -12 || d === -19 || d === -24) && b.amp >= a.amp * 0.8 && Math.abs(a.start - b.start) < 0.08 && ov(a, b) / (a.dur / 1000) >= 0.6) keep[i] = false;
+    if ((d === -12 || d === -19 || d === -24) && b.amp >= a.amp * (o.poly ? 1.6 : 0.8) && Math.abs(a.start - b.start) < 0.08 && ov(a, b) / (a.dur / 1000) >= 0.6) keep[i] = false;
   }
   n = n.filter((_, i) => keep[i]);
   const keep2 = n.map(() => true);
-  if (o.skyline !== false) for (let i = 0; i < n.length; i++) for (let j = 0; j < n.length; j++) {   // pass 2: a clearly stronger note above covers most of this one = accompaniment
+  if (o.skyline !== false && !o.poly) for (let i = 0; i < n.length; i++) for (let j = 0; j < n.length; j++) {   // pass 2: a clearly stronger note above covers most of this one = accompaniment
     if (i === j) continue; const a = n[i], b = n[j], d = b.midi - a.midi;
     if (d >= 1 && d <= 36 && b.amp >= a.amp * 0.6 && ov(a, b) / (a.dur / 1000) >= 0.6 && ov(a, b) / (b.dur / 1000) > 0.5) keep2[i] = false;
   }
   n = n.filter((_, i) => keep2[i]);
   // one tune: strongest and longest notes win; a weaker note that mostly overlaps an already chosen one is accompaniment
+  if (o.poly) return mergeSame(n);                  // chord instruments (guitar, ukulele, piano): keep every note, only tidy
   const chosen = [], order = n.map((e, i) => i).sort((i, j) => (n[j].amp || 0.1) * Math.sqrt(n[j].dur) - (n[i].amp || 0.1) * Math.sqrt(n[i].dur));
   for (const i of order) { const e = n[i]; if (chosen.every(c => ov(e, c) / (e.dur / 1000) < 0.35)) chosen.push(e); }
   n = chosen.sort((x, y) => x.start - y.start).map(e => ({ ...e }));
   for (let i = 0; i + 1 < n.length; i++) if (end(n[i]) > n[i + 1].start) n[i].dur = Math.max(minDur * 0.6, (n[i + 1].start - n[i].start) * 1000);   // trim the small overlap
-  const out = [];
-  for (const e of n) {                               // merge fragments of one note
-    const p = out[out.length - 1];
-    if (p && p.midi === e.midi && e.start - end(p) < mergeGap / 1000) { p.dur = (end(e) - p.start) * 1000; p.pts = (p.pts || []).concat((e.pts || []).map(q => [q[0] + Math.round((e.start - p.start) * 1000), q[1]])); p.amp = Math.max(p.amp || 0, e.amp || 0); }
-    else out.push({ ...e });
+  return mergeSame(n);
+  function mergeSame(n) {
+  const out = [], lastOf = new Map();
+  for (const e of n.slice().sort((x, y) => x.start - y.start)) {                               // merge fragments of one note (per pitch, so chords work too)
+    const p = lastOf.get(e.midi);
+    if (p && p.midi === e.midi && e.start - end(p) < mergeGap / 1000) { p.dur = (end(e) - p.start) * 1000; p.pts = (p.pts || []).concat((e.pts || []).map(q => [q[0] + Math.round((e.start - p.start) * 1000), q[1]])); p.amp = Math.max(p.amp || 0, e.amp || 0); p.vib = vibratoOf(p.pts); }
+    else { const q = { ...e }; out.push(q); lastOf.set(e.midi, q); }
   }
   return out;
+  }
 }
 
 // ---------- APP ----------
@@ -1726,7 +1757,7 @@ $('scStop').onclick = stopScale;
 // Only the CURRENT recording is kept, in memory. Nothing is written to storage; Clear (or a new recording) discards it.
 const REC_MAX_S = 600;                                   // safety cap: 10 minutes per recording
 let events = [], recording = false, recT0 = 0, recEnd = 0, recSel = -1;
-const view = { vs: 0, pps: 0, follow: true, mode: 'sheet', fps: 120 };            // vs = time (s) at the left edge, pps = pixels per second
+const view = { vs: 0, pps: 0, follow: true, mode: 'sheet', fps: 120, spanF: 4, fallMid: null };            // vs = time (s) at the left edge, pps = pixels per second
 const pb = { playing: false, pos: 0, startCtx: 0, startPos: 0, rate: 1, nodes: [], abuf: null };
 const cap = { chunks: [], n: 0, k: 1, rate: 16000, acc: 0, cnt: 0 };   // recorded sound (16-bit, low sample rate to save memory)
 let capNode = null, capSink = null;
@@ -1748,6 +1779,7 @@ const recLen = () => recording ? Math.max(0, ctx.currentTime - t0 - recT0)
 const hasRec = () => events.length > 0 || cap.n > 0;
 
 function newRecording() {
+  view.fallMid = null; view.spanF = 4;
   recGen++; liveEv = detEv = null; shownRes = 'live';
   events = []; $('rows').innerHTML = ''; recSel = -1; recEnd = 0;
   cap.chunks = []; cap.n = 0; cap.acc = 0; cap.cnt = 0; pb.abuf = null; pb.pos = 0; view.vs = 0;
@@ -1796,7 +1828,7 @@ let recGen = 0, engine = 'live', liveEv = null, detEv = null, detBusy = false, s
 try { if (localStorage.getItem(ENG_KEY) === 'det') engine = 'det'; } catch {}
 function engUi() {
   for (const b of $('engSeg').children) b.classList.toggle('on', b.dataset.e === engine);
-  $('engHint').textContent = engine === 'det' ? 'Notes appear as you play, then press Stop: the app studies the whole recording and shows a more accurate result (takes a little while).' + (bpReady === 'loading' ? ' Getting the analysis files…' : bpReady === 'ready' ? ' Ready, and works offline.' : '') : 'Notes appear instantly as you play. Light and fast.';
+  $('engHint').textContent = engine === 'det' ? 'Notes appear as you play, then press Stop: the app studies the whole recording and shows a more accurate result (takes a little while). Guitar and ukulele keep every note of a chord; other instruments get one melody line.' + (bpReady === 'loading' ? ' Getting the analysis files…' : bpReady === 'ready' ? ' Ready, and works offline.' : '') : 'Notes appear instantly as you play. Light and fast.';
   const both = !!(liveEv && detEv); $('showWrap').classList.toggle('hide', !both);
   for (const b of $('showSeg').children) b.classList.toggle('on', b.dataset.s === shownRes);
   if (detBusy) $('rec').disabled = true;
@@ -1845,7 +1877,7 @@ async function analyseDetailed() {
     const lo = +$('fmin').value, hi = +$('fmax').value;
     const raw = BP.noteFramesToTime(BP.addPitchBendsToNoteEvents(C, BP.outputToNotesPoly(F, O, BP_PARAMS.onset, BP_PARAMS.frame, BP_PARAMS.minLen, true, hi, lo)));
     const toMidi = f => Math.round(69 + 12 * Math.log2(f / a4()));
-    detEv = extractMelody(bpToEvents(raw, a4()), { lo: toMidi(lo) - 1, hi: toMidi(hi) + 1 });
+    detEv = extractMelody(bpToEvents(raw, a4()), { lo: toMidi(lo) - 1, hi: toMidi(hi) + 1, poly: ['guitar', 'ukulele', 'mandolin'].includes(prof.k) });   // chord instruments keep every note; violin, voice etc. get one melody line
     showResult('det');
     info.textContent = `Detailed result: ${detEv.length} notes (Live found ${liveEv.length}).`;
   } catch (err) {
@@ -2015,6 +2047,10 @@ function syncCtl(pos, max) {      // slider + follow button
 const uiK = () => { const w = innerWidth, base = w >= 1100 ? 1.15 : w >= 600 ? 1.1 : 1; return base * ({ large: 1.2, xl: 1.45 }[$('dispSize').value] || 1); };
 $('dispSize').addEventListener('change', () => { try { localStorage.setItem('tuner-dispsize', $('dispSize').value); } catch {} requestDraw(); });
 try { const d = localStorage.getItem('tuner-dispsize'); if (d) $('dispSize').value = d; } catch {}
+const chromeH = () => { const q = c => ($('tab-rec').querySelector(c) || {}).offsetHeight || 0; return q('.tport') + q('.rbar') + 52; };   // controls kept in full screen
+let showDur = false; try { showDur = localStorage.getItem('tuner-showdur') === '1'; } catch {}
+$('msBtn').setAttribute('aria-pressed', showDur);
+$('msBtn').onclick = () => { showDur = !showDur; $('msBtn').setAttribute('aria-pressed', showDur); try { localStorage.setItem('tuner-showdur', showDur ? '1' : '0'); } catch {} requestDraw(); };
 const FS = () => $('tab-rec').classList.contains('fs');
 function setFS(on) {
   $('tab-rec').classList.toggle('fs', on); document.body.classList.toggle('fsrec', on);
@@ -2049,7 +2085,7 @@ function drawSheet() {
   const dTop = Math.max(topLine, none ? 0 : maxD + 4), dBot = Math.min(botLine, none ? 99 : minD - 3);
   const K = uiK(), bandH = sp => { const st = sp / 2, staffH = (dTop - dBot) * st; return 14 + staffH + 14 + 26 + 6 + (bpm > 0 ? 44 : 26); };
   let sp = Math.round(Math.min(26, Math.max(12, Wc / 46)) * K / 1.1 * (FS() ? 1.15 : 1));
-  const maxH = FS() ? innerHeight - 110 : Math.max(300, innerHeight * 0.62); while (sp > 11 && bandH(sp) > maxH) sp--;
+  const maxH = FS() ? innerHeight - chromeH() : Math.max(300, innerHeight * 0.62); while (sp > 11 && bandH(sp) > maxH) sp--;
   const st = sp / 2, padTop = 14, labBot = 14, laneH = 26, rulerH = bpm > 0 ? 44 : 26;
   const staffH = (dTop - dBot) * st, laneTop = padTop + staffH + labBot, rulerTop = laneTop + laneH + 6, H = rulerTop + rulerH;
   lay = { rulerTop };
@@ -2099,7 +2135,7 @@ function drawSheet() {
     if (w > 3) {
       rrect(xs, y - bh / 2, w, bh, bh / 2); g2.globalAlpha = 0.32; g2.fillStyle = col; g2.fill(); g2.globalAlpha = 1;
       if (e.pts && e.pts.length > 2 && w > 40) {
-        g2.beginPath(); e.pts.forEach((p, k) => { const px = xs + p[0] / 1000 * view.pps, py = y - Math.max(-1.1, Math.min(1.1, p[1] / 50)) * sp * 0.6; k ? g2.lineTo(px, py) : g2.moveTo(px, py); });
+        g2.beginPath(); e.pts.forEach((p, k) => { const px = xs + p[0] / 1000 * view.pps, py = y - Math.max(-1.1, Math.min(1.1, p[1] / 50)) * sp * (e.vib ? 0.9 : 0.6); k ? g2.lineTo(px, py) : g2.moveTo(px, py); });
         g2.strokeStyle = 'rgba(255,255,255,.7)'; g2.lineWidth = 1.1; g2.stroke();
       }
     }
@@ -2144,12 +2180,27 @@ function drawSheet() {
 function drawFall() {
   const K = uiK(), Wc = cv.clientWidth, BG = '#0c0f15', TXT = '#f1f4fb', MUT = '#c9d2e6', hdr = Math.round(32 * K);
   const live = liveEvent(), all = live ? events.concat([live]) : events, len = recLen(), bpm = bpmVal();
-  const H = FS() ? Math.max(200, innerHeight - (($('tab-rec').querySelector('.tport') || {}).offsetHeight || 90) - 24) : Math.round(Math.min(760, Math.max(320, Math.min(Wc * 0.9, innerHeight * 0.62)))) ;
+  const H = FS() ? Math.max(200, innerHeight - chromeH()) : Math.round(Math.min(760, Math.max(320, Math.min(Wc * 0.9, innerHeight * 0.62)))) ;
   sizeCanvas(Wc, H); g2.fillStyle = BG; g2.fillRect(0, 0, Wc, H);
   const now = recording ? len : pbPos(), fps = view.fps;
   const nowY = hdr + (recording ? 20 : Math.round((H - hdr) * 0.4));       // while recording the newest notes sit at the top and drop away
   const Y = t => nowY - (t - now) * fps;                                    // later = higher up, earlier = lower
-  const used = [...new Set(all.map(e => e.midi))].sort((a, b) => a - b), n = Math.max(1, used.length), laneW = Wc / n;
+  // Only the lanes around the note being played are shown (default: that note and 4 either side), so the current notes are big and easy to read.
+  // Zoom out shows more lanes, zoom in fewer. The window only moves when the active note nears its edge, so lanes do not jump about.
+  const allUsed = [...new Set(all.map(e => e.midi))].sort((a, b) => a - b);
+  const span = Math.round(view.spanF), W2 = Math.min(allUsed.length, 2 * span + 1);
+  let actMidi = null, actStart = -1; for (const e of all) if (e.start <= now + 0.001 && e.start >= actStart) { actMidi = e.midi; actStart = e.start; }
+  if (view.fallMid == null || !allUsed.length) view.fallMid = actMidi != null ? actMidi : allUsed[0];
+  const idxNear = m => { let b = 0; allUsed.forEach((u, i) => { if (Math.abs(u - m) < Math.abs(allUsed[b] - m)) b = i; }); return b; };
+  let lo = 0;
+  if (allUsed.length) {
+    lo = Math.max(0, Math.min(allUsed.length - W2, idxNear(view.fallMid) - span));
+    if (actMidi != null && W2 < allUsed.length) {
+      const ai = allUsed.indexOf(actMidi), nearEdge = (ai < lo + 1 && lo > 0) || (ai > lo + W2 - 2 && lo + W2 < allUsed.length);
+      if (nearEdge || ai < lo || ai >= lo + W2) { view.fallMid = actMidi; lo = Math.max(0, Math.min(allUsed.length - W2, ai - span)); }
+    }
+  }
+  const used = allUsed.slice(lo, lo + W2), n = Math.max(1, used.length), laneW = Wc / n;
   const laneOf = new Map(used.map((m, i) => [m, i]));
   lay = { rulerTop: 1e9, fall: { used, laneW, hdr, nowY, now, fps } };
 
@@ -2169,22 +2220,25 @@ function drawFall() {
 
   // notes
   g2.save(); g2.beginPath(); g2.rect(0, hdr, Wc, H - hdr); g2.clip();
-  const bw = Math.min(laneW - 6, 76), act = new Set(); g2.textAlign = 'center';
+  const bw = Math.min(laneW - 6, Math.round(110 * K)), act = new Set(); g2.textAlign = 'center';
   for (let i = 0; i < all.length; i++) {
     const e = all[i], lane = laneOf.get(e.midi), end = e.start + e.dur / 1000, yTop = Y(end), yBot = Y(e.start);
-    if (yBot < hdr - 4 || yTop > H + 4) continue;
+    if (lane == null || yBot < hdr - 4 || yTop > H + 4) continue;
     const h = Math.max(5, yBot - yTop), top = yBot - h, x = lane * laneW + (laneW - bw) / 2, past = end < now - 0.001;
     const isAct = e.start <= now && end >= now - 0.001, sel = i === recSel && !e.live, col = recColorOf(e);
     if (isAct) act.add(lane);
     g2.globalAlpha = past ? 0.5 : 1; rrect(x, top, bw, h, Math.min(7, h / 2)); g2.fillStyle = col; g2.fill();
     if (isAct || sel) { g2.lineWidth = 2; g2.strokeStyle = '#fff'; g2.stroke(); } else { g2.lineWidth = 1; g2.strokeStyle = 'rgba(255,255,255,.28)'; g2.stroke(); }
-    g2.globalAlpha = past ? 0.75 : 1; g2.fillStyle = '#0b0d12';
-    const fs = Math.max(Math.round(12 * K), Math.min(Math.round(22 * K), Math.round(bw * 0.3)));
-    if (h >= 34) {
-      g2.font = `700 ${fs}px system-ui,sans-serif`; g2.fillText(nm(e.note), x + bw / 2, top + h / 2 + 1, bw - 6);
-      g2.font = `600 ${Math.max(11, fs - 2)}px system-ui,sans-serif`; g2.fillText(durText(e, bpm), x + bw / 2, top + h / 2 + fs + 2, bw - 6);
-    } else if (h >= 15) { g2.font = `700 ${fs}px system-ui,sans-serif`; g2.fillText(nm(e.note), x + bw / 2, top + h / 2 + fs * 0.35, bw - 6); }
-    else if (h >= 10) { g2.font = '700 11px system-ui,sans-serif'; g2.fillText(nm(e.note), x + bw / 2, top + h / 2 + 3, bw - 4); }
+    if (e.vib && h > 22) {                                           // vibrato: a small wave down the bar (one note, not many)
+      const amp = Math.min(bw * 0.28, 2 + e.vib.width / 7), per = Math.max(7, fps / e.vib.rate), y0 = Math.max(top + 3, hdr); g2.beginPath();
+      for (let yy = y0; yy <= Math.min(top + h - 3, H); yy += 2) { const px = x + bw / 2 + Math.sin((yy - top) / per * 6.2832) * amp; yy === y0 ? g2.moveTo(px, yy) : g2.lineTo(px, yy); }
+      g2.strokeStyle = 'rgba(255,255,255,.75)'; g2.lineWidth = 1.6; g2.stroke();
+    }
+    g2.globalAlpha = past ? 0.85 : 1;
+    const fs = Math.max(Math.round(12 * K), Math.min(Math.round(22 * K), Math.round(bw * 0.3))), lab = (t, yy, f) => { g2.font = `700 ${f}px system-ui,sans-serif`; haloText(t, x + bw / 2, yy, '#ffffff', 'rgba(8,10,16,.85)'); };
+    if (h >= 34 && showDur) { lab(nm(e.note), top + h / 2 + 1, fs); lab(durText(e, bpm), top + h / 2 + fs + 2, Math.max(11, fs - 2)); }
+    else if (h >= 15) lab(nm(e.note), top + h / 2 + fs * 0.35, fs);
+    else if (h >= 10) lab(nm(e.note), top + h / 2 + 3, 11);
     g2.globalAlpha = 1;
   }
   g2.restore();
@@ -2195,7 +2249,7 @@ function drawFall() {
   for (let i = 0; i < used.length; i++) {
     const lit = act.has(i), cx = i * laneW + laneW / 2, c = $('recColor').value === 'note' ? `hsl(${(((used[i] % 12) + 12) % 12) * 30},85%,62%)` : '#6c8dff';
     if (lit) { rrect(i * laneW + 3, 4, laneW - 6, hdr - 9, 7); g2.fillStyle = c; g2.fill(); }
-    g2.font = `700 ${hf}px system-ui,sans-serif`; g2.fillStyle = lit ? '#0b0d12' : TXT; g2.fillText(nm(midiName(used[i])), cx, hdr / 2 + hf * 0.35, laneW - 4);
+    g2.font = `700 ${hf}px system-ui,sans-serif`; g2.fillStyle = lit ? '#05070b' : TXT; g2.fillText(nm(midiName(used[i])), cx, hdr / 2 + hf * 0.35, laneW - 4);
   }
 
   // the "now" line
@@ -2207,7 +2261,7 @@ function drawFall() {
 
 // ----- moving around the chart: drag, pinch, wheel, slider, buttons -----
 function zoomBy(f, cx) {
-  if (view.mode === 'fall') { view.fps = Math.max(25, Math.min(600, view.fps * f)); requestDraw(); return; }
+  if (view.mode === 'fall') { view.fps = Math.max(25, Math.min(600, view.fps * f)); view.spanF = Math.max(2, Math.min(60, view.spanF / Math.pow(f, 1.2))); requestDraw(); return; }   // zoom out also shows more lanes
   const Wc = cv.clientWidth, c = cx == null ? GUT + (Wc - GUT) / 2 : cx, t = view.vs + (c - GUT) / view.pps;
   view.pps = Math.max(4, Math.min(700, view.pps * f)); view.vs = t - (c - GUT) / view.pps; requestDraw();
 }
@@ -2274,7 +2328,7 @@ $('rows').addEventListener('click', e => {
 });
 $('rvStart').onclick = () => { view.follow = false; view.vs = 0; if (hasRec() && !recording) pbSeek(0); else requestDraw(); };
 $('rvIn').onclick = () => zoomBy(1.5); $('rvOut').onclick = () => zoomBy(1 / 1.5);
-$('rvFit').onclick = () => { if (view.mode === 'fall') { if (hasRec()) { const A = cv.clientHeight - 32; view.fps = Math.max(25, Math.min(600, A / Math.max(1, recLen()))); pbSeek(recLen() * 0.6); } return; } view.follow = false; view.vs = 0; view.pps = Math.max(4, (cv.clientWidth - GUT - 24) / Math.max(2, recLen())); requestDraw(); };
+$('rvFit').onclick = () => { if (view.mode === 'fall') { view.spanF = 60; if (hasRec()) { const A = cv.clientHeight - 32; view.fps = Math.max(25, Math.min(600, A / Math.max(1, recLen()))); pbSeek(recLen() * 0.6); } return; } view.follow = false; view.vs = 0; view.pps = Math.max(4, (cv.clientWidth - GUT - 24) / Math.max(2, recLen())); requestDraw(); };
 $('rvLive').onclick = () => { view.follow = !view.follow; requestDraw(); };
 $('rvPos').oninput = () => { if (view.mode === 'fall') { if (!recording) pbSeek(+$('rvPos').value / 1000 * recLen()); return; } const Wc = cv.clientWidth, vsMax = Math.max(0, recLen() - (Wc - GUT) / view.pps * 0.2); view.follow = false; view.vs = +$('rvPos').value / 1000 * vsMax; requestDraw(); };
 window.addEventListener('resize', requestDraw);
@@ -2289,7 +2343,7 @@ let autoShown = '';
 function autoUi() { const k = autoM.mode + autoM.why; if (k === autoShown) return; autoShown = k; modeDesc(); }
 function modeDesc() {
   const v = $('recMode').value, d = MODE_DESC[v] || MODE_DESC.fast;
-  $('recModeDesc').innerHTML = `${d[0]} <i>${d[1]}</i>` + (v === 'auto' ? `<br><b>Now using: ${REC_NAMES[autoM.mode] || autoM.mode}</b> (${autoM.why})` : '') + (v === 'fast' && +$('fmin').value < 80 ? '<br>Tip: for violin, choose the Violin range in Settings → Detection → Pitch range. It makes fast passages more accurate.' : '');
+  $('recModeDesc').innerHTML = v === 'auto' ? `Now using: <b>${REC_NAMES[autoM.mode] || autoM.mode}</b> (${autoM.why})` : `${d[0]} <i>${d[1]}</i>` + (v === 'fast' && +$('fmin').value < 80 ? '<br>Tip: for violin, choose the Violin range in Settings → Detection → Pitch range. It makes fast passages more accurate.' : '');
 }
 $('recMode').addEventListener('change', modeDesc); $('fmin').addEventListener('input', modeDesc); $('fmin').addEventListener('change', modeDesc); modeDesc();
 function setView(m) {
