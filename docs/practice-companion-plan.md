@@ -2,6 +2,8 @@
 
 v5 changes (read these first): (1) accuracy is the first priority, so a new **Phase A** measures the current pitch front end on real recordings and replaces components by evidence (section 3 decisions 12-14, Appendix D, Appendix E); (2) instrument scope is **violin first, then guitar, ukulele and piano**; nothing else; (3) all inputs go through **one "Add a piece" screen** (section 7); (4) VioPTT and Demucs are now evaluated as import engines in the local helper, never used for scoring a live take.
 
+**Build order update:** the UI correction and the pluggable-engine registry in `docs/ui-and-engines-plan.md` (UI0-UI6) are built **first**, while the Phase A gold clips are being recorded. New algorithms are then plugged in through the registry as Phase A proves them, and are chosen in Settings > Engines.
+
 Status: design only. Nothing here is built unless marked "(exists)". Written for the existing PWA in this repo (`note-recorder`, deployed to GitHub Pages). Background on the detector and Basic Pitch is in `docs/intelligence-plan.md`; working rules are in `CLAUDE.md`. Read both first. Where this plan and `CLAUDE.md` disagree, `CLAUDE.md` wins.
 
 ## 0. How to use this document

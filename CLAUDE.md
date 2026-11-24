@@ -51,6 +51,7 @@ If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. W
 - `node tests/shot.js <folder>` renders the Recorder (Falling, Sheet, full screen; phone and tablet sizes) with sample notes and saves screenshots. Look at them after any display change.
 - Audio test clips (`tests/audio/`, `*.mp3`) are copyrighted or personal and git-ignored. Never commit them. `tests/realclip.js <file.f32>` runs the Live detector over a decoded clip (`ffmpeg -i x.mp3 -ac 1 -ar 44100 -f f32le x.f32`).
 - Design background and roadmap: `docs/intelligence-plan.md`.
+- UI correction and pluggable engine registry (build this first, work packages UI0-UI6): `docs/ui-and-engines-plan.md`.
 - Practice Companion build plan (pieces, scoring against a reference score, tempo ladder, teacher report): `docs/practice-companion-plan.md`. Work one phase at a time and stop at each gate.
 
 ## Lab page (reference MIDI and comparison)
