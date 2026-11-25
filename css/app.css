@@ -81,8 +81,9 @@
   .pc-det{font-size:14px;color:var(--mut)} .pc-det b{color:var(--fg)}
   .pc-parts{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:6px} .pc-parts legend{font-size:13px;color:var(--mut);padding:0 0 6px}
   .pc-part{display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 10px;border:1px solid var(--line);border-radius:12px} .pc-part input{width:20px;height:20px;flex:none}
-  .eng-row{padding:12px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
-  .eng-chips{display:flex;flex-wrap:wrap;gap:6px} .eng-chip{font-size:12px;padding:3px 8px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);color:var(--mut)}
+  .eng-row{padding:10px 12px;margin:8px 0;border:1px solid var(--line);border-radius:12px;background:var(--surface2);display:flex;flex-direction:column;gap:6px}
+  .eng-head{display:flex;align-items:center;justify-content:space-between;gap:10px} .eng-head select{flex:1 1 0;width:0;max-width:60%;min-width:0;box-sizing:border-box;text-overflow:ellipsis} .eng-head b{flex:0 0 auto}
+  .eng-act{display:flex;align-items:center;gap:8px;flex-wrap:wrap} .eng-act .sec{padding:4px 12px;min-height:0;font-size:13px} .eng-act .hint2{flex:1;min-width:0;margin:0}
   .eng-p input[type=range]{width:100%}
   .modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(5,7,12,.82)}
   .modal-in{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px}

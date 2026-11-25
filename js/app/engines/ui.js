@@ -7,7 +7,6 @@ const ENG_ROWS = [['f0', 'live', 'Tuner algorithm'], ['segmenter', 'live', 'Reco
 const engKey = (role, mode) => role === 'transcriber' ? role : role + ':' + mode;
 const engEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const engWhyNot = e => e.contractFail ? 'failed its check' : e.caps.needsHelper && !(typeof LAB !== 'undefined' && LAB.ok) ? 'helper not running' : '';
-const engChips = e => [e.caps.live ? 'Live' : '', e.caps.offline ? 'Offline' : '', e.caps.needsHelper ? 'Needs helper' : '', e.caps.needsDownloadMB ? e.caps.needsDownloadMB + ' MB' : '', e.caps.license].filter(Boolean);
 const engCurrent = (role, mode) => engSet.default[engKey(role, mode)] || 'auto';
 function engineSummary() { return ENG_ROWS.every(([r, m]) => engCurrent(r, m) === 'auto') ? 'Auto (built in)' : 'Custom choice'; }
 function engSave(mutator) { const s = JSON.parse(JSON.stringify(engSet)); s.params = s.params || {}; mutator(s); setEngineSettings(s); if (typeof rebuildSegmenter === 'function') rebuildSegmenter(); renderEngines(); if (typeof renderSet === 'function') renderSet(); }
@@ -17,15 +16,13 @@ function renderEngines() {
   box.innerHTML = ENG_ROWS.map(([role, mode, title], i) => {
     const dev = !!($('devOn') && $('devOn').checked), cands = listEngines(role).filter(e => !e.caps.clipInput && e.caps[mode] !== false && (!e.caps.dev || dev || engCurrent(role, mode) === e.id)), cur = engCurrent(role, mode), eff = engineFor(role, mode);
     const auto = getEngine(role, prof.k, mode, { default: {} });
-    const opts = [`<option value="auto"${cur === 'auto' ? ' selected' : ''}>Auto (${engEsc(auto ? auto.label : 'none')})</option>`].concat(cands.map(e => { const why = engWhyNot(e); return `<option value="${engEsc(e.id)}"${cur === e.id ? ' selected' : ''}${why ? ' disabled' : ''}>${engEsc(e.label)}${why ? ' (' + why + ')' : ''}</option>`; })).join('');
+    const opts = [`<option value="auto"${cur === 'auto' ? ' selected' : ''}>Auto (${engEsc(auto ? auto.label.split(/ [+(]/)[0] : 'none')})</option>`].concat(cands.map(e => { const why = engWhyNot(e); return `<option value="${engEsc(e.id)}"${cur === e.id ? ' selected' : ''}${why ? ' disabled' : ''}>${engEsc(e.label)}${why ? ' (' + why + ')' : ''}</option>`; })).join('');
     const pv = (engSet.params || {})[role + '.' + (eff && eff.id)] || {};
     const params = eff ? Object.keys(eff.params || {}).map(k => { const p = eff.params[k], v = pv[k] != null ? pv[k] : p.default;
       return p.type === 'switch' ? `<label class="field eng-p"><span>${engEsc(p.label || k)}</span><input type="checkbox" data-p="${i}|${engEsc(k)}"${v ? ' checked' : ''}></label>`
         : `<label class="field eng-p"><span>${engEsc(p.label || k)}: <b>${engEsc(v)}</b></span><input type="range" min="${p.min}" max="${p.max}" step="${p.step}" value="${engEsc(v)}" data-p="${i}|${engEsc(k)}"></label>`; }).join('') : '';
-    return `<div class="eng-row"><label class="field"><span><b>${engEsc(title)}</b></span><select data-row="${i}" aria-label="${engEsc(title)}">${opts}</select></label>
-      <div class="eng-chips">${eff ? engChips(eff).map(c => `<span class="eng-chip">${engEsc(c)}</span>`).join('') : ''}</div>${params}
-      <div class="row"><button type="button" class="sec" data-test="${i}">Test this engine</button>${cur !== 'auto' || Object.keys(pv).length ? `<button type="button" class="sec" data-reset="${i}">Reset to Auto</button>` : ''}</div>
-      <div class="hint2" id="engRes${i}" role="status"></div></div>`;
+    return `<div class="eng-row"><div class="eng-head"><b>${engEsc(title)}</b><select data-row="${i}" aria-label="${engEsc(title)}">${opts}</select></div>${params}
+      <div class="eng-act"><button type="button" class="sec" data-test="${i}">Test</button>${cur !== 'auto' || Object.keys(pv).length ? `<button type="button" class="sec" data-reset="${i}">Reset</button>` : ''}<span class="hint2" id="engRes${i}" role="status"></span></div></div>`;
   }).join('');
 }
 $('engBody').addEventListener('change', e => {
