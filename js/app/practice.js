@@ -62,23 +62,37 @@ function liveScaleFrame(f) {
 // ----- per-note scorecard (keybr-style) -----
 // Every play of a note adds one event: hit {c: mean cents, a: share of frames in tolerance, s: wobble},
 // skip {k:'s'} or slip {k:'w'} (a wrong note played while this one was expected). Recent events weigh more.
-const PROFILES = ['Nandini', 'Nayonika'], PCOLOR = { Nandini: '#6c8dff', Nayonika: '#f472b6' };
 const CARD_MAX = 150;                                   // plays kept per note (older ones fall off)
 const ckey = p => 'tuner-scorecard-v2-' + p, pkey = p => 'tuner-passes-v2-' + p;
 const lsGet = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-let profile = (() => { try { const p = localStorage.getItem('tuner-profile'); return PROFILES.includes(p) ? p : PROFILES[0]; } catch { return PROFILES[0]; } })();
-let cardAll = lsGet(ckey(profile), {}), passAll = lsGet(pkey(profile), []), cardSess = {}, hold = null;
-$('profile').value = profile;
+// Players: typed in the app and kept only on this device (no names live in the code). Each player's scores are stored under their name (ckey / pkey).
+const PALETTE = ['#6c8dff', '#f472b6', '#34d399', '#fbbf24', '#a78bfa', '#f87171', '#22d3ee', '#fb923c'], PLAYERS_KEY = 'tuner-players';
+const PROFILES = [], PCOLOR = {};
+const validName = n => typeof n === 'string' && /^[\p{L}\p{N} .'_-]{1,24}$/u.test(n) && n === n.trim();   // no characters that could break the page or a storage key
+function addPlayerRecord(n, c) { if (!PROFILES.includes(n)) PROFILES.push(n); PCOLOR[n] = /^#[0-9a-f]{6}$/i.test(c) ? c : PALETTE[(PROFILES.indexOf(n)) % PALETTE.length]; }
+const savePlayers = () => lsSet(PLAYERS_KEY, PROFILES.map(name => ({ name, color: PCOLOR[name] })));
+(function loadPlayers() {
+  let list = lsGet(PLAYERS_KEY, null);
+  if (!Array.isArray(list)) {   // first start after the update: players who already have saved scores on this device are found by their storage keys, so nothing is lost
+    const names = new Set();
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i) || ''; for (const pre of ['tuner-scorecard-v2-', 'tuner-passes-v2-']) if (k.startsWith(pre)) names.add(k.slice(pre.length)); } } catch {}
+    list = [...names].sort().map(name => ({ name }));
+  }
+  list.forEach(p => p && validName(p.name) && addPlayerRecord(p.name, p.color));
+  if (PROFILES.length) savePlayers();
+})();
+let profile = (() => { try { const p = localStorage.getItem('tuner-profile'); return PROFILES.includes(p) ? p : (PROFILES[0] || ''); } catch { return PROFILES[0] || ''; } })();
+let cardAll = profile ? lsGet(ckey(profile), {}) : {}, passAll = profile ? lsGet(pkey(profile), []) : [], cardSess = {}, hold = null;
 const profEvents = p => p === profile ? cardAll : lsGet(ckey(p), {});
 const profPasses = p => p === profile ? passAll : lsGet(pkey(p), []);
 function addEv(midi, ev, quiet) {
   ev.t = Date.now(); ev.sl = ev.sl || scaleLabel(); ev.i = ev.i || $('scInst').value;
   for (const s of [cardSess, cardAll]) { const a = (s[midi] = s[midi] || []); a.push(ev); if (a.length > CARD_MAX) a.shift(); }
-  lsSet(ckey(profile), cardAll);
+  if (profile) lsSet(ckey(profile), cardAll);
   if (!quiet) renderCard();
 }
-function savePass(pct) { passAll.push({ t: Date.now(), pct, s: scaleLabel() }); if (passAll.length > 300) passAll.shift(); lsSet(pkey(profile), passAll); }
+function savePass(pct) { passAll.push({ t: Date.now(), pct, s: scaleLabel() }); if (passAll.length > 300) passAll.shift(); if (profile) lsSet(pkey(profile), passAll); }
 const clamp01 = x => Math.max(0, Math.min(1, x));
 // Instrument-specific steadiness: how much pitch wobble (¢, std-dev) earns zero steadiness credit.
 // Bowed/vibrato instruments forgive more; fretted instruments (fixed pitch) are held to a tighter standard.

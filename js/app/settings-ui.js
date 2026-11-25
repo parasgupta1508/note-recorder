@@ -2,10 +2,11 @@
 // Part of the app. Scripts in js/app load in the order listed in index.html and share one scope.
 
 // ----- settings layout (List / Tabs / Classic) -----
-const SG = [['instrument', 'Instrument'], ['tuning', 'Tuning'], ['mic', 'Microphone'], ['detect', 'Detection'], ['check', 'Accuracy check'], ['data', 'Backup & restore'], ['layout', 'Settings layout'], ['install', 'Install app'], ['dev', 'Developer'], ['reset', 'Reset']], LAY_KEY = 'tuner-setlayout';
+const SG = [['players', 'Players'], ['instrument', 'Instrument'], ['tuning', 'Tuning'], ['mic', 'Microphone'], ['detect', 'Detection'], ['check', 'Accuracy check'], ['data', 'Backup & restore'], ['layout', 'Settings layout'], ['install', 'Install app'], ['dev', 'Developer'], ['reset', 'Reset']], LAY_KEY = 'tuner-setlayout';
 let setLay = 'list', setCur = null; try { setLay = localStorage.getItem(LAY_KEY) || 'list'; } catch {}
 if (!['list', 'tabs', 'classic'].includes(setLay)) setLay = 'list';
 const setSum = k => ({
+  players: () => PROFILES.length ? PROFILES.join(', ') : 'Add a player',
   instrument: () => profReady ? profName() : 'All instruments',
   tuning: () => `A4 ${$('a4').value} Hz · ±${$('tol').value}¢`,
   mic: () => `Noise gate ${(+$('gate').value).toFixed(3)} · Boost ${$('boost').value}×`,
@@ -89,12 +90,13 @@ $('impFile').onchange = async e => {
     if (!b || b.app !== APP_ID || !Number.isInteger(b.version) || b.version < 1 || !b.profiles || typeof b.profiles !== 'object') throw new Error('this is not a Tuner & Scale Trainer backup');
     const cur = dataVer();
     if (b.version <= cur) { bkMsg(`Not imported: this backup is v${b.version} and this device is already at v${cur}. Only a higher version can be imported.`, 'bad-t'); return; }
-    const found = PROFILES.filter(p => b.profiles[p]);
-    if (!found.length) throw new Error('it contains no profile data for ' + PROFILES.join(' or '));
+    const found = Object.keys(b.profiles).filter(p => validName(p) && b.profiles[p] && typeof b.profiles[p] === 'object');
+    if (!found.length) throw new Error('it contains no players');
     const cleaned = {}; found.forEach(p => cleaned[p] = { sc: cleanEv(b.profiles[p].scorecard), ps: cleanPass(b.profiles[p].passes) });
     const sum = found.map(p => `${p}: ${Object.values(cleaned[p].sc).reduce((s, a) => s + a.length, 0)} plays, ${cleaned[p].ps.length} passes`).join('\n');
     if (!confirm(`Import backup v${b.version}${b.created ? ' from ' + String(b.created).slice(0, 10) : ''}?\nThis REPLACES the data for ${found.join(' and ')} on this device (now v${cur}).\n\n${sum}`)) { bkMsg('Import cancelled.'); return; }
-    found.forEach(p => { lsSet(ckey(p), cleaned[p].sc); lsSet(pkey(p), cleaned[p].ps); });
+    found.forEach(p => { lsSet(ckey(p), cleaned[p].sc); lsSet(pkey(p), cleaned[p].ps); addPlayerRecord(p); });
+    savePlayers(); renderPlayers(); if (!profile) switchPlayer(found[0]);
     try { localStorage.setItem(VER_KEY, String(b.version)); } catch {}
     cardAll = lsGet(ckey(profile), {}); passAll = lsGet(pkey(profile), []); cardSess = {};
     updBackupInfo(); renderCard(); renderAnalysis(); bkMsg(`Imported backup v${b.version}.`, 'ok-t');

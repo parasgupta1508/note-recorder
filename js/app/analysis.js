@@ -151,14 +151,15 @@ function renderAnalysis() {
     <div class="card2"><h3>Note by note</h3><div class="scroll tbl">${rows.length ? `<table>${thead('ana', [['m', 'Note'], ['plays', 'Plays'], ['first', 'First'], ['latest', 'Latest'], ['chg', 'Change'], ['spark', 'Trend', false]])}${sortRows('ana', rows).map(r => `<tr><td><b>${midiName(r.m)}</b></td><td>${r.plays}</td><td>${fmtV(r.first, m)}</td><td><b>${fmtV(r.latest, m)}</b></td><td class="${fixOk(r, r.chg)}">${r.chg >= 0 ? '+' : '−'}${Math.abs(r.chg).toFixed(0)}</td><td>${r.spark}</td></tr>`).join('')}</table>` : EMPTY}</div></div>`;
 }
 function renderCompare(m, scope, lowerBetter) {
-  const byDate = $('anX').value === 'date';
-  const ds = PROFILES.map(p => ({ p, ...scopeData(p, scope) }));
+  if (PROFILES.length < 2) { $('anBody').innerHTML = '<div class="card2"><h3>Compare players</h3><p class="mut">Add a second player in Settings > Players to compare.</p></div>'; return; }
+  const byDate = $('anX').value === 'date', CMP = PROFILES.slice(0, 2);   // the comparison shows the first two players
+  const ds = CMP.map(p => ({ p, ...scopeData(p, scope) }));
   const notes = [...new Set(ds.flatMap(d => d.notes))].sort((a, b) => a - b);
   const A = notes.map(n => latestVal(ds[0].ev[n] || [], m.f)), B = notes.map(n => latestVal(ds[1].ev[n] || [], m.f));
   const rows = notes.map((n, i) => ({ m: n, a: A[i], b: B[i], gap: A[i] != null && B[i] != null ? A[i] - B[i] : null }));
   const winner = g => (g > 0) !== lowerBetter ? PROFILES[0] : PROFILES[1];
   const ahead = g => g == null || Math.abs(g) < 0.5 ? '–' : `<span style="color:${PCOLOR[winner(g)]}">${winner(g)}</span> +${Math.abs(g).toFixed(0)}`;
-  const legend = `<div class="legend">${PROFILES.map(p => `<span class="chip mini" style="flex:none"><i style="width:9px;height:9px;border-radius:50%;background:${PCOLOR[p]}"></i>&nbsp;${p}</span>`).join('')}</div>`;
+  const legend = `<div class="legend">${CMP.map(p => `<span class="chip mini" style="flex:none"><i style="width:9px;height:9px;border-radius:50%;background:${PCOLOR[p]}"></i>&nbsp;${p}</span>`).join('')}</div>`;
   const sA = scaleRows(PROFILES[0], m), sB = scaleRows(PROFILES[1], m), names = [...new Set([...sA, ...sB].map(r => r.name))];
   const srows = names.map(name => { const a = sA.find(r => r.name === name), b = sB.find(r => r.name === name); return { name, a: a ? a.net : null, b: b ? b.net : null, gap: a && b && a.net != null && b.net != null ? a.net - b.net : null }; });
   $('anBody').innerHTML = `<div class="two">${ds.map(d => `<div class="card2"><h3 style="color:${PCOLOR[d.p]}">${d.p}</h3><p class="mut">${esc(d.label)}</p>${tilesHtml(statsFor(d, m), m)}</div>`).join('')}</div>
@@ -175,10 +176,11 @@ $('anBody').onclick = e => { const b = e.target.closest('.legend button'); if (!
 document.querySelectorAll('#anMode button').forEach(b => b.onclick = () => { anMode = b.dataset.m; document.querySelectorAll('#anMode button').forEach(x => x.classList.toggle('on', x === b)); renderAnalysis(); });
 $('anMetric').onchange = $('anScope').onchange = $('anX').onchange = renderAnalysis;
 let rzT = null; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(renderAnalysis, 150); });
-$('profile').onchange = () => {
-  finalizeHold(); stopScale(); profile = $('profile').value;
+function switchPlayer(name) {
+  finalizeHold(); stopScale(); profile = name;
   try { localStorage.setItem('tuner-profile', profile); } catch {}
-  cardAll = lsGet(ckey(profile), {}); passAll = lsGet(pkey(profile), []); cardSess = {};
+  cardAll = profile ? lsGet(ckey(profile), {}) : {}; passAll = profile ? lsGet(pkey(profile), []) : []; cardSess = {};
   resetPractice(); renderScale(); renderCard(); renderAnalysis();
-};
+}
+$('profile').onchange = () => switchPlayer($('profile').value);
 

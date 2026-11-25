@@ -19,7 +19,7 @@
 <body>
 <header class="appbar"><div class="in">
   <div class="bar">
-    <label class="who-wrap"><span>Player</span><select id="profile" class="who" aria-label="Who is playing"><option>Nandini</option><option>Nayonika</option></select></label>
+    <label class="who-wrap"><span>Player</span><select id="profile" class="who" aria-label="Who is playing"></select></label>
     <div class="bar-r"><span id="status" role="status"></span><button type="button" id="micChip" class="mic-chip" aria-pressed="false" aria-label="Microphone is off. Tap to turn it on."><span class="mic-dot" aria-hidden="true"></span><span id="micTxt">Mic off</span></button></div>
   </div>
   <!-- live input level (−60…0 dBFS, after boost); the white tick is the gate: sound must reach past it to be analysed -->
@@ -152,7 +152,7 @@
 <!-- ============ ANALYSIS ============ -->
 <section id="tab-analysis" class="panel hide stack" role="tabpanel" aria-labelledby="nav-analysis">
   <div class="an-head">
-    <div class="seg" id="anMode"><button data-m="prog" class="on">Progress</button><button data-m="cmp">Compare kids</button></div>
+    <div class="seg" id="anMode"><button data-m="prog" class="on">Progress</button><button data-m="cmp">Compare players</button></div>
     <label class="field scope"><span>Scale</span><select id="anScope"><option value="cur">Current scale</option><option value="all">All scales</option></select></label>
     <label class="field"><span>Measure</span><select id="anMetric"><option value="score">Note score</option><option value="acc">In-tune %</option><option value="err">Pitch offset (¢)</option></select></label>
     <label class="field"><span>Time axis</span><select id="anX"><option value="play">Per play</option><option value="date">By date</option></select></label>
@@ -273,6 +273,10 @@
 <!-- ============ SETTINGS ============ -->
 <section id="tab-settings" class="panel hide stack" role="tabpanel" aria-labelledby="nav-settings" data-layout="list">
   <div id="setMenu"></div><div id="setTabs"></div><button id="setBack"><span>‹</span> <b id="setTitle"></b></button>
+  <div class="set-group" data-g="players"><h3>Players</h3><p>Each player has their own scores and progress. Names are typed here and stay on this device only.</p>
+    <div id="plList"></div>
+    <form id="plForm" class="row" style="margin-top:10px"><input id="plName" maxlength="24" autocomplete="off" placeholder="New player name" aria-label="New player name"><button type="submit" class="sec">Add player</button></form>
+    <p class="hint2" id="plMsg" role="alert"></p></div>
   <div class="set-group" data-g="instrument"><h3>Instrument</h3><p>Choose what you play. The Tuner, Practice, Recorder and pitch range all switch to match, so you don't have to set them one by one.</p>
     <div class="qk" id="profChips" style="margin-top:0"></div>
     <label class="field hide" id="profTuningWrap" style="margin-top:12px"><span>Tuning</span><select id="profTuning"></select></label>
@@ -330,7 +334,7 @@
     <p class="hint2" id="lcMsg" style="margin:10px 0 0">Live check: tap, then play one steady note for 4 seconds (turn the microphone on first).</p>
     <div class="kv hide" id="lcOut"></div>
     <div id="stOut" style="margin-top:10px"></div></div>
-  <div class="set-group" data-g="data"><h3>Backup &amp; restore</h3><p>Saves both children's scores and history in one file. Send it to yourself by WhatsApp or email, or keep the downloaded copy. A backup can only be imported if its version number is higher than the data on this device.</p>
+  <div class="set-group" data-g="data"><h3>Backup &amp; restore</h3><p>Saves every player's scores and history in one file. Send it to yourself by WhatsApp or email, or keep the downloaded copy. A backup can only be imported if its version number is higher than the data on this device.</p>
     <div class="hint2" id="verInfo"></div>
     <div class="row" style="margin-top:10px"><button id="bkShare">Back up &amp; share</button><button id="bkDl" class="sec">Save file only</button><button id="bkImp" class="sec">Import backup…</button><input type="file" id="impFile" class="hide" accept=".json,.txt,application/json,text/plain"></div>
     <div class="hint2" id="bkMsg" style="margin-top:8px"></div></div>
@@ -344,6 +348,11 @@
 </section>
 </main>
 </div>
+
+<div id="firstRun" class="modal hide" role="dialog" aria-modal="true" aria-labelledby="frT"><div class="modal-in">
+  <h2 id="frT">Who is practising?</h2><p class="mut">Type a name. It stays on this device and is never sent anywhere. You can add more players later in Settings.</p>
+  <form id="frForm"><input id="frName" maxlength="24" autocomplete="off" aria-label="Player name"><button type="submit">Start</button></form>
+  <p id="frMsg" class="hint2" role="alert"></p></div></div>
 
 <script src="js/core/pitch.js"></script>
 <script src="js/core/music.js"></script>
@@ -364,6 +373,7 @@
 <script src="js/app/tuner.js"></script>
 <script src="js/app/practice.js"></script>
 <script src="js/app/analysis.js"></script>
+<script src="js/app/players.js"></script>
 <script src="js/app/metronome.js"></script>
 <script src="js/app/selftest.js"></script>
 <script src="js/app/settings-ui.js"></script>

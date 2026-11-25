@@ -13,6 +13,7 @@ fs.mkdirSync(out, { recursive: true });
 
 // Runs in the page for one tab: click it, report which panels show, and measure page width.
 const PAGE_CHECK = `(async () => {
+  if (!PROFILES.length) addPlayer('Student');   // a new device asks who is practising first (checked separately below)
   const btns = [...document.querySelectorAll('nav.tabs button[data-tab]')];
   const res = { tabs: btns.map(b => b.dataset.tab), items: [] };
   for (const b of btns) {
@@ -73,6 +74,22 @@ srv.listen(0, async () => {
     }
     say(errs.length === 0, `${label}: no script errors${errs.length ? ' - ' + errs.join(' | ') : ''}`);
   }
+  // players: a brand-new device asks who is practising; scores saved under the old names are found again; names with markup are refused
+  const ev = async x => { const r = await send('Runtime.evaluate', { expression: x, awaitPromise: true, returnByValue: true }); return r && r.result && r.result.value; };
+  errs.length = 0; await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+  await send('Page.navigate', { url: `http://localhost:${port}/index.html` }); await wait(800); await ev('localStorage.clear()');
+  await send('Page.navigate', { url: `http://localhost:${port}/index.html` }); await wait(1200);
+  say(await ev("!$('firstRun').classList.contains('hide') && PROFILES.length === 0"), 'players: a new device asks "Who is practising?"');
+  say(await ev("$('frName').value = '<b>x</b>'; $('frForm').requestSubmit(); !$('firstRun').classList.contains('hide') && PROFILES.length === 0 && $('frMsg').textContent.length > 0"), 'players: a name with markup is refused');
+  say(await ev("$('frName').value = 'Ada'; $('frForm').requestSubmit(); $('firstRun').classList.contains('hide') && PROFILES.join() === 'Ada' && $('profile').value === 'Ada' && JSON.parse(localStorage.getItem('tuner-players'))[0].name === 'Ada'"), 'players: a name is added, selected and saved');
+  say(await ev("addPlayer('ada') !== '' && addPlayer('Bo') === '' && PROFILES.join() === 'Ada,Bo' && profile === 'Bo'"), 'players: duplicate refused (any case), a second player can be added');
+  await ev("addEv(60, { k: 'h', c: 3, a: 0.9, s: 2 }, true); switchPlayer('Ada'); addEv(62, { k: 'h', c: 1, a: 0.8, s: 2 }, true); 1");
+  await ev("localStorage.removeItem('tuner-players'); localStorage.setItem('tuner-profile', 'Ada'); 1");   // what a device from before this update looks like: scores under the names, no player list
+  await send('Page.navigate', { url: `http://localhost:${port}/index.html` }); await wait(1200);
+  say(await ev("PROFILES.join() === 'Ada,Bo' && profile === 'Ada' && !!cardAll[62] && $('firstRun').classList.contains('hide')"), 'players: scores saved before the update are found again by name, nothing is lost');
+  await ev("showTab('analysis'); document.querySelector('#anMode button[data-m=cmp]').click(); 1"); await wait(300);
+  say(await ev("document.querySelector('#anBody').textContent.includes('Ada') && document.querySelector('#anBody').textContent.includes('Bo')"), 'players: Compare shows both players');
+  say(errs.length === 0, 'players: no script errors' + (errs.length ? ' - ' + errs.join(' | ') : ''));
   console.log('screenshots in ' + out);
   done(bad ? 1 : 0);
 });
