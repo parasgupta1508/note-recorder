@@ -32,7 +32,7 @@ function showTab(k) {
   tab = k; const lit = TAB_PARENT[k] || k;
   document.querySelectorAll('nav.tabs button').forEach(x => { const on = x.dataset.tab === lit; x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false'); x.tabIndex = on ? 0 : -1; });
   for (const t of ['home', 'pieces', 'tuner', 'scale', 'analysis', 'rec', 'lab', 'settings']) $('tab-' + t).classList.toggle('hide', t !== tab);
-  if (tab !== 'scale') { stopDemo(); stopMetro(); finalizeHold(); if (sc.running) { sc.running = false; $('scStart').textContent = 'Start practice'; $('scMsg').textContent = 'Paused — press Start practice'; renderScale(); } }
+  if (tab !== 'scale') { stopDemo(); stopMetro(); finalizeHold(); if (DRONE.on) droneToggle(false); if (sc.running) { sc.running = false; $('scStart').textContent = 'Start practice'; $('scMsg').textContent = 'Paused — press Start practice'; renderScale(); } }
   if (tab === 'analysis') renderAnalysis();
   if (tab === 'settings') renderSet();
   if (tab === 'lab' && typeof labShow === 'function') labShow();

@@ -1,66 +1,95 @@
 // Scale practice tab and the per-note scorecard.
 // Part of the app. Scripts in js/app load in the order listed in index.html and share one scope.
+// The pure parts (scale + timeline in core/scales.js, instrument rules in core/instruments.js, scoring in core/scoring.js) live in js/core.
 
 // ----- SCALE -----
-const sc = { seq: [], pos: 0, grades: [], attempts: [], running: false, wrong: 0, pass: 1, passes: [] };
-let demoIdx = -1, demoTimers = [], liveBuf = [], silentFrames = 99;
+// sc.tl is the reference timeline (core/scales.js) used by Hear scale and by the live scoring; sc.seq is its MIDI list.
+// sc.slots holds one result per scale position per pass of this run (what the summary and "Spots to fix" use).
+const sc = { seq: [], tl: [], pos: 0, grades: [], attempts: [], running: false, wrong: 0, pass: 1, passes: [], slots: [], slotAt: {}, mode: 'tempo', clock: null, bpm: 80, waitFrames: [], waitOk: 0, label: null, plan: null };
+let demoIdx = -1, liveBuf = [], liveC = [], silentFrames = 99;
 const det = new AttemptDetector(a => onAttempt(a));   // onAttempt lives in practice-engine.js, which loads later
-for (const k in SCALES) $('scType').add(new Option(SCALES[k][0], k));
-NOTES.forEach((n, i) => $('scRoot').add(new Option(n, i)));
+for (const k in SCALE_DEFS) $('scType').add(new Option(SCALE_DEFS[k].label, k));
+const ROOT_LABELS = ['C', 'C♯/D♭', 'D', 'D♯/E♭', 'E', 'F', 'F♯/G♭', 'G', 'G♯/A♭', 'A', 'A♯/B♭', 'B'];
+ROOT_LABELS.forEach((n, i) => $('scRoot').add(new Option(n, i)));
 $('scRoot').value = 0;
 for (const k in PRESETS) $('scInst').add(new Option(PRESETS[k].label, k));
+{ const z = document.createElement('div'); z.className = 'dev-zone'; z.id = 'devZone'; $('devBar').insertBefore(z, $('devMarker')); }   // the green "in tune" band of the ±50¢ meter
 
-const scaleSeq = () => buildScale(+$('scRoot').value, +$('scOct').value, $('scType').value, +$('scSpan').value, $('scDir').value);
-const noteHtml = m => { const n = midiName(m).match(/^([A-G][#♭]?)(-?\d+)$/); return `${n[1]}<small>${n[2]}</small>`; };
+// What the controls ask for, with the instrument's rules applied: start note, effective span, warnings, and the timeline.
+function planNow() {
+  const inst = $('scInst').value, pc = +$('scRoot').value, type = $('scType').value, tech = $('scTech').value, bpm = Math.max(30, Math.min(240, +$('scBpm').value || 80));
+  const plan = planScale(inst, pc, +$('scSpan').value, tech);
+  const tl = buildTimeline({ start: plan.start, type, span: plan.span, bpm, rootPc: pc, slur: slurSize(inst, tech), flats: useFlats ? true : null });
+  return { ...plan, tl, inst, pc, type, tech, bpm };
+}
+const currentPlan = planNow;
+const techLabel = (inst, tech) => (techOptions(inst).options.find(o => o.value === tech) || { label: '' }).label;
+const scaleLabel = () => sc.label || (sc.label = (() => { const p = planNow(); return `${p.tl[0].noteName.replace(/-?\d+$/, '')} ${SCALE_DEFS[p.type].label} · ${p.span} oct` + (techLabel(p.inst, p.tech) ? ` · ${techLabel(p.inst, p.tech)}` : ''); })());
+const nameParts = n => n.match(/^([A-G][#b]?)(-?\d+)$/);
+const noteHtml = n => { const m = nameParts(n); return m ? `${m[1].replace('#', '♯').replace(/b$/, '♭')}<small>${m[2]}</small>` : n; };
+const stringsOf = inst => (PRESETS[inst] && PRESETS[inst].strings || []).map(nameToMidi);
 const complete = () => sc.attempts.length > 0 && sc.pos >= sc.seq.length && !sc.running;
 
 function neutralLive(msg = 'Waiting for note…') {
   $('scHeard').innerHTML = '&nbsp;'; $('scVerdict').textContent = '';
   $('devMarker').className = 'dev-marker'; $('devMarker').style.left = '50%';
   $('devRead').textContent = '–'; $('devRead').className = '';
-  $('scAcc').textContent = msg; $('scAcc').className = 'srow center';
+  $('scAcc').textContent = msg; $('scAcc').className = 'srow center'; liveC = [];
 }
 function renderScale() {
   const seq = sc.seq, A = a4(), demo = demoIdx >= 0;
-  { const lo = Math.min(...seq), hi = Math.max(...seq), fl = noteToFreq(lo, A), fh = noteToFreq(hi, A);
-    $('scRange').innerHTML = `${midiName(lo)}–${midiName(hi)} · ${fl.toFixed(0)}–${fh.toFixed(0)} Hz` + (fl < +$('fmin').value || fh > +$('fmax').value ? ' · <span class="bad-t">outside the detection range — widen it in Settings</span>' : ''); }
-  $('scRow1').className = seq.length > 16 ? 'dense wrap' : seq.length > 9 ? 'dense' : ''; $('scStop').disabled = !(sc.running || demo);
-  $('scRow1').innerHTML = seq.map((m, i) => {
+  if (seq.length) {
+    const lo = Math.min(...seq), hi = Math.max(...seq), fl = noteToFreq(lo, A), fh = noteToFreq(hi, A);
+    $('scRange').innerHTML = `${sc.tl[seq.indexOf(lo)].noteName}–${sc.tl[seq.indexOf(hi)].noteName} · ${fl.toFixed(0)}–${fh.toFixed(0)} Hz` + (fl < +$('fmin').value || fh > +$('fmax').value ? ' · <span class="bad-t">outside the detection range — widen it in Settings</span>' : '');
+  }
+  $('scRow1').className = seq.length > 12 ? 'dense wrap' : seq.length > 9 ? 'dense' : ''; $('scStop').disabled = !(sc.running || demo);
+  $('scRow1').innerHTML = sc.tl.map((n, i) => {
     let cls;
     if (demo) cls = i < demoIdx ? 'ok' : i === demoIdx ? 'cur' : 'pend';
     else if (i < sc.pos && sc.grades[i]) cls = { 'In tune': 'ok', 'Close': 'close', 'Skipped': 'pend' }[sc.grades[i]] || 'bad';
     else cls = sc.running && i === sc.pos ? 'cur' : 'pend';
-    return `<span class="chip mini ${cls}"${sc.grades[i] === 'Skipped' && !demo ? ' title="Skipped"' : ''}>${midiName(m)}</span>`;
+    return `<span class="chip mini ${cls}${n.direction === 'down' ? ' dn' : ''}" title="${n.direction === 'up' ? 'going up' : 'going down'}${sc.grades[i] === 'Skipped' && !demo ? ' · skipped' : ''}">${n.noteName.replace('b', '♭').replace('#', '♯')}</span>`;
   }).join('');
   const idx = demo ? demoIdx : sc.running ? sc.pos : -1;
   if (idx >= 0 && idx < seq.length) {
-    $('scCur').innerHTML = noteHtml(seq[idx]); $('scTarget').textContent = `target ${noteToFreq(seq[idx], A).toFixed(2)} Hz`;
+    const n = sc.tl[idx], fh = sc.plan ? fingerHint(sc.plan.inst, n.midi, stringsOf(sc.plan.inst), sc.plan.tech) : null;
+    $('scCur').innerHTML = noteHtml(n.noteName); $('scTarget').textContent = `target ${noteToFreq(n.midi, A).toFixed(2)} Hz`;
+    $('scArrow').textContent = n.direction === 'up' ? '↑' : '↓'; $('scFinger').textContent = fh ? fh.text : '';
     if (demo) { neutralLive('Demo playing'); $('scHeard').textContent = 'demo playback'; }
   } else if (complete()) {
-    $('scCur').textContent = '✓'; $('scTarget').textContent = 'Scale complete'; neutralLive('');
-  } else { $('scCur').textContent = '–'; $('scTarget').textContent = 'Press Start practice'; neutralLive(); }
+    $('scCur').textContent = '✓'; $('scTarget').textContent = 'Scale complete'; $('scArrow').textContent = ''; $('scFinger').textContent = ''; neutralLive('');
+  } else { $('scCur').textContent = '–'; $('scTarget').textContent = 'Press Start practice'; $('scArrow').textContent = ''; $('scFinger').textContent = ''; neutralLive(); }
 }
 function setMsg(text, cls = 'mut') { $('scMsg').textContent = text; $('scMsg').className = 'center ' + (cls === 'mut' ? 'mut' : cls + '-t'); }
 
-function liveScaleFrame(f) {
-  if (!sc.running || demoIdx >= 0 || sc.pos >= sc.seq.length) return;
-  if (!f) { if (++silentFrames > 8) neutralLive(); return; }
+// The live meter: cents from the target, smoothed (wide window for vibrato on bowed strings, narrow for frets), +-50 cents across the bar.
+const liveMedian = a => { const s = a.slice().sort((x, y) => x - y); return s[s.length >> 1]; };
+function liveScaleFrame(f, t) {
+  if (!sc.running || demoIdx >= 0) return;
+  clockTick(t);
+  if (sc.pos >= sc.seq.length) return;
+  if (!f) { if (++silentFrames > 8) { neutralLive(); sc.waitFrames = []; sc.waitOk = 0; } return; }   // a bow change or a breath is a short gap, not an error
+  const T = tol(), target = sc.seq[sc.pos], raw = centsOffset(f, target, a4());
+  if (isOctaveGlitch(raw)) return;                         // YIN octave/twelfth glitch: not a pitch the player made
   silentFrames = 0;
-  const T = tol(), target = noteToFreq(sc.seq[sc.pos], a4()), c = centsBetween(f, target), a = Math.abs(c);
+  const rule = ruleFor($('scInst').value);
+  liveC.push(raw); if (liveC.length > 15) liveC.shift();
+  const c = liveMedian(liveC.slice(-rule.smooth)), a = Math.abs(c);
   const cls = a <= T ? 'ok' : a <= 25 ? 'warn' : 'bad';
   $('scHeard').textContent = `heard ${f.toFixed(2)} Hz   ${c >= 0 ? '+' : '−'}${a.toFixed(0)}¢`;
   $('scVerdict').textContent = gradeCents(c, T); $('scVerdict').className = `verdict ${cls}-t`;
-  const u = Math.max(-10, Math.min(10, c / 10));
-  $('devMarker').style.left = (50 + u * 5) + '%'; $('devMarker').className = 'dev-marker ' + cls;
+  $('devMarker').style.left = (50 + Math.max(-50, Math.min(50, c)) * 0.9) + '%'; $('devMarker').className = 'dev-marker ' + cls;
+  const z = $('devZone'); if (z.dataset.t !== String(T)) { z.dataset.t = T; z.style.left = (50 - T * 0.9) + '%'; z.style.width = (T * 1.8) + '%'; }
   $('devRead').textContent = `${c >= 0 ? '+' : '−'}${a.toFixed(0)}¢`; $('devRead').className = cls + '-t';
   liveBuf.push(a <= T ? 1 : 0); if (liveBuf.length > 90) liveBuf.shift();
   const pct = 100 * liveBuf.reduce((s, x) => s + x, 0) / liveBuf.length;
-  $('scAcc').textContent = `Accuracy this note: ${pct.toFixed(0)}% (${liveBuf.length} frames)`;
+  $('scAcc').textContent = sc.mode === 'wait' ? `Hold it in tune: ${Math.min(sc.waitOk, rule.holdFrames)}/${rule.holdFrames}` : `Accuracy this note: ${pct.toFixed(0)}% (${liveBuf.length} frames)`;
   $('scAcc').className = 'srow center ' + (pct >= 80 ? 'ok' : pct >= 50 ? 'warn' : 'bad') + '-t';
+  if (sc.mode === 'wait') waitFrame(raw, a <= T, rule);
 }
 
 // ----- per-note scorecard (keybr-style) -----
-// Every play of a note adds one event: hit {c: mean cents, a: share of frames in tolerance, s: wobble},
+// Every play of a note adds one event: hit {c: mean cents, a: share of frames in tolerance, s: wobble, e: timing error ms, d: direction},
 // skip {k:'s'} or slip {k:'w'} (a wrong note played while this one was expected). Recent events weigh more.
 const CARD_MAX = 150;                                   // plays kept per note (older ones fall off)
 const ckey = p => 'tuner-scorecard-v2-' + p, pkey = p => 'tuner-passes-v2-' + p;
@@ -93,46 +122,28 @@ function addEv(midi, ev, quiet) {
   if (!quiet) renderCard();
 }
 function savePass(pct) { passAll.push({ t: Date.now(), pct, s: scaleLabel() }); if (passAll.length > 300) passAll.shift(); if (profile) lsSet(pkey(profile), passAll); }
-const clamp01 = x => Math.max(0, Math.min(1, x));
-// Instrument-specific steadiness: how much pitch wobble (¢, std-dev) earns zero steadiness credit.
-// Bowed/vibrato instruments forgive more; fretted instruments (fixed pitch) are held to a tighter standard.
-const INST_WOBBLE = { chromatic: 25, guitar: 20, ukulele: 20, ukuleleLow: 20, ukuleleBar: 20, bass: 20, bass5: 20, violin: 40, viola: 40, cello: 40, mandolin: 25 };
-const wobbleCap = e => INST_WOBBLE[e.i] || 25;
-function noteScore(evs) {
-  const n = evs.length; if (n < 3) return null;                 // not enough data yet
-  let W = 0, Wh = 0, Ws = 0, acc = 0, bias = 0, sd = 0, sdn = 0;
-  evs.forEach((e, i) => {
-    const w = Math.pow(0.9, n - 1 - i); W += w;
-    if (e.k === 'h') {
-      Wh += w; acc += w * e.a; bias += w * e.c;
-      if (typeof e.s === 'number') { Ws += w; sd += w * e.s; sdn += w * e.s / wobbleCap(e); }   // very short notes carry no wobble measurement
-    }
-  });
-  const hitRate = Wh / W; if (Wh) { acc /= Wh; bias /= Wh; }
-  const sdv = Ws ? sd / Ws : 0, sdnv = Ws ? sdn / Ws : 0.5;     // wobble unknown => half steadiness credit, never full
-  const hit = Wh > 0;                                            // never actually played => no credit for "centred"/"steady"
-  const score = 100 * (0.4 * acc + (hit ? 0.25 * clamp01(1 - Math.abs(bias) / 30) + 0.15 * clamp01(1 - sdnv) : 0) + 0.2 * hitRate);
-  return { score, bias, acc, sd: sdv, hitRate, n, hit };
-}
-const biasText = (b, hit = true) => !hit ? 'never played' : Math.abs(b) < 5 ? 'centred' : `${b > 0 ? 'sharp' : 'flat'} by ${Math.abs(b).toFixed(0)}¢`;
 // While a note is held, keep collecting its frames (after the attack) so we can score accuracy and steadiness.
+// An octave glitch frame is skipped like a gap (a few in a row end the note), so one bad YIN frame does not cut a held note short.
 function collectHold(f) {
   if (!hold) return;
   if (f) {
     const c = centsBetween(f, noteToFreq(hold.midi, a4()));
-    if (Math.abs(c) <= 65) { hold.frames.push(c); hold.gap = 0; } else finalizeHold();
+    if (Math.abs(c) <= 65) { hold.frames.push(c); hold.gap = 0; } else if (isOctaveGlitch(c)) { if (++hold.gap >= 4) finalizeHold(); } else finalizeHold();
   } else if (++hold.gap >= 4) finalizeHold();
 }
 function finalizeHold() {
   const h = hold; hold = null; if (!h) return;
   let c = h.c0, a = Math.abs(h.c0) <= h.T ? 1 : 0, s = null;   // s stays null when the note was too short to measure wobble
-  const fr = h.frames;
-  if (fr.length >= 4) {
-    c = fr.reduce((x, y) => x + y, 0) / fr.length;
-    s = Math.sqrt(fr.reduce((x, y) => x + (y - c) * (y - c), 0) / fr.length);
-    a = fr.filter(x => Math.abs(x) <= h.T).length / fr.length;
-  }
-  addEv(h.midi, { k: 'h', c, a, s, sl: h.sl, i: h.i });
+  if (h.frames.length >= 4) { const st = holdStats(h.frames, h.T, ruleFor(h.i).smooth); c = st.c; s = st.s; a = st.a; }
+  addEv(h.midi, { k: 'h', c, a, s, e: h.e, d: h.d, sl: h.sl, i: h.i }, true);
+  Object.assign(slotFor(h.ix, h.pass), { k: 'h', c, a, s, e: h.e });
+  renderCard(); renderSummary();
+}
+// One result per scale position per pass of this run.
+function slotFor(i, pass = sc.pass) {
+  const key = pass + ':' + i; let s = sc.slotAt[key];
+  if (!s) { const n = sc.tl[i]; s = sc.slotAt[key] = { pass, index: i, name: n.noteName, midi: n.midi, d: n.direction, k: 's', c: null, a: 0, s: null, e: null, wrong: 0 }; sc.slots.push(s); }
+  return s;
 }
 const SPARK = '▁▂▃▄▅▆▇█';
 const sortSt = { card: { k: 'm', d: 1 }, ana: { k: 'latest', d: 1 }, cmp: { k: 'm', d: 1 } };
@@ -144,24 +155,22 @@ document.addEventListener('click', e => {
   if (s.k === k) s.d = -s.d; else { s.k = k; s.d = 1; }
   if (th.dataset.t === 'card') renderCard(); else renderAnalysis();
 });
-const scaleNotes = () => [...new Set(sc.seq)].sort((a, b) => a - b);
-const scaleLabel = () => `${$('scRoot').selectedOptions[0].text} ${$('scType').selectedOptions[0].text} · oct ${$('scOct').value} · ${$('scSpan').value} oct · ${$('scDir').value}`;
-const statusOf = s => !s ? ['Needs data', 'na'] : s.score >= 85 ? ['Strong', 'ok'] : s.score >= 70 ? ['OK', 'mid'] : ['Weak', 'bad'];
-const cmtOf = (evs, s) => {
-  const sk = evs.filter(e => e.k === 's').length, wr = evs.filter(e => e.k === 'w').length, p = [];
-  p.push(s ? biasText(s.bias, s.hit) : evs.length ? `${evs.length}/3 plays so far` : 'not played yet');
-  if (sk) p.push(`${sk} skipped`); if (wr) p.push(`${wr} wrong`);
-  return p.join(' · ');
-};
+const scaleNotes = () => [...new Set(sc.seq)].sort((a, b) => a - b);   // the analysis page adds the current scale's notes
+const scoreCls = s => !s ? 'na' : s.score >= 85 ? 'ok' : s.score >= 70 ? 'mid' : 'bad';
+// One row per scale position: F#4 going up and F#4 going down are separate rows.
+function cardRows(store) {
+  const T = tol(), cap = e => ruleFor(e.i || $('scInst').value).wobble;
+  return sc.tl.map(n => {
+    const evs = eventsFor(store, n.midi, n.direction), s = noteScore(evs, cap, 1), st = noteStatus(evs, s, T);
+    return { m: n.index, midi: n.midi, d: n.direction, name: n.noteName, evs, s, score: s ? s.score : null, stk: s ? s.score : null, bias: s ? s.bias : null, st, cmt: commentFor(evs, s, cap(evs[0] || {})) };
+  });
+}
 function renderCard() {
   const store = $('cardView').value === 'all' ? cardAll : cardSess;
-  const mids = scaleNotes();            // the scorecard always follows the scale chosen in the options
-  const rows = mids.map(m => {
-    const evs = store[m] || [], s = noteScore(evs), [st, cls] = statusOf(s);
-    return { m, name: midiName(m), score: s ? s.score : null, stk: s ? s.score : null, bias: s ? s.bias : null, st, cls, cmt: cmtOf(evs, s) };
-  });
+  const rows = cardRows(store);
+  const badge = r => r.st ? `<span class="b b-${r.st}">${STATUS_LABEL[r.st]}</span>` : '<span class="b b-na">No data</span>';
   $('cardTable').innerHTML = rows.length ? `<table>${thead('card', [['score', 'Score'], ['m', 'Note'], ['stk', 'Status'], ['bias', 'Comment']])}` +
-    sortRows('card', rows).map(r => `<tr><td><span class="sc ${r.cls}">${r.score != null ? r.score.toFixed(0) : '–'}</span></td><td><b>${r.name}</b></td><td class="${r.cls === 'na' ? 'mut' : r.cls + '-t'}">${r.st}</td><td>${r.cmt}</td></tr>`).join('') + '</table>'
+    sortRows('card', rows).map(r => `<tr><td><span class="sc ${scoreCls(r.s)}">${r.score != null ? r.score.toFixed(0) : '–'}</span></td><td><b>${r.name.replace('b', '♭').replace('#', '♯')}</b> <span class="mut">${r.d === 'up' ? '↑' : '↓'}</span></td><td>${badge(r)}</td><td>${r.cmt}</td></tr>`).join('') + '</table>'
     : '<span class="mut">Play a scale to build the scorecard.</span>';
   const ps = sc.passes;
   $('cardTrend').textContent = ps.length ? `Passes: ${ps.map(p => SPARK[Math.min(7, Math.floor(p.pct / 12.5))]).join('')}  ${ps.map(p => p.pct.toFixed(0) + '%').join(' → ')}` : '';
@@ -173,12 +182,31 @@ $('cardReset').onclick = () => {
   if (all) { cardAll = {}; passAll = []; try { localStorage.removeItem(ckey(profile)); localStorage.removeItem(pkey(profile)); } catch {} } else cardSess = {};
   renderCard(); renderAnalysis();
 };
+// Scorecard export: one row per note and direction (events saved before directions existed are "any").
+function cardExportRows(store) {
+  const T = tol(), out = [];
+  for (const m of Object.keys(store).map(Number).sort((x, y) => x - y)) {
+    const groups = new Map(); store[m].forEach(e => { const d = e.d || 'any'; (groups.get(d) || groups.set(d, []).get(d)).push(e); });
+    for (const [d, evs] of groups) {
+      const s = noteScore(evs, e => ruleFor(e.i).wobble, 1), tm = evs.filter(e => typeof e.e === 'number');
+      out.push({ note: midiName(m), midi: m, direction: d, plays: evs.length, score: s ? +s.score.toFixed(0) : null, status: noteStatus(evs, s, T) || '', bias_cents: s ? +s.bias.toFixed(1) : null,
+        in_tune_pct: s ? +(100 * s.acc).toFixed(0) : null, wobble_cents: s ? +s.sd.toFixed(1) : null, played_pct: s ? +(100 * s.hitRate).toFixed(0) : null,
+        timing_ms: tm.length ? +(tm.reduce((a, b) => a + b.e, 0) / tm.length).toFixed(0) : null, instrument: (evs[evs.length - 1].i || ''), scale: (evs[evs.length - 1].sl || '') });
+    }
+  }
+  return out;
+}
+const CARD_COLS = ['note', 'direction', 'plays', 'score', 'status', 'bias_cents', 'in_tune_pct', 'wobble_cents', 'played_pct', 'timing_ms', 'instrument', 'scale'];
+const csvCell = v => v == null ? '' : /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
 $('cardCsv').onclick = () => {
   const store = $('cardView').value === 'all' ? cardAll : cardSess;
-  const rows = Object.keys(store).map(Number).sort((x, y) => x - y).map(m => {
-    const s = noteScore(store[m]);
-    return [midiName(m), store[m].length, s ? s.score.toFixed(0) : '', s ? s.bias.toFixed(1) : '', s ? (100 * s.acc).toFixed(0) : '', s ? s.sd.toFixed(1) : '', s ? (100 * s.hitRate).toFixed(0) : ''].join(',');
-  });
-  download(`scorecard-${profile}-${stamp()}.csv`, ['note,plays,score,bias_cents,in_tune_pct,wobble_cents,played_pct', ...rows].join('\n'), 'text/csv');
+  download(`scorecard-${profile}-${stamp()}.csv`, [CARD_COLS.join(','), ...cardExportRows(store).map(r => CARD_COLS.map(c => csvCell(r[c])).join(','))].join('\n'), 'text/csv');
 };
-
+// JSON export of this run: settings, the reference timeline, every result, the summary and the scorecard.
+function scaleJson() {
+  const p = sc.plan || planNow(), store = $('cardView').value === 'all' ? cardAll : cardSess;
+  return JSON.stringify({ app: 'scale-drills', version: 2, exported: new Date().toISOString(), player: profile || null,
+    settings: { instrument: p.inst, root: p.pc, scale: p.type, span: p.span, requestedSpan: p.requestedSpan, technique: p.tech, bpm: sc.bpm || p.bpm, mode: sc.mode, tolerance_cents: tol() },
+    plan: { start: p.start, top: p.top, warnings: p.warnings }, timeline: sc.tl, results: sc.slots, summary: summariseRun(sc.slots, { tol: tol(), beatMs: 60000 / (sc.bpm || p.bpm) }),
+    scorecard: cardExportRows(store), attempts: sc.attempts }, null, 2);
+}

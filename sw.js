@@ -1,6 +1,6 @@
 // Service worker: makes the app installable and usable offline.
 // Bump CACHE whenever you change any file, so installed copies pick up the update.
-const CACHE = 'tuner-v45';
+const CACHE = 'tuner-v46';
 const VENDOR = 'tuner-vendor-v1';   // the Detailed-analysis files live in their own cache, so a new app version does not delete them
 const FILES = [
   './',
@@ -10,6 +10,9 @@ const FILES = [
   './css/lab.css',
   './js/core/pitch.js',
   './js/core/music.js',
+  './js/core/instruments.js',
+  './js/core/scales.js',
+  './js/core/scoring.js',
   './js/core/segmenter.js',
   './js/core/listening.js',
   './js/core/detailed.js',
@@ -34,6 +37,7 @@ const FILES = [
   './js/app/analysis.js',
   './js/app/players.js',
   './js/app/metronome.js',
+  './js/app/reference.js',
   './js/app/selftest.js',
   './js/app/settings-ui.js',
   './js/app/practice-engine.js',

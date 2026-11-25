@@ -140,20 +140,26 @@
       <div class="tempo">
         <label class="field bpm"><span>Tempo (BPM)</span><div class="stepper"><button id="bpmDn" class="sec" aria-label="Slower">−</button><input id="scBpm" type="number" value="80" min="30" max="240" inputmode="numeric"><button id="bpmUp" class="sec" aria-label="Faster">+</button></div></label>
         <label class="field"><span>Beats</span><select id="scSig"><option value="2">2/2</option><option value="3">3/4</option><option value="4" selected>4/4</option></select></label>
-        <button id="metro" class="sec" aria-label="Metronome">♩ Click</button>
+        <div class="tbtns">
+          <button id="metro" class="sec" aria-label="Metronome">♩ Click</button>
+          <button id="drone" class="sec" aria-label="Tonic drone" title="Plays the scale's first note as a quiet continuous drone. Use headphones so the microphone does not hear it.">𝅘𝅥 Drone</button>
+        </div>
+      </div>
+      <div class="seg" id="scMode" role="group" aria-label="Practice mode">
+        <button type="button" data-mode="tempo" class="on" title="The target follows the BPM: a count-in bar, then each note is due on its beat">⏱ Tempo-locked</button>
+        <button type="button" data-mode="wait" title="The target waits for you and moves on when the note is held in tune">⏸ Wait for note</button>
       </div>
       <div class="beats" id="beats" aria-hidden="true"></div>
       <details id="scOpts"><summary>Scale options</summary>
-        <div class="opt-h" style="margin-top:6px">Scale</div>
+        <div class="opt-h opt-row" style="margin-top:6px"><span>Scale</span><button id="scRandom" class="sec mini" title="Pick a random root, scale and span, like an exam prompt">🎲 Random</button></div>
         <div class="grid">
           <label class="field"><span>Instrument</span><select id="scInst"></select></label>
           <label class="field"><span>Root</span><select id="scRoot"></select></label>
-          <label class="field"><span>Octave</span><select id="scOct"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
           <label class="field"><span>Scale</span><select id="scType"></select></label>
-          <label class="field"><span>Span</span><select id="scSpan"><option value="1">1 octave</option><option value="2">2 octaves</option><option value="3">3 octaves</option><option value="4">4 octaves</option></select></label>
-          <label class="field"><span>Direction</span><select id="scDir"><option value="asc">Ascending</option><option value="desc">Descending</option><option value="both">Both</option></select></label>
+          <label class="field"><span>Span</span><select id="scSpan"><option value="1">1 octave</option><option value="2">2 octaves</option><option value="3">3 octaves</option></select></label>
+          <label class="field" id="scTechWrap"><span id="scTechLbl">Bowing</span><select id="scTech"></select></label>
         </div>
-        <div class="hint2" style="margin-top:8px"><span id="instRange"></span> The instrument also adjusts the steadiness part of the score: violin allows vibrato, guitar and ukulele are held steadier.</div>
+        <div class="hint2" style="margin-top:8px"><span id="instRange"></span> The scale always goes up and then down from the lowest comfortable start. The instrument also adjusts the steadiness part of the score: violin allows vibrato, guitar and ukulele are held steadier.</div>
         <div class="opt-h">Practice</div>
         <div style="margin-top:-4px">
           <label class="check"><input type="checkbox" id="scStrict" checked> Strict — flag wrong notes</label>
@@ -170,16 +176,17 @@
       <div class="livecard">
         <!-- Row 2: current expected note -->
         <div class="readout">
-          <div id="scCur" class="big">–</div>
+          <div class="tgt"><span id="scArrow" class="dirarrow" aria-hidden="true"></span><div id="scCur" class="big">–</div></div>
           <div id="scTarget" class="center mut">Press Start practice</div>
+          <div id="scFinger" class="center fing"></div>
           <div id="scHeard" class="center">&nbsp;</div>
           <div id="scVerdict" class="verdict"></div>
           <div id="scMsg" class="center mut" style="min-height:20px;font-size:14px"></div>
         </div>
-        <!-- Row 3: deviation bar (±1 semitone) -->
+        <!-- Row 3: deviation bar (±50 cents) -->
         <div class="srow">
           <div class="dev-bar" id="devBar"><div class="dev-mid"></div><div id="devMarker" class="dev-marker"></div></div>
-          <div class="dev-labels"><span>♭ −1 semitone</span><span id="devRead">–</span><span>+1 semitone ♯</span></div>
+          <div class="dev-labels"><span>♭ −50¢</span><span id="devRead">–</span><span>+50¢ ♯</span></div>
         </div>
         <!-- Row 4: live accuracy for the current note -->
         <div class="srow center" id="scAcc">Waiting for note…</div>
@@ -195,7 +202,7 @@
           <button id="cardReset" class="sec">Reset</button><button id="cardCsv" class="sec">Export</button></div></div>
         <div id="cardTrend" class="mut" style="margin-top:8px"></div>
         <div id="cardTable" class="scroll tbl" style="margin-top:8px"></div>
-        <div class="mut" style="font-size:13px;margin-top:6px">Notes follow the chosen scale. Tap a heading to sort. A note needs 3 plays to get a score.</div>
+        <div class="mut" style="font-size:13px;margin-top:6px">Rows follow the chosen scale; going up and going down are scored separately. Tap a heading to sort. Green in tune, blue flat, red sharp, purple wrong note.</div>
       </div>
     </div>
   </div>
@@ -420,6 +427,9 @@
 
 <script src="js/core/pitch.js"></script>
 <script src="js/core/music.js"></script>
+<script src="js/core/instruments.js"></script>
+<script src="js/core/scales.js"></script>
+<script src="js/core/scoring.js"></script>
 <script src="js/core/segmenter.js"></script>
 <script src="js/core/listening.js"></script>
 <script src="js/core/detailed.js"></script>
@@ -444,6 +454,7 @@
 <script src="js/app/analysis.js"></script>
 <script src="js/app/players.js"></script>
 <script src="js/app/metronome.js"></script>
+<script src="js/app/reference.js"></script>
 <script src="js/app/selftest.js"></script>
 <script src="js/app/settings-ui.js"></script>
 <script src="js/app/practice-engine.js"></script>

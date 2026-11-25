@@ -43,7 +43,7 @@ const INST_PROFILES = [
   { k: 'all',      name: 'All',      fam: null,        range: [60, 1500], rec: 'auto' },
   { k: 'guitar',   name: 'Guitar',   fam: 'guitar',    range: [70, 1500], rec: 'auto' },
   { k: 'bass',     name: 'Bass',     fam: 'bass',      range: [30, 400],  rec: 'auto' },
-  { k: 'violin',   name: 'Violin',   fam: 'violin',    range: [180, 2800], rec: 'auto' },
+  { k: 'violin',   name: 'Violin',   fam: 'violin',    range: [180, 3300], rec: 'auto' },
   { k: 'viola',    name: 'Viola',    fam: 'viola',     range: [120, 1500], rec: 'auto' },
   { k: 'cello',    name: 'Cello',    fam: 'cello',     range: [55, 1200], rec: 'auto' },
   { k: 'ukulele',  name: 'Ukulele',  fam: 'ukulele',   range: [140, 1400], rec: 'auto' },
@@ -126,7 +126,7 @@ function loop() {
   liveFrame(f, gateOn);
   if (tab === 'tuner') tunerFrame(t, f);
   if (demoIdx < 0) collectHold(f);                   // keep scoring the note that is still sounding
-  if (sc.running && demoIdx < 0) { det.frame(t, f, a4()); liveScaleFrame(f); }
+  if (sc.running && demoIdx < 0) { det.frame(t, f, a4()); liveScaleFrame(f, t); }
   if (tab === 'rec' && recording) { drawRoll(); recUi(); }
 }
 
