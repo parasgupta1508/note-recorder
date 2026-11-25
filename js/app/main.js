@@ -11,8 +11,8 @@ $('scCsv').onclick = () => download(`scale-${stamp()}.csv`, ['pass,index,expecte
   ...sc.attempts.map(a => [a.pass, a.index, a.expected, a.played, a.grade, a.hz == null ? '' : a.hz.toFixed(2), a.cents == null ? '' : a.cents.toFixed(1), a.time_s.toFixed(3)].join(','))].join('\n'), 'text/csv');
 $('scJson').onclick = () => download(`scale-${stamp()}.json`, JSON.stringify({ scale: $('scType').value, notes: sc.seq.map(midiName), attempts: sc.attempts }, null, 2), 'application/json');
 $('clear').onclick = clearRec;
-$('rec').onclick = () => setRecording(!recording);
-$('start').onclick = async () => { try { listening ? stopListening() : await startListening(); } catch (e) { $('status').textContent = 'Mic error: ' + e.message; } };
+$('rec').onclick = async () => { if (!recording && !listening) { await ensureMic(); if (!listening) return; } setRecording(!recording); };   // Record starts the microphone itself
+$('micChip').onclick = async () => { if (listening) stopListening(); else await ensureMic(); };
 
 function applyTol() {
   const T = tol();

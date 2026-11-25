@@ -10,9 +10,9 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Tuner">
+<meta name="apple-mobile-web-app-title" content="Practice Companion">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Tuner & Scale Trainer</title>
+<title>Practice Companion</title>
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/lab.css">
 </head>
@@ -20,7 +20,7 @@
 <header class="appbar"><div class="in">
   <div class="bar">
     <label class="who-wrap"><span>Player</span><select id="profile" class="who" aria-label="Who is playing"><option>Nandini</option><option>Nayonika</option></select></label>
-    <div class="bar-r"><span id="status"></span><button id="start">▶ Start listening</button></div>
+    <div class="bar-r"><span id="status" role="status"></span><button type="button" id="micChip" class="mic-chip" aria-pressed="false" aria-label="Microphone is off. Tap to turn it on."><span class="mic-dot" aria-hidden="true"></span><span id="micTxt">Mic off</span></button></div>
   </div>
   <!-- live input level (−60…0 dBFS, after boost); the white tick is the gate: sound must reach past it to be analysed -->
   <div class="level"><span>Input</span>
@@ -29,18 +29,35 @@
 </div></header>
 
 <div class="wrap">
-<div class="tabs-wrap"><nav class="tabs" aria-label="Mode">
-  <button data-tab="tuner" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/></svg>Tuner</button>
-  <button data-tab="scale"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h4v-4h4v-4h4V8h6"/></svg>Practice</button>
-  <button data-tab="analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Analysis</button>
-  <button data-tab="rec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>Recorder</button>
-  <button data-tab="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M8 15h8"/></svg>Lab</button>
-  <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Settings</button>
+<div class="tabs-wrap"><nav class="tabs" id="mainTabs" role="tablist" aria-label="Main">
+  <button type="button" role="tab" id="nav-home" data-tab="home" aria-controls="tab-home" aria-selected="true" tabindex="0" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Practice</button>
+  <button type="button" role="tab" id="nav-pieces" data-tab="pieces" aria-controls="tab-pieces" aria-selected="false" tabindex="-1" class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg>Pieces</button>
+  <button type="button" role="tab" id="nav-tuner" data-tab="tuner" aria-controls="tab-tuner" aria-selected="false" tabindex="-1" class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/></svg>Tuner</button>
+  <button type="button" role="tab" id="nav-analysis" data-tab="analysis" aria-controls="tab-analysis" aria-selected="false" tabindex="-1" class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Progress</button>
+  <button type="button" role="tab" id="nav-settings" data-tab="settings" aria-controls="tab-settings" aria-selected="false" tabindex="-1" class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Settings</button>
 </nav></div>
 
 <main>
+<!-- ============ PRACTICE (home) ============ -->
+<section id="tab-home" class="panel stack" role="tabpanel" aria-labelledby="nav-home">
+  <h2 class="pg-h">Practice</h2>
+  <div class="home-card"><b>Your pieces</b><p class="mut">Add a piece to practise bar by bar with feedback on every note. Coming soon: this card will continue where you stopped.</p>
+    <div class="row"><button type="button" class="sec" data-go="pieces">Open Pieces</button></div></div>
+  <div class="home-quick" aria-label="Quick start">
+    <button type="button" class="home-btn" data-go="tuner"><b>Tuner</b><small>Check a string or note</small></button>
+    <button type="button" class="home-btn" data-go="scale"><b>Scale drills</b><small>Play a scale, get graded</small></button>
+    <button type="button" class="home-btn" data-go="rec"><b>Free record</b><small>See what you just played</small></button>
+  </div>
+</section>
+
+<!-- ============ PIECES ============ -->
+<section id="tab-pieces" class="panel stack hide" role="tabpanel" aria-labelledby="nav-pieces">
+  <h2 class="pg-h">Pieces</h2>
+  <div class="home-card"><b>Nothing here yet</b><p class="mut">Your library and “Add a piece” arrive in the next updates. Until then, use the Tuner, Scale drills and Free record from the Practice tab.</p></div>
+</section>
+
 <!-- ============ TUNER ============ -->
-<section id="tab-tuner" class="panel tuner">
+<section id="tab-tuner" class="panel tuner hide" role="tabpanel" aria-labelledby="nav-tuner">
   <div class="t-side stack">
     <div id="instBox"><div id="instChips"></div><select id="tuningSel" class="hide" aria-label="Tuning"></select></div>
     <div id="strBox">
@@ -133,7 +150,7 @@
 </section>
 
 <!-- ============ ANALYSIS ============ -->
-<section id="tab-analysis" class="panel hide stack">
+<section id="tab-analysis" class="panel hide stack" role="tabpanel" aria-labelledby="nav-analysis">
   <div class="an-head">
     <div class="seg" id="anMode"><button data-m="prog" class="on">Progress</button><button data-m="cmp">Compare kids</button></div>
     <label class="field scope"><span>Scale</span><select id="anScope"><option value="cur">Current scale</option><option value="all">All scales</option></select></label>
@@ -147,7 +164,7 @@
 <section id="tab-rec" class="panel hide stack" data-view="sheet">
   <div class="rbar">
     <button id="rec" disabled>● Record</button>
-    <span id="recInfo">Start listening, then press Record.</span>
+    <span id="recInfo">Press Record.</span>
     <div class="segc" role="group" aria-label="Chart style">
       <button id="vwSheet" class="on" aria-pressed="true">Sheet</button>
       <button id="vwFall" aria-pressed="false">Falling</button>
@@ -254,7 +271,7 @@
 </section>
 
 <!-- ============ SETTINGS ============ -->
-<section id="tab-settings" class="panel hide stack" data-layout="list">
+<section id="tab-settings" class="panel hide stack" role="tabpanel" aria-labelledby="nav-settings" data-layout="list">
   <div id="setMenu"></div><div id="setTabs"></div><button id="setBack"><span>‹</span> <b id="setTitle"></b></button>
   <div class="set-group" data-g="instrument"><h3>Instrument</h3><p>Choose what you play. The Tuner, Practice, Recorder and pitch range all switch to match, so you don't have to set them one by one.</p>
     <div class="qk" id="profChips" style="margin-top:0"></div>
@@ -286,7 +303,7 @@
         <label class="field"><span>Input boost <b id="boostVal">1×</b></span><input id="boost" type="range" min="1" max="8" step="0.5" value="1"></label>
       </div>
       <p class="hint2" style="margin:10px 0 0">Gate: sound quieter than the white tick is ignored. Raise it if the tuner reacts to room noise. Boost: raise it if your microphone is quiet; lower it if the bar shows CLIPPING.</p></details>
-    <div class="hint2" id="micProc" style="margin-top:12px">Mic processing: start listening to check.</div>
+    <div class="hint2" id="micProc" style="margin-top:12px">Mic processing: turn the microphone on to check.</div>
     <div class="hint2" id="audioInfo" style="margin-top:4px"></div></div>
 
   <div class="set-group" data-g="detect"><h3>Detection</h3><p>How careful the app is before it shows a note. Pick a preset, or fine-tune below.</p>
@@ -310,18 +327,19 @@
 
   <div class="set-group" data-g="check"><h3>Accuracy check</h3><p>The software test proves the maths. The live check measures your own microphone and instrument.</p>
     <div class="row"><button id="selftest" class="sec">Software test</button><button id="livetest" class="sec">Live check</button></div>
-    <p class="hint2" id="lcMsg" style="margin:10px 0 0">Live check: tap, then play one steady note for 4 seconds (start listening first).</p>
+    <p class="hint2" id="lcMsg" style="margin:10px 0 0">Live check: tap, then play one steady note for 4 seconds (turn the microphone on first).</p>
     <div class="kv hide" id="lcOut"></div>
     <div id="stOut" style="margin-top:10px"></div></div>
   <div class="set-group" data-g="data"><h3>Backup &amp; restore</h3><p>Saves both children's scores and history in one file. Send it to yourself by WhatsApp or email, or keep the downloaded copy. A backup can only be imported if its version number is higher than the data on this device.</p>
     <div class="hint2" id="verInfo"></div>
     <div class="row" style="margin-top:10px"><button id="bkShare">Back up &amp; share</button><button id="bkDl" class="sec">Save file only</button><button id="bkImp" class="sec">Import backup…</button><input type="file" id="impFile" class="hide" accept=".json,.txt,application/json,text/plain"></div>
     <div class="hint2" id="bkMsg" style="margin-top:8px"></div></div>
-  <div class="set-group" data-g="data"><h3>Settings layout</h3><p>How this page is arranged.</p>
+  <div class="set-group" data-g="layout"><h3>Settings layout</h3><p>How this page is arranged.</p>
     <div class="seg" id="laySeg"><button data-l="list">List</button><button data-l="tabs">Tabs</button><button data-l="classic">Classic</button></div></div>
-  <div class="set-group" data-g="data"><h3>Install app</h3><p id="instText">Install the app on this device so it opens like a normal app, works without internet, and keeps your recordings' analysis files.</p>
+  <div class="set-group" data-g="install"><h3>Install app</h3><p id="instText">Install the app on this device so it opens like a normal app, works without internet, and keeps your recordings' analysis files.</p>
     <button id="installBtn" class="hide">Install app</button></div>
-  <div class="set-group" data-g="data"><h3>Reset</h3><p>Put every setting above back to its recommended value.</p>
+  <div class="set-group" data-g="dev"><h3>Developer</h3><p>Tools for checking how the app listens. You do not need them to practise.</p><label class="field"><span>Show developer tools</span><input type="checkbox" id="devOn"></label><div class="row"><button type="button" class="sec hide" id="openLab">Open Lab</button></div></div>
+  <div class="set-group" data-g="reset"><h3>Reset</h3><p>Put every setting above back to its recommended value.</p>
     <button id="defaults" class="sec">Restore default settings</button></div>
 </section>
 </main>

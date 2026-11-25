@@ -127,7 +127,7 @@ async function analyseDetailed() {
     console.warn('Detailed analysis failed:', err && (err.stack || err.message || err));
     detEv = null; info.textContent = err && err.message === 'offline' ? 'Detailed analysis needs its files. Connect to the internet once, then it works offline.' : 'Detailed analysis could not run on this device. The Live result is shown.';
   }
-  detBusy = false; $('rec').disabled = !listening; engUi(); recUi();
+  detBusy = false; $('rec').disabled = false; engUi(); recUi();
 }
 
 // Offline audio-file analysis. Parked: not wired to any button right now. To bring it back, add
@@ -193,7 +193,7 @@ function recUi() {
   $('pbMode').disabled = !has; $('pbSpeed').disabled = !has || $('pbMode').value !== 'notes';
   $('pbTime').textContent = `${fmtT(recording ? len : pbPos())} / ${fmtT(len)}`;
   $('recInfo').textContent = recording ? `REC ${fmtT(len)} · ${events.length} ${events.length === 1 ? 'note' : 'notes'}`
-    : has ? `${events.length} ${events.length === 1 ? 'note' : 'notes'} recorded` : listening ? 'Press Record.' : 'Start listening, then press Record.';
+    : has ? `${events.length} ${events.length === 1 ? 'note' : 'notes'} recorded` : 'Press Record.';
 }
 
 // ----- replay: the recorded sound, or clean tones of the notes the app detected -----

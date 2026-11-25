@@ -25,7 +25,7 @@
   /* phones: brand + button on row 1, status text on its own row so nothing wraps or truncates */
   .bar{display:grid;grid-template-columns:minmax(0,1fr) auto;row-gap:2px}
   .bar-r{display:contents}
-  #start{white-space:nowrap;grid-column:2;grid-row:1}
+  
   #status{grid-column:1/-1;grid-row:2;color:var(--mut);font-size:13.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   @media (min-width:560px){
     .bar{display:flex} .bar-r{display:flex;align-items:center;gap:12px;min-width:0}
@@ -54,10 +54,20 @@
   .pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 
   /* ---------- navigation: bottom bar on phones, pill bar on tablets ---------- */
-  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(6,1fr);
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);
         background:rgba(20,24,33,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
         border-top:1px solid var(--line);padding:6px 6px calc(6px + var(--sab))}
-  .tabs button{background:none;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:12px;font-size:13px;font-weight:550}
+  .tabs button{background:none;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:12px;font-size:13px;font-weight:550;min-height:48px}
+  .tabs button:focus-visible,.mic-chip:focus-visible,.home-btn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .mic-chip{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;grid-column:2;grid-row:1;min-height:44px;padding:8px 14px;border-radius:999px;background:var(--surface2);color:var(--fg);border:1.5px solid var(--line)}
+  .mic-chip .mic-dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--mut);box-sizing:border-box}
+  .mic-chip.on{border-color:var(--acc)} .mic-chip.on .mic-dot{background:var(--acc);border-color:var(--acc)}
+  .pg-h{margin:0;font-size:22px}
+  .home-card{background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .home-card p{margin:6px 0 12px}
+  .home-quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .home-btn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:16px;min-height:76px;border-radius:14px;background:var(--surface2);border:1px solid var(--line);color:var(--fg)}
+  .home-btn small{color:var(--mut);font-size:13px;font-weight:450}
   .tabs button svg{width:22px;height:22px}
   .tabs button.on{color:var(--fg);background:var(--surface2)}
   .tabs button.on svg{color:var(--acc)}
@@ -291,7 +301,7 @@
   }
 
   /* ---------- very small phones ---------- */
-  @media (max-width:420px){ .brand svg{display:none} .brand{font-size:15.5px} #start{padding:10px 13px} }
+  @media (max-width:420px){ .brand svg{display:none} .brand{font-size:15.5px} .mic-chip{padding:8px 11px} }
   @media (max-width:360px){ .actions{grid-template-columns:1fr 1fr} .actions #scStart{grid-column:1/-1} }
 
   /* ---------- landscape phones: keep the readout visible without scrolling ---------- */
@@ -304,12 +314,21 @@
   /* ---------- tablets and up ---------- */
   @media (min-width:720px){
     body{font-size:16px}
-    .tabs{position:static;display:inline-grid;grid-template-columns:repeat(6,auto);gap:4px;border:1px solid var(--line);border-radius:999px;padding:4px;margin:14px auto 0;backdrop-filter:none;background:var(--surface)}
+    .tabs{position:static;display:inline-grid;grid-template-columns:repeat(5,auto);gap:4px;border:1px solid var(--line);border-radius:999px;padding:4px;margin:14px auto 0;backdrop-filter:none;background:var(--surface)}
     .tabs-wrap{display:flex;justify-content:center}
     .tabs button{flex-direction:row;gap:8px;padding:8px 15px;border-radius:999px;font-size:14px;min-height:40px}
     .tabs button svg{width:18px;height:18px}
     main{padding:16px 0 40px}
     .panel{padding:22px}
+  }
+  /* ---------- desktop: navigation becomes a side rail ---------- */
+  @media (min-width:1000px){
+    .wrap{display:grid;grid-template-columns:168px minmax(0,1fr);gap:20px;align-items:start}
+    .tabs-wrap{position:sticky;top:84px;display:block}
+    .tabs{display:flex;flex-direction:column;border-radius:16px;margin:14px 0 0;width:100%}
+    .tabs button{justify-content:flex-start;width:100%;border-radius:12px}
+  }
+  @media (min-width:720px){
     .tuner{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:28px;align-items:start}
     .t-main{order:1} .t-side{order:2}
     #instChips{flex-wrap:wrap;overflow:visible}

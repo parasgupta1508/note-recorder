@@ -65,5 +65,5 @@ If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. W
 
 ## Other conventions
 
-- When you change any cached file, bump `CACHE` in `sw.js` (currently `tuner-v38`) so installed copies update.
+- When you change any cached file, bump `CACHE` in `sw.js` (currently `tuner-v39`) so installed copies update.
 - Netlify is no longer used. GitHub Pages is the only host.

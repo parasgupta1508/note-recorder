@@ -1,6 +1,6 @@
 {
-  "name": "Tuner & Scale Trainer",
-  "short_name": "Tuner",
+  "name": "Practice Companion",
+  "short_name": "Practice",
   "description": "Chromatic tuner, scale practice and note recorder that works offline.",
   "start_url": "./",
   "scope": "./",

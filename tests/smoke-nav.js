@@ -2,10 +2,10 @@
 // visits every tab, and checks: no script errors, no horizontal page overflow, the tab bar is well formed,
 // and each click shows exactly its own panel. Saves a screenshot of every tab to tests/_shots/before/ (git-ignored).
 // Run: node tests/smoke-nav.js [outDir]        STRICT_ROLES=1 also fails when ARIA tab roles are missing.
-// Tab ARIA roles (tablist / tab / aria-selected) do not exist yet; until UI2 adds them that check is a WARN.
+// UI2 checks: five main tabs with ARIA roles, no global Start button, Scale drills / Free record / Lab reachable with the right tab lit, arrow keys walk every tab.
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os'), { spawn } = require('child_process');
 const root = path.join(__dirname, '..'), out = process.argv[2] || path.join(__dirname, '_shots', 'before');
-const STRICT = !!process.env.STRICT_ROLES;
+const STRICT = process.env.STRICT_ROLES !== '0';   // ARIA tab roles are required since UI2 (STRICT_ROLES=0 only warns)
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/json' };
 const exe = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Google/Chrome/Application/chrome.exe'].find(fs.existsSync);
 if (!exe) { console.log('No Edge/Chrome found - skipped'); process.exit(0); }
@@ -23,6 +23,14 @@ const PAGE_CHECK = `(async () => {
     res.items.push({ tab: t, shown, on: btns.filter(x => x.classList.contains('on')).map(x => x.dataset.tab),
       overflow: Math.max(de.scrollWidth, document.body.scrollWidth) - innerWidth });
   }
+  const wait = ms => new Promise(r => setTimeout(r, ms)), shownNow = () => [...document.querySelectorAll('section.panel')].filter(p => !p.classList.contains('hide')).map(p => p.id);
+  res.noStart = !document.getElementById('start') && !/start listening/i.test(document.querySelector('header').textContent);
+  res.controls = btns.every(b => document.getElementById(b.getAttribute('aria-controls')));
+  res.sub = [];
+  for (const [k, parent] of [['scale', 'home'], ['rec', 'home'], ['lab', 'settings']]) { showTab(k); await wait(300); res.sub.push({ k, shown: shownNow(), lit: btns.filter(x => x.classList.contains('on')).map(x => x.dataset.tab), sel: btns.filter(x => x.getAttribute('aria-selected') === 'true').map(x => x.dataset.tab), parent }); }
+  btns[0].click(); await wait(200); btns[0].focus(); res.kb = [btns[0].dataset.tab];
+  for (let i = 1; i < btns.length; i++) { document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); await wait(200); res.kb.push(document.activeElement.dataset.tab + ':' + shownNow().join()); }
+  btns[0].click();
   const nav = document.querySelector('nav.tabs');
   res.nav = { label: nav.getAttribute('aria-label'), allButtons: btns.every(b => b.tagName === 'BUTTON' && b.textContent.trim().length > 0),
     roles: nav.getAttribute('role') === 'tablist' && btns.every(b => b.getAttribute('role') === 'tab' && b.hasAttribute('aria-selected')) };
@@ -53,6 +61,10 @@ srv.listen(0, async () => {
     say(res.tabs.length > 0, `${label}: ${res.tabs.length} tabs found (${res.tabs.join(', ')})`);
     say(!!res.nav.label && res.nav.allButtons, `${label}: tab bar is a labelled nav of text buttons`);
     say(res.nav.roles, `${label}: ARIA tab roles (tablist/tab/aria-selected) present`, !STRICT);
+    say(res.noStart, `${label}: no global Start listening button`);
+    say(res.controls, `${label}: every tab points at an existing panel (aria-controls)`);
+    for (const sb of res.sub) say(sb.shown.length === 1 && sb.shown[0] === 'tab-' + sb.k && sb.lit.join() === sb.parent && sb.sel.join() === sb.parent, `${label}: "${sb.k}" is reachable and keeps "${sb.parent}" lit`);
+    say(res.kb.length === res.tabs.length && res.kb.slice(1).every((x, i) => x === res.tabs[i + 1] + ':tab-' + res.tabs[i + 1]), `${label}: arrow keys reach every tab (${res.kb.join(' > ')})`);
     for (const it of res.items) {
       say(it.shown.length === 1 && it.shown[0] === 'tab-' + it.tab && it.on.length === 1 && it.on[0] === it.tab, `${label}: "${it.tab}" shows only its own panel and is the only active tab`);
       say(it.overflow <= 0, `${label}: "${it.tab}" has no horizontal overflow${it.overflow > 0 ? ' (' + it.overflow + ' px too wide)' : ''}`);

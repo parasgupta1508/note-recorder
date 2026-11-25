@@ -6,7 +6,7 @@
 let wakeLock = null;
 async function keepAwake() { try { if ($('awake').value === '1' && navigator.wakeLock && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.onrelease = () => { wakeLock = null; }; } } catch {} }
 function releaseAwake() { try { if (wakeLock) wakeLock.release(); } catch {} wakeLock = null; }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && listening) keepAwake(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && listening) keepAwake(); else if (document.visibilityState === 'hidden' && listening && !recording) stopListening(); });   // a backgrounded app lets go of the microphone (not while recording)
 let starting = false;
 async function startListening() {
   if (listening || starting) return;
@@ -31,9 +31,16 @@ async function openMic() {
   capNode.onaudioprocess = ev => { if (recording) capPush(ev.inputBuffer.getChannelData(0)); };
   boostNode.connect(capNode); capNode.connect(capSink); capSink.connect(c.destination);
   buf = new Float32Array(analyser.fftSize); t0 = c.currentTime; listening = true; keepAwake();
-  showMicProc(); listMics(); audioInfo(); $('start').textContent = '■ Stop listening'; $('rec').disabled = detBusy; $('status').textContent = '';
+  showMicProc(); listMics(); audioInfo(); micChipUi(); $('rec').disabled = detBusy; $('status').textContent = '';
   loop();
 }
+// The mic chip in the header: shows whether the microphone is on, and is the one place to switch it on or off by hand.
+function micChipUi() {
+  const b = $('micChip'); b.classList.toggle('on', listening); b.setAttribute('aria-pressed', listening ? 'true' : 'false');
+  b.setAttribute('aria-label', listening ? 'Microphone is on. Tap to turn it off.' : 'Microphone is off. Tap to turn it on.'); $('micTxt').textContent = listening ? 'Mic on' : 'Mic off';
+}
+// Every screen's own start button calls this; it never throws.
+function ensureMic() { return listening ? Promise.resolve() : startListening().catch(e => { $('status').textContent = 'Mic error: ' + e.message; }); }
 function stopListening() {
   listening = false; releaseAwake(); cancelAnimationFrame(rafId); finalizeHold(); seg.end(); setRecording(false);
   stream.getTracks().forEach(t => t.stop()); srcNode.disconnect(); hpNode.disconnect(); boostNode.disconnect(); analyser = null;
@@ -41,7 +48,7 @@ function stopListening() {
   recUi();
   $('lvlBar').style.width = '0'; $('lvlDb').textContent = '–';
   sc.running = false; $('scStart').textContent = 'Start practice'; liveBuf = [];
-  $('start').textContent = '▶ Start listening'; $('rec').disabled = true; $('status').textContent = '';
+  micChipUi(); $('rec').disabled = detBusy; $('status').textContent = '';
   hist.length = 0; lastVoiced = -9; tunerIdle(); renderScale();
 }
 let boostNode = null, lpA = null, lpB = null, lpCut = 6000;
@@ -80,7 +87,7 @@ function startCalib(phase) {
   calib = { phase, vals: [], pk: 0, end: performance.now() + (phase === 1 ? 3000 : 4000) }; $('calib').disabled = true;
   calMsg(phase === 1 ? 'Step 1 of 2: stay quiet for 3 seconds…' : 'Step 2 of 2: play one steady note at normal volume for 4 seconds…');
 }
-$('calib').onclick = () => { if (!listening) { calMsg('Tap “Start listening” at the top first.'); return; } $('calibOut').classList.add('hide'); startCalib(1); };
+$('calib').onclick = () => { if (!listening) { calMsg('Tap the Mic button at the top to turn the microphone on first.'); return; } $('calibOut').classList.add('hide'); startCalib(1); };
 function calibFrame(rms, pk = 0) {
   if (!calib) return;
   calib.vals.push(rms); calib.pk = Math.max(calib.pk, pk);
@@ -107,7 +114,7 @@ function calibFrame(rms, pk = 0) {
 // Live check: how steady is the pitch your microphone really hears?
 let lc = null;
 $('livetest').onclick = () => {
-  if (!listening) { $('lcMsg').textContent = 'Tap “Start listening” at the top first.'; return; }
+  if (!listening) { $('lcMsg').textContent = 'Tap the Mic button at the top to turn the microphone on first.'; return; }
   lc = { end: performance.now() + 4000, fs: [], n: 0 }; $('livetest').disabled = true; $('lcOut').classList.add('hide'); $('lcMsg').textContent = 'Listening… play one steady note.';
 };
 function liveFrame(f, open) {

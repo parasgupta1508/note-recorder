@@ -9,7 +9,7 @@ const probe = `<script>setTimeout(function(){var r=[],$=function(i){return docum
 function ck(n,c){r.push((c?'PASS ':'FAIL ')+n)}
 try{document.querySelector('[data-tab=rec],#tabRec,button[data-t=rec]')&&0;
 var tabBtn=[].find.call(document.querySelectorAll('button,a,[role=tab]'),function(b){return /record/i.test(b.textContent)&&b.closest('nav,.tabs,header,.appbar,[role=tablist]')});
-if(tabBtn)tabBtn.click(); ck('recorder tab opens',!$('tab-rec').classList.contains('hide'));
+showTab('rec'); ck('recorder tab opens',!$('tab-rec').classList.contains('hide'));
 $('vwFall').click(); ck('Falling view',$('tab-rec').dataset.view==='fall'&&$('vwFall').classList.contains('on'));
 $('vwSheet').click(); ck('Sheet view',$('tab-rec').dataset.view==='sheet');
 $('fsBtn').click(); ck('full screen on',$('tab-rec').classList.contains('fs')&&getComputedStyle(document.querySelector('#tab-rec .rbar')).display!=='none'&&$('rec').offsetHeight>0&&getComputedStyle($('recMode').closest('.ropts')).display==='none'&&getComputedStyle(document.querySelector('#tab-rec .tport')).display!=='none');

@@ -2,7 +2,7 @@
 // Part of the app. Scripts in js/app load in the order listed in index.html and share one scope.
 
 // ----- settings layout (List / Tabs / Classic) -----
-const SG = [['instrument', 'Instrument'], ['tuning', 'Tuning'], ['mic', 'Microphone'], ['detect', 'Detection'], ['check', 'Accuracy check'], ['data', 'Data & reset']], LAY_KEY = 'tuner-setlayout';
+const SG = [['instrument', 'Instrument'], ['tuning', 'Tuning'], ['mic', 'Microphone'], ['detect', 'Detection'], ['check', 'Accuracy check'], ['data', 'Backup & restore'], ['layout', 'Settings layout'], ['install', 'Install app'], ['dev', 'Developer'], ['reset', 'Reset']], LAY_KEY = 'tuner-setlayout';
 let setLay = 'list', setCur = null; try { setLay = localStorage.getItem(LAY_KEY) || 'list'; } catch {}
 if (!['list', 'tabs', 'classic'].includes(setLay)) setLay = 'list';
 const setSum = k => ({
@@ -11,7 +11,11 @@ const setSum = k => ({
   mic: () => `Noise gate ${(+$('gate').value).toFixed(3)} · Boost ${$('boost').value}×`,
   detect: () => { const h = [...document.querySelectorAll('#detSeg button.on')][0]; return `${h ? h.textContent : 'Custom'} · ${$('smooth').selectedOptions[0].textContent.split(' ')[0]} needle`; },
   check: () => 'Software test · Live check',
-  data: () => 'Backup, restore, layout, reset',
+  data: () => 'Save or restore scores and history',
+  layout: () => ({ list: 'List', tabs: 'Tabs', classic: 'Classic' })[setLay],
+  install: () => 'Use like a normal app',
+  dev: () => $('devOn').checked ? 'Developer tools on' : 'Off',
+  reset: () => 'Back to recommended values',
 }[k])();
 function renderSet() {
   const T = $('tab-settings'); T.dataset.layout = setLay;
@@ -30,6 +34,12 @@ $('tab-settings').addEventListener('click', e => {
   const l = e.target.closest('#laySeg button'); if (l) { setLay = l.dataset.l; try { localStorage.setItem(LAY_KEY, setLay); } catch {} if (setLay === 'list') setCur = null; renderSet(); }
 });
 $('tab-settings').addEventListener('input', () => { if (setLay === 'list' && !setCur) renderSet(); });
+const DEV_KEY = 'tuner-dev';
+try { $('devOn').checked = localStorage.getItem(DEV_KEY) === '1'; } catch {}
+const devUi = () => $('openLab').classList.toggle('hide', !$('devOn').checked);
+$('devOn').onchange = () => { try { localStorage.setItem(DEV_KEY, $('devOn').checked ? '1' : '0'); } catch {} devUi(); renderSet(); };
+$('openLab').onclick = () => showTab('lab');
+devUi();
 renderSet();
 
 // ----- backup / restore (versioned) -----

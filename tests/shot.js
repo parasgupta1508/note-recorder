@@ -28,7 +28,7 @@ srv.listen(0, async () => {
   const shot = async (name, w, h, mode, full) => {
     await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 2, mobile: w < 600 });
     await send('Page.navigate', { url: `http://localhost:${port}/_shot.html` }); await wait(1500);
-    await send('Runtime.evaluate', { expression: `document.querySelector('[data-tab=rec],#tabRec') && 0; [...document.querySelectorAll('button,a,[role=tab]')].find(b => /record/i.test(b.textContent) && b.closest('nav,.tabs,header,.appbar,[role=tablist]')).click(); window.__t.load('${mode}', ${!!full})` });
+    await send('Runtime.evaluate', { expression: `document.querySelector('[data-tab=rec],#tabRec') && 0; showTab('rec'); window.__t.load('${mode}', ${!!full})` });
     await wait(700);
     const r = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(out, name), Buffer.from(r.data, 'base64')); console.log('saved', path.join(out, name));
   };

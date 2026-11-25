@@ -29,7 +29,7 @@ srv.listen(0, async () => {
   await new Promise(r => ws.onopen = r); await send('Runtime.enable'); await send('Page.enable'); await send('Page.navigate', { url: `http://localhost:${port}/index.html` });
   try {
     await until("document.readyState==='complete' && typeof labConnect==='function'", 15000, 'page'); ok(!errs.length, 'page loads without script errors ' + errs.join('|').slice(0, 200));
-    await ev("document.querySelector('[data-tab=lab]').click(); 1");
+    await ev("showTab('lab'); 1");
     await until("$('labState').textContent!=='checking…'", 8000, 'first connect attempt'); await ev("$('labUrl').value='http://localhost:" + hp + "'; 1"); await ev("labConnect()");
     ok(await ev("LAB.ok"), 'connects to the helper'); ok(await ev("!$('tab-lab').classList.contains('hide')"), 'Lab tab opens');
     ok(await ev("$('labEngPick').querySelectorAll('input').length>=3"), 'engine list is shown');
