@@ -78,5 +78,7 @@ If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. W
 
 ## Other conventions
 
+- `TODO.md` is the running list of pending work. When something is deferred ("later", "add to the to-do list"), a follow-up is spotted, or an item is finished, update it in the same change.
+
 - When you change any cached file, bump `CACHE` in `sw.js` (currently `tuner-v44`) so installed copies update.
 - Netlify is no longer used. GitHub Pages is the only host.
