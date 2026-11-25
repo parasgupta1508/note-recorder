@@ -21,6 +21,14 @@ ok(snap.f0 && snap.f0.id === 'yin' && snap.segmenter.id === 'classic' && snap.tr
 ok(lib.validateList('note', [{ midi: 69, start: 0, dur: 100 }]).length === 0 && lib.validateList('note', [{ midi: 'a' }]).length > 0, 'schema accepts a note and rejects a bad one');
 
 // --- per engine (the same check the Settings > Engines Test button runs) ---
-for (const e of lib.listEngines()) for (const r of lib.engineContract(e)) { if (r.skip) console.log('SKIP ' + r.msg); else ok(r.ok, r.msg); }
-console.log(fail ? `\n${fail} FAILED` : '\nall engine contracts pass');
-process.exit(fail ? 1 : 0);
+const where = require('./lib/swiftf0-node.js').attachSwiftF0(lib);
+for (const e of lib.listEngines().filter(e => !(where && e.caps.needsRuntime))) for (const r of lib.engineContract(e)) { if (r.skip) console.log('SKIP ' + r.msg); else ok(r.ok, r.msg); }
+// --- engines with a model runner (SwiftF0 through onnxruntime-web): checked end to end when the runtime and model are found (tests/lib/swiftf0-node.js), else skipped ---
+(async () => {
+  for (const e of lib.listEngines().filter(e => e.caps.needsRuntime)) {
+    if (!where) { console.log(`SKIP ${e.role}/${e.id}: runtime or model not found (set ORT_WEB and SWIFTF0_MODEL, see tests/lib/swiftf0-node.js)`); continue; }
+    for (const r of await lib.engineContractAsync(e)) { if (r.skip) console.log('SKIP ' + r.msg); else ok(r.ok, r.msg); }
+  }
+  console.log(fail ? `\n${fail} FAILED` : '\nall engine contracts pass');
+  process.exit(fail ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(1); });

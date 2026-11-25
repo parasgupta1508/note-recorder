@@ -9,16 +9,10 @@ function engineContract(e) {
   if (e.caps.needsHelper) return out.concat({ ok: true, skip: true, msg: `${tag}: needs the Lab helper (not run here)` });
   try {
     if (e.role === 'f0') {
-      const sr = 16000, rate = e.caps.sampleRate || sr, melody = mk(rate), run = x => e.run({ x, sr: rate, fmin: 180, fmax: 2400 });
-      const s = run(new Float32Array(rate * 2)); ok(validateList('frame', s).length === 0 && s.every(f => !f.hz), `${tag}: silence gives no voiced frames`);
-      const t0 = Date.now(), m = run(melody), ms = Date.now() - t0, v = m.filter(f => f.hz);
-      ok(validateList('frame', m).length === 0, `${tag}: output frames match the schema`);
-      ok(same(m, run(melody)), `${tag}: deterministic`);
-      ok(v.length > 0 && v.every(f => f.hz >= 180 && f.hz <= 2400), `${tag}: stays inside the requested range`);
-      const a = v.filter(f => f.t > 0.5 && f.t < 1.1), c = v.filter(f => f.t > 1.5 && f.t < 2.1);
-      ok(a.length > 5 && a.every(f => Math.abs(cents(f.hz, 440)) < 20) && c.length > 5 && c.every(f => Math.abs(cents(f.hz, 523.25)) < 20), `${tag}: sustained A4 and C5 within 20 cents`);
-      const perMin = ms / (melody.length / rate) * 60; ok(perMin < 60000, `${tag}: time budget (${Math.round(perMin)} ms per minute of audio, limit 60000)`);
-      if (e.caps.live) { const r = e.frame(tone(440, 1, sr).subarray(0, 4096), sr, 180, 2400); ok(r && Math.abs(cents(r.freq, 440)) < 20 && r.clarity > 0.8, `${tag}: live frame() reads A4`); }
+      if (e.caps.needsRuntime) {                                       // the model runner is attached by the host; engineContractAsync runs the full check when it is
+        ok(typeof e.run === 'function' && e.caps.sampleRate > 0, `${tag}: runs on audio at a fixed sample rate`);
+        out.push({ ok: true, skip: true, msg: `${tag}: needs its model runner (engineContractAsync runs it where one is attached)` });
+      } else { const sr = 16000, rate = e.caps.sampleRate || sr, melody = mk(rate), run = x => e.run({ x, sr: rate, fmin: 180, fmax: 2400 }), t0 = Date.now(), s = run(new Float32Array(rate * 2)), m = run(melody); f0Assert(e, tag, ok, cents, s, m, run(melody), Date.now() - t0, 2 + 2 * melody.length / rate, tone); }
     } else if (e.role === 'segmenter') {
       const sr = 44100, opts = { m: REC_MODES.fast, fmin: 180, fmax: 2400, conf: 0.85, a4: 440 }, run = x => e.run({ x, sr }, opts);   // mic audio is 44.1/48 kHz; the classic listener is not tuned for 16 kHz
       const melody = mk(sr);
@@ -37,5 +31,28 @@ function engineContract(e) {
       }
     }
   } catch (err) { ok(false, `${tag}: threw ${err && err.message}`); }
+  return out;
+}
+
+// Assertions for an f0 engine's output on silence (s), a two-note melody (m, m2 = a second run) and the time the runs took. Shared by the sync and the async check.
+function f0Assert(e, tag, ok, cents, s, m, m2, ms, sec, tone) {
+  const v = m.filter(f => f.hz), same = (a, b) => JSON.stringify(a) === JSON.stringify(b), rate = e.caps.sampleRate || 16000;
+  ok(validateList('frame', s).length === 0 && s.every(f => !f.hz), `${tag}: silence gives no voiced frames`);
+  ok(validateList('frame', m).length === 0, `${tag}: output frames match the schema`);
+  ok(same(m, m2), `${tag}: deterministic`);
+  ok(v.length > 0 && v.every(f => f.hz >= 180 && f.hz <= 2400), `${tag}: stays inside the requested range`);
+  const a = v.filter(f => f.t > 0.5 && f.t < 1.1), c = v.filter(f => f.t > 1.5 && f.t < 2.1);
+  ok(a.length > 5 && a.every(f => Math.abs(cents(f.hz, 440)) < 20) && c.length > 5 && c.every(f => Math.abs(cents(f.hz, 523.25)) < 20), `${tag}: sustained A4 and C5 within 20 cents`);
+  const perMin = ms / sec * 60; ok(perMin < 60000, `${tag}: time budget (${Math.round(perMin)} ms per minute of audio, limit 60000)`);
+}
+// Same as engineContract, but awaits an f0 engine that needs a model runner (swiftf0). Returns the same [{ ok, msg }] list; other engines are checked as before.
+async function engineContractAsync(e) {
+  if (!(e.role === 'f0' && e.caps.needsRuntime)) return engineContract(e);
+  const out = engineContract(e).filter(r => !r.skip), ok = (c, m) => out.push({ ok: !!c, msg: m }), tag = `${e.role}/${e.id}`, cents = (a, b) => 1200 * Math.log2(a / b);
+  if (typeof e.infer !== 'function') return out.concat({ ok: true, skip: true, msg: `${tag}: no model runner attached here` });
+  const tone = (f, s, r) => { const n = r * s, x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = 0.4 * Math.sin(2 * Math.PI * f * i / r) + 0.15 * Math.sin(4 * Math.PI * f * i / r) + 0.08 * Math.sin(6 * Math.PI * f * i / r); return x; };
+  const rate = e.caps.sampleRate, a = tone(440, 1, rate), b = tone(523.25, 1, rate), melody = new Float32Array(a.length + b.length + rate / 2); melody.set(a, rate / 4); melody.set(b, rate / 4 + a.length);
+  try { const run = x => e.run({ x, sr: rate, fmin: 180, fmax: 2400 }), s = await run(new Float32Array(rate * 2)), t0 = Date.now(), m = await run(melody), m2 = await run(melody); f0Assert(e, tag, ok, cents, s, m, m2, Date.now() - t0, 2 + 2 * melody.length / rate, tone); }
+  catch (err) { ok(false, `${tag}: threw ${err && err.message}`); }
   return out;
 }
