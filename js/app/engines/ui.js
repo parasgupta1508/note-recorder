@@ -15,7 +15,7 @@ function engSave(mutator) { const s = JSON.parse(JSON.stringify(engSet)); s.para
 function renderEngines() {
   const box = $('engBody'); if (!box) return;
   box.innerHTML = ENG_ROWS.map(([role, mode, title], i) => {
-    const cands = listEngines(role).filter(e => !e.caps.clipInput && e.caps[mode] !== false), cur = engCurrent(role, mode), eff = engineFor(role, mode);
+    const dev = !!($('devOn') && $('devOn').checked), cands = listEngines(role).filter(e => !e.caps.clipInput && e.caps[mode] !== false && (!e.caps.dev || dev || engCurrent(role, mode) === e.id)), cur = engCurrent(role, mode), eff = engineFor(role, mode);
     const auto = getEngine(role, prof.k, mode, { default: {} });
     const opts = [`<option value="auto"${cur === 'auto' ? ' selected' : ''}>Auto (${engEsc(auto ? auto.label : 'none')})</option>`].concat(cands.map(e => { const why = engWhyNot(e); return `<option value="${engEsc(e.id)}"${cur === e.id ? ' selected' : ''}${why ? ' disabled' : ''}>${engEsc(e.label)}${why ? ' (' + why + ')' : ''}</option>`; })).join('');
     const pv = (engSet.params || {})[role + '.' + (eff && eff.id)] || {};

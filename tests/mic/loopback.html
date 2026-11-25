@@ -26,8 +26,8 @@ async function openMic() {
   return { c, label, settings: stream.getAudioTracks()[0].getSettings(), mark: () => n, slice: (i, j) => { const out = new Float32Array(j - i); let pos = 0; for (const ch of chunks) { const s = Math.max(i, pos), e = Math.min(j, pos + ch.length); if (e > s) out.set(ch.subarray(s - pos, e - pos), s - i); pos += ch.length; } return out; } };
 }
 const rms = x => Math.sqrt(x.reduce((s, v) => s + v * v, 0) / (x.length || 1));
-function fmt(x, sr, lo = 150, hi = 2000) {   // frames of 4096 samples, hop 2048, with the app's pitch engine; median of the clear ones
-  const f0 = getEngine('f0'), hz = [];
+function fmt(x, sr, lo = 150, hi = 2000, id = null) {   // frames of 4096 samples, hop 2048, with a pitch engine (default: the app's own); median of the clear ones
+  const f0 = id ? findEngine('f0', id) : getEngine('f0'), hz = [];
   for (let i = 0; i + 4096 <= x.length; i += 2048) { const r = f0.frame(x.subarray(i, i + 4096), sr, lo, hi); if (r && r.clarity >= 0.85) hz.push(r.freq); }
   hz.sort((p, q) => p - q); return { hz: hz.length ? hz[hz.length >> 1] : null, voiced: hz.length };
 }
@@ -57,7 +57,7 @@ function synthTone(midi, sr, dur) { const x = new Float32Array(Math.floor(sr * d
     for (const midi of notes) {
       const i0 = M.mark(), t0 = M.c.currentTime + 0.1; tone(M.c, midi, t0, 1.1); await sleep(1600);
       const a = i0 + Math.floor(sr * 0.45), x = M.slice(a, a + 8192), real = fmt(x, sr), syn = fmt(synthTone(midi, sr, 0.5).subarray(0, 8192), sr);
-      const truth = hzOf(midi); rows.push({ midi, level: +rms(x).toFixed(4), realHz: real.hz && +real.hz.toFixed(2), realCents: real.hz && +cents(real.hz, truth).toFixed(1), voiced: real.voiced, synthCents: syn.hz && +cents(syn.hz, truth).toFixed(1) });
+      const truth = hzOf(midi); rows.push({ midi, level: +rms(x).toFixed(4), realHz: real.hz && +real.hz.toFixed(2), realCents: real.hz && +cents(real.hz, truth).toFixed(1), voiced: real.voiced, synthCents: syn.hz && +cents(syn.hz, truth).toFixed(1), engines: Object.fromEntries(['yin', 'pyin', 'mpm'].map(id => { const q = fmt(x, sr, 150, 2000, id); return [id, q.hz && +cents(q.hz, truth).toFixed(1)]; })) });
       all.push(M.slice(i0, M.mark()));
     }
     const tot = all.reduce((s, a) => s + a.length, 0), cat = new Float32Array(tot); let p = 0; for (const a of all) { cat.set(a, p); p += a.length; }

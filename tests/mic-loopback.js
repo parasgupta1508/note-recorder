@@ -59,6 +59,7 @@ srv.listen(0, '127.0.0.1', async () => {
   if (r.mode === 'loopback') {
     console.log(`mic: ${r.mic}  ${r.sr} Hz  room noise ${r.noise.toExponential(2)}`); console.log('note   truth Hz   heard Hz   real(speaker->mic)   synthesised   level');
     for (const x of r.rows) { const truth = 440 * Math.pow(2, (x.midi - 69) / 12); console.log(`${String(nameOf(x.midi)).padEnd(6)} ${truth.toFixed(1).padStart(8)} ${x.realHz == null ? '    -    ' : x.realHz.toFixed(1).padStart(10)}   ${(x.realCents == null ? 'MISS' : (x.realCents >= 0 ? '+' : '') + x.realCents + 'c').padStart(12)}   ${(x.synthCents == null ? 'MISS' : (x.synthCents >= 0 ? '+' : '') + x.synthCents + 'c').padStart(12)}   ${x.level}`); }
+    console.log('every engine on the same recorded sound (cents off, MISS = nothing clear heard):'); for (const x of r.rows) console.log('  ' + String(nameOf(x.midi)).padEnd(5) + Object.entries(x.engines || {}).map(([k, v]) => k + ' ' + (v == null ? 'MISS' : (v >= 0 ? '+' : '') + v + 'c')).join('   '));
     const snr = r.rows.map(x => x.level / r.noise).sort((a, b) => a - b)[r.rows.length >> 1], quiet = snr < 4;
     console.log('note level vs room noise: ' + snr.toFixed(1) + 'x' + (quiet ? '  <-- TOO QUIET: raise the speaker volume or quiet the room. MISS rows are then the room, not the detector.' : ''));
     const ok = r.rows.filter(x => x.realCents != null && Math.abs(x.realCents) <= LOOPBACK_TOL), octave = r.rows.filter(x => x.realCents != null && Math.abs(x.realCents) > 300);

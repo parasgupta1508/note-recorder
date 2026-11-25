@@ -39,7 +39,7 @@ $('tab-settings').addEventListener('input', () => { if (setLay === 'list' && !se
 const DEV_KEY = 'tuner-dev';
 try { $('devOn').checked = localStorage.getItem(DEV_KEY) === '1'; } catch {}
 const devUi = () => $('openLab').classList.toggle('hide', !$('devOn').checked);
-$('devOn').onchange = () => { try { localStorage.setItem(DEV_KEY, $('devOn').checked ? '1' : '0'); } catch {} devUi(); renderSet(); };
+$('devOn').onchange = () => { try { localStorage.setItem(DEV_KEY, $('devOn').checked ? '1' : '0'); } catch {} devUi(); renderSet(); if (typeof renderEngines === 'function') renderEngines(); };
 $('openLab').onclick = () => showTab('lab');
 devUi();
 renderSet();
