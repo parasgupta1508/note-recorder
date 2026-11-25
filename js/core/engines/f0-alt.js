@@ -1,4 +1,4 @@
-// Optional pitch engines you can pick for the Tuner (Settings > Engines > "Pitch while playing"): pYIN and McLeod (MPM).
+// Optional pitch engines you can pick for the Tuner (Settings > Engines > "Tuner algorithm"): pYIN and McLeod (MPM).
 // "Auto" is still YIN + harmonic check (f0-yin.js). Nothing here changes what Auto does.
 //   frame(buf, sr, fmin, fmax) -> { freq, clarity, p2 } | null      (the live path: one analysis window, no memory between calls)
 //   run({ x, sr, fmin, fmax, win, hop }) -> [{ t, hz, conf }]       (offline: frames over a recording; hz 0 = unvoiced)
