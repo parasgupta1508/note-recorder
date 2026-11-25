@@ -53,12 +53,12 @@ function recPitchCore(r, rms, pk, conf, m, sg, gate, a4, relaxed) {
 }
 
 // Offline analysis of a whole recording (a decoded audio file): the same detector the live Recorder uses.
-// opts: { fmin, fmax, conf, a4, m (REC_MODES entry), relaxed, onProgress }  ->  array of notes.
+// opts: { fmin, fmax, conf, a4, m (REC_MODES entry), relaxed, onProgress, instrument, engines (Settings engines value) }  ->  array of notes.
 // Runs synchronously unless opts.chunk is set, in which case it returns a Promise and yields to the UI between chunks.
 function analyseSamples(x, sr, opts = {}) {
   let m = opts.m; const auto = opts.auto ? new AutoMode() : null, a4 = opts.a4 || 440, conf = opts.conf || 0.85, lo = opts.fmin || 70, hi = opts.fmax || 2000;
   const win = lo < 60 ? 8192 : 4096, hop = Math.round(sr / 60), n = Math.max(0, Math.floor((x.length - win) / hop));
-  const out = [], sg = new Segmenter(ev => out.push(ev));
+  const out = [], sg = new Segmenter(ev => out.push(ev)), f0 = opts.f0 || getEngine('f0', opts.instrument, 'live', opts.engines);   // the pitch engine comes from the registry ("auto" = YIN)
   sg.a4 = a4; sg.minDur = m.minDur || 30; sg.confirm = m.confirm; sg.maxMiss = m.miss || 5; sg.gap = m.gap || 0;
   const rmsAt = f => { let s = 0, o = f * hop + win - 1024; for (let i = 0; i < 1024; i++) s += x[o + i] * x[o + i]; return Math.sqrt(s / 1024); };
   const lv = new Float32Array(n); for (let f = 0; f < n; f++) lv[f] = rmsAt(f);
@@ -70,7 +70,7 @@ function analyseSamples(x, sr, opts = {}) {
       const o = f * hop, w = m.win && lo >= 80 ? m.win : win, b = x.subarray(o + win - w, o + win);   // fast mode looks at only the newest 2048 samples, like the live Recorder
       let pk = 0; for (let i = 0; i < b.length; i += 4) { const a = Math.abs(b[i]); if (a > pk) pk = a; }
       let fR = null, rAuto = null;
-      if (lv[f] > gate * 0.6) { const r = yin(b, sr, lo, hi); rAuto = r; fR = recPitchCore(r, lv[f], pk, conf, m, sg, gate, a4, m === REC_MODES.relaxed); }
+      if (lv[f] > gate * 0.6) { const r = f0.frame(b, sr, lo, hi); rAuto = r; fR = recPitchCore(r, lv[f], pk, conf, m, sg, gate, a4, m === REC_MODES.relaxed); }
       if (auto) { auto.frame(lv[f], rAuto); if (REC_MODES[auto.mode] !== m) { m = REC_MODES[auto.mode]; sg.minDur = m.minDur || 30; sg.confirm = m.confirm; sg.maxMiss = m.miss || 5; sg.gap = m.gap || 0; } }
       sg.frame((o + win / 2) / sr, fR, lv[f]);
     }

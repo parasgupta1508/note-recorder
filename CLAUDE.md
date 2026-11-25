@@ -17,7 +17,7 @@ Whenever you change any file in this project, back it up to GitHub without being
 
 - `js/core/*.js` is pure (no `document`, `window`, `localStorage`). Tests load these exact files in Node through `tests/lib/load.js`. Anything that touches the screen or the microphone goes in `js/app/`.
 - `js/app/*.js` are classic scripts that share one scope, loaded in the order `index.html` lists them. A top-level statement may only call things from files loaded earlier. Calls inside functions are fine. `main.js` loads last.
-- `yin()` in `js/core/pitch.js` is the single pitch detector. The tuner, Practice, the Recorder, the self-test, file analysis and the Detailed refinement all call it, so improve it there and every module benefits. Do not write a second detector.
+- `yin()` in `js/core/pitch.js` is the single pitch detector. The tuner, Practice, the Recorder, the self-test, file analysis and the Detailed refinement all call it, so improve it there and every module benefits. Do not write a second detector. Screens and tests reach it through the engine registry (`getEngine('f0')`, `engineFor('f0','live')` in the app); `"auto"` always means `yin`, `classic`, `basicpitch` until the owner approves a change. New engines are added by registering a file in `js/core/engines/` or `js/app/engines/` and must pass `tests/engine-contract.js`.
 - When you add, rename or remove a file under `js/`, `css/` or `icons/`: list it in `index.html` AND in `FILES` in `sw.js` (otherwise the app breaks offline). `node tests/structure.js` checks both.
 - No loose images in the project root. Icons live in `icons/`.
 
@@ -32,6 +32,7 @@ Each benchmark runs the real code and compares with a saved baseline in `tests/b
 | `node tests/detailed-strings.js` | Detailed path with the real Basic Pitch model in Node (about 5 min; needs `tools/node_modules`) | Any change to `bpToEvents`, `markAttacks`, `refineEvents`, `extractMelody`, `resample`, `BP_PARAMS` |
 | `node tests/pitch-sweep.js` | Raw YIN error per semitone and sample rate | Any change to `yin` |
 | `node tests/resample.js` | The resampler keeps pitch and level and does not alias | Any change to `resample` |
+| `node tests/engine-contract.js` | Every engine in the registry (`js/core/engines/`): shape, silence, determinism, range, time budget | Adding or changing an engine, or the registry |
 
 If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. When you add a detection feature, add a benchmark case for it first. `DBG="guitar mid clean auto" node tests/strings.js` prints expected versus found notes; `KIND=repeat`, `ONLY=ukulele` narrow the Detailed run.
 
@@ -64,5 +65,5 @@ If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. W
 
 ## Other conventions
 
-- When you change any cached file, bump `CACHE` in `sw.js` (currently `tuner-v37`) so installed copies update.
+- When you change any cached file, bump `CACHE` in `sw.js` (currently `tuner-v38`) so installed copies update.
 - Netlify is no longer used. GitHub Pages is the only host.

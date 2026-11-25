@@ -1,7 +1,7 @@
 // Frame-level pitch accuracy of yin() on realistic string tones with known pitch (no segmenter involved).
 // node tests/pitch-sweep.js [--json]   -> per instrument: octave errors, missed frames, cents error (mean/p95/max)
 const fs = require('fs'), path = require('path');
-const S = require('./synth.js');
+const S = require('./lib/synth.js');
 const lib = require('./lib/load.js');
 const PROF = { violin: { lo: 180, hi: 1800, m: [55, 93] }, guitar: { lo: 70, hi: 1400, m: [40, 84] }, ukulele: { lo: 140, hi: 1000, m: [60, 83] } };
 const out = {};
@@ -12,7 +12,7 @@ for (const inst of ['violin', 'guitar', 'ukulele']) {
     const det = Math.round((S.rnd() * 2 - 1) * 40), b = S.mk(1, sr);
     S.INST[inst](b, midi, 0, 1, { sr, detune: det, vib: 0, scoop: 0 }); S.noise(b, nz);
     const t0 = Math.floor(sr * (inst === 'violin' ? 0.4 : 0.12)), x = b.subarray(t0, t0 + win);
-    const truth = S.hz(midi + det / 100), r = lib.yin(x, sr, P.lo, P.hi); tot++;
+    const truth = S.hz(midi + det / 100), r = lib.getEngine('f0').frame(x, sr, P.lo, P.hi); tot++;
     if (!r || r.clarity < 0.85) { miss++; bad.push(`${midi}${det >= 0 ? '+' : ''}${det} sr${sr} w${win} n${nz} MISS`); continue; }
     const c = lib.centsBetween(r.freq, truth), oc = Math.round(c / 1200);
     if (Math.abs(c) > 150) { oct++; bad.push(`${midi}${det >= 0 ? '+' : ''}${det} sr${sr} w${win} n${nz} OFF ${c.toFixed(0)}c`); continue; }

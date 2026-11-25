@@ -9,11 +9,11 @@ const view = { vs: 0, pps: 0, follow: true, mode: 'sheet', fps: 120, spanF: 4, f
 const pb = { playing: false, pos: 0, startCtx: 0, startPos: 0, rate: 1, nodes: [], abuf: null };
 const cap = { chunks: [], n: 0, k: 1, rate: 44100, acc: 0, cnt: 0 };   // recorded sound: 16-bit at the device's own sample rate (k stays 1), so nothing is lost before analysis
 let capNode = null, capSink = null;
-const seg = new Segmenter(ev => { if (recording) addEvent(ev); });
+const seg = engineFor('segmenter', 'live').create(ev => { if (recording) addEvent(ev); });
 
 const autoM = new AutoMode();
 const recModeCfg = () => $('recMode').value === 'auto' ? REC_MODES[autoM.mode] : (REC_MODES[$('recMode').value] || REC_MODES.fast);
-const recPitch = (r, rms, pk, conf) => recPitchCore(r, rms, pk, conf, recModeCfg(), seg, +$('gate').value, a4(), recModeCfg() === REC_MODES.relaxed);
+const recPitch = (r, rms, pk, conf) => engineFor('segmenter', 'live').gate(r, rms, pk, conf, recModeCfg(), seg, +$('gate').value, a4(), recModeCfg() === REC_MODES.relaxed);
 
 const infoHint = () => '';
 const FLN = { C: 'D♭', D: 'E♭', F: 'G♭', G: 'A♭', A: 'B♭' };
@@ -111,17 +111,7 @@ function capSamples22() {                                   // the recorded soun
 }
 // Detailed analysis of 22,050 Hz samples: Basic Pitch, then the app's own refinement. Shared by the Recorder and the Lab page.
 // o: { lo, hi (Hz), poly (keep every chord note), a4, onStatus(text), onProgress(0..1) }  ->  notes
-async function detailedNotes(x, o) {
-  o.onStatus && o.onStatus('Loading detailed analysis…'); await loadBP(); const BP = window.BP;
-  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
-  if (!BP.model) { const m = BP.tf.loadGraphModel('vendor/model/model.json'); m.catch(() => { if (BP.model === m) BP.model = null; }); BP.model = m; }
-  await new Promise(r => setTimeout(r, 30));
-  const bp = new BP.BasicPitch(BP.model), F = [], O = [], C = [];
-  await bp.evaluateModel(x, (f, ons, c) => { for (let i = 0; i < f.length; i++) { F.push(f[i]); O.push(ons[i]); } for (let i = 0; i < c.length; i++) C.push(c[i]); }, p => { o.onProgress && o.onProgress(p); });
-  const raw = BP.noteFramesToTime(BP.addPitchBendsToNoteEvents(C, BP.outputToNotesPoly(F, O, BP_PARAMS.onset, BP_PARAMS.frame, BP_PARAMS.minLen, true, o.hi, o.lo)));
-  const toMidi = f => Math.round(69 + 12 * Math.log2(f / o.a4));
-  return extractMelody(refineEvents(markAttacks(bpToEvents(raw, o.a4), x, 22050), x, 22050, { a4: o.a4, poly: o.poly }), { lo: toMidi(o.lo) - 1, hi: toMidi(o.hi) + 1, poly: o.poly });   // chord instruments keep every note; violin, voice etc. get one melody line
-}
+async function detailedNotes(x, o) { return engineFor('transcriber', 'offline').run(x, o); }   // default engine: Basic Pitch + refinement (js/app/engines/basicpitch.js)
 const isPolyInst = () => ['guitar', 'ukulele', 'mandolin'].includes(prof.k);
 async function analyseDetailed() {
   if (detBusy || cap.n < cap.rate * 0.5) return;
@@ -152,7 +142,7 @@ async function analyseFile(file) {
     const n = ab.length, x = new Float32Array(n), nc = ab.numberOfChannels;
     for (let c = 0; c < nc; c++) { const d = ab.getChannelData(c); for (let i = 0; i < n; i++) x[i] += d[i] / nc; }
     pbStop(); newRecording(); recT0 = 0;
-    const notes = await analyseSamples(x, ab.sampleRate, { auto: $('recMode').value === 'auto', m: REC_MODES[$('recMode').value] || REC_MODES.fast, fmin: +$('fmin').value, fmax: +$('fmax').value, conf: +$('conf').value, a4: a4(), chunk: true, onProgress: p => { info.textContent = 'Analysing… ' + Math.round(p * 100) + '%'; } });
+    const notes = await engineFor('segmenter', 'offline').run({ x, sr: ab.sampleRate }, { auto: $('recMode').value === 'auto', m: REC_MODES[$('recMode').value] || REC_MODES.fast, fmin: +$('fmin').value, fmax: +$('fmax').value, conf: +$('conf').value, a4: a4(), chunk: true, onProgress: p => { info.textContent = 'Analysing… ' + Math.round(p * 100) + '%'; } });
     notes.forEach(addEvent);
     const k = 1; cap.k = k; cap.rate = ab.sampleRate;       // keep the sound for Replay
     for (let o = 0; o < n; o += 65536) capPush(x.subarray(o, Math.min(n, o + 65536)));

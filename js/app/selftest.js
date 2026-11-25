@@ -16,7 +16,7 @@ $('selftest').onclick = async () => {
     const trial = (f0, amp, noiseK, hum = 0, weak = false) => {
       const det = (rnd() - 0.5) * 100, f = f0 * Math.pow(2, det / 1200), p1 = rnd() * 6.283, p2 = rnd() * 6.283, p3 = rnd() * 6.283, b = new Float32Array(N);
       for (let i = 0; i < N; i++) { const t = i / sr; b[i] = amp * (weak ? 0.45 * Math.sin(6.283185 * f * t + p1) + Math.sin(12.56637 * f * t + p2) + 0.7 * Math.sin(18.849556 * f * t + p3) : Math.sin(6.283185 * f * t + p1) + 0.5 * Math.sin(12.56637 * f * t + p2) + 0.27 * Math.sin(18.849556 * f * t + p3)) + noiseK * (rnd() - 0.5) + hum * Math.sin(6.283185 * 60 * t); }
-      const r = yin(b, sr, fmin, fmax); return r && r.clarity > conf ? centsBetween(r.freq, f) : null;
+      const r = engineFor('f0', 'live').frame(b, sr, fmin, fmax); return r && r.clarity > conf ? centsBetween(r.freq, f) : null;
     };
     const conds = [['clean', 0.3, 0], ['noisy', 0.3, 0.084], ['quiet', 0.03, 0.0084], ['hum', 0.3, 0.02, 0.05], ['weak', 0.3, 0.02, 0, true]], lim = { clean: 2, noisy: 5, quiet: 5, hum: 5, weak: 5 };
     const rows = []; let bad = 0, soft = 0, total = 0;

@@ -47,7 +47,7 @@ function score(found, exp) {
 
 const res = {};
 for (const mode of ['auto', 'fast', 'normal']) for (const c of cases) {
-  const m = lib.REC_MODES[mode === 'auto' ? 'fast' : mode], found = lib.analyseSamples(c.b, SR, { m, auto: mode === 'auto', fmin: 180, fmax: 2400, conf: 0.85, a4: 440 });
+  const m = lib.REC_MODES[mode === 'auto' ? 'fast' : mode], found = lib.getEngine('segmenter').run({ x: c.b, sr: SR }, { m, auto: mode === 'auto', fmin: 180, fmax: 2400, conf: 0.85, a4: 440 });
   res[mode + ' | ' + c.name] = score(found, c.exp);
 }
 

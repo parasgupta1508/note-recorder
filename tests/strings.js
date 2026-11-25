@@ -54,7 +54,7 @@ for (const inst of ['violin', 'guitar', 'ukulele']) for (const kind of ['slow', 
   const P = PROF[inst]; let tot = { hit: 0, oct: 0, wrong: 0, extra: 0, n: 0, errs: [] };
   for (const seed of [3, 4]) {
     const ph = phrase(inst, kind, seed + inst.length * 10), b = render(inst, ph, sr, nz, cond === 'ringing' ? { ring: 1 } : cond === 'beating' ? { beat: 1.5 + S.rnd() * 2 } : {}); if (HARD[cond]) HARD[cond](b, sr);
-    const found = lib.analyseSamples(b, sr, { m: lib.REC_MODES[mode === 'auto' ? 'fast' : mode], auto: mode === 'auto', fmin: P.lo, fmax: P.hi, conf: 0.85, a4: 440 });
+    const found = lib.getEngine('segmenter').run({ x: b, sr }, { m: lib.REC_MODES[mode === 'auto' ? 'fast' : mode], auto: mode === 'auto', fmin: P.lo, fmax: P.hi, conf: 0.85, a4: 440 });
     if (process.env.DBG && `${inst} ${kind} ${cond} ${mode}`.includes(process.env.DBG)) { console.log('--', inst, kind, cond, mode, 'seed', seed); console.log(' expected', ph.notes.map(n => n.midi + (n.detune >= 0 ? '+' : '') + n.detune + '@' + n.t.toFixed(2)).join(' ')); console.log(' found   ', found.map(f => f.midi + (f.cents >= 0 ? '+' : '') + Math.round(f.cents) + '@' + f.start.toFixed(2) + '/' + Math.round(f.dur)).join(' ')); }
     const r = match(found, ph.notes); for (const k of ['hit', 'oct', 'wrong', 'extra', 'n']) tot[k] += r[k]; tot.errs.push(...r.errs);
   }
