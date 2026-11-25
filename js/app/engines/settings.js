@@ -9,4 +9,8 @@ function engineFor(role, mode) {
   const inst = typeof prof !== 'undefined' && prof ? prof.k : null, key = role + '|' + mode + '|' + inst;
   return _engCache[key] || (_engCache[key] = getEngine(role, inst, mode, engSet));
 }
+// Options every engine call from a screen should carry, so the Settings choice reaches code that picks its own engine (analyseSamples).
+const engineOpts = () => ({ instrument: typeof prof !== 'undefined' && prof ? prof.k : null, engines: engSet });
+// A parameter value of an engine (what Settings > Engines stored, else the declared default).
+const engineParam = (e, name) => { const v = ((engSet.params || {})[e.role + '.' + e.id] || {})[name]; return v != null ? v : e.params[name] && e.params[name].default; };
 const currentEngineSnapshot = () => engineSnapshot(engSet, typeof prof !== 'undefined' && prof ? prof.k : null);

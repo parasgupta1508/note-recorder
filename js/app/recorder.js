@@ -9,7 +9,9 @@ const view = { vs: 0, pps: 0, follow: true, mode: 'sheet', fps: 120, spanF: 4, f
 const pb = { playing: false, pos: 0, startCtx: 0, startPos: 0, rate: 1, nodes: [], abuf: null };
 const cap = { chunks: [], n: 0, k: 1, rate: 44100, acc: 0, cnt: 0 };   // recorded sound: 16-bit at the device's own sample rate (k stays 1), so nothing is lost before analysis
 let capNode = null, capSink = null;
-const seg = engineFor('segmenter', 'live').create(ev => { if (recording) addEvent(ev); });
+let seg = engineFor('segmenter', 'live').create(ev => { if (recording) addEvent(ev); });
+// Called when Settings > Engines changes the live segmenter. Never swapped in the middle of a recording.
+function rebuildSegmenter() { if (!recording) seg = engineFor('segmenter', 'live').create(ev => { if (recording) addEvent(ev); }); }
 
 const autoM = new AutoMode();
 const recModeCfg = () => $('recMode').value === 'auto' ? REC_MODES[autoM.mode] : (REC_MODES[$('recMode').value] || REC_MODES.fast);
@@ -142,7 +144,7 @@ async function analyseFile(file) {
     const n = ab.length, x = new Float32Array(n), nc = ab.numberOfChannels;
     for (let c = 0; c < nc; c++) { const d = ab.getChannelData(c); for (let i = 0; i < n; i++) x[i] += d[i] / nc; }
     pbStop(); newRecording(); recT0 = 0;
-    const notes = await engineFor('segmenter', 'offline').run({ x, sr: ab.sampleRate }, { auto: $('recMode').value === 'auto', m: REC_MODES[$('recMode').value] || REC_MODES.fast, fmin: +$('fmin').value, fmax: +$('fmax').value, conf: +$('conf').value, a4: a4(), chunk: true, onProgress: p => { info.textContent = 'Analysing… ' + Math.round(p * 100) + '%'; } });
+    const notes = await engineFor('segmenter', 'offline').run({ x, sr: ab.sampleRate }, { ...engineOpts(), auto: $('recMode').value === 'auto', m: REC_MODES[$('recMode').value] || REC_MODES.fast, fmin: +$('fmin').value, fmax: +$('fmax').value, conf: +$('conf').value, a4: a4(), chunk: true, onProgress: p => { info.textContent = 'Analysing… ' + Math.round(p * 100) + '%'; } });
     notes.forEach(addEvent);
     const k = 1; cap.k = k; cap.rate = ab.sampleRate;       // keep the sound for Replay
     for (let o = 0; o < n; o += 65536) capPush(x.subarray(o, Math.min(n, o + 65536)));

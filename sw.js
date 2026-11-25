@@ -1,6 +1,6 @@
 // Service worker: makes the app installable and usable offline.
 // Bump CACHE whenever you change any file, so installed copies pick up the update.
-const CACHE = 'tuner-v40';
+const CACHE = 'tuner-v41';
 const VENDOR = 'tuner-vendor-v1';   // the Detailed-analysis files live in their own cache, so a new app version does not delete them
 const FILES = [
   './',
@@ -20,6 +20,7 @@ const FILES = [
   './js/core/engines/f0-yin.js',
   './js/core/engines/segmenter-classic.js',
   './js/core/engines/transcriber-basicpitch.js',
+  './js/core/engines/contract.js',
   './js/app/base.js',
   './js/app/engines/settings.js',
   './js/app/engines/basicpitch.js',
@@ -36,6 +37,7 @@ const FILES = [
   './js/app/chart.js',
   './js/app/audio.js',
   './js/app/profiles.js',
+  './js/app/engines/ui.js',
   './js/app/lab.js',
   './js/app/main.js',
   './js/app/install.js',

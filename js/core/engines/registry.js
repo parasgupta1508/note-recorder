@@ -17,17 +17,18 @@ const listEngines = role => _engines.filter(e => !role || e.role === role);
 // Default settings object (what Settings stores under "engines"). 'auto' follows AUTO_ENGINES.
 const defaultEngineSettings = () => ({ default: { f0: 'auto', segmenter: 'auto', transcriber: 'auto', separator: 'none' }, perInstrument: {}, params: {} });
 // Which engine id a role uses for this instrument, after 'auto' is resolved. Returns null for 'none'.
-function resolveEngineId(role, settings, instrument) {
-  const s = settings || defaultEngineSettings();
-  let id = (s.perInstrument && instrument && s.perInstrument[instrument] && s.perInstrument[instrument][role]) || (s.default && s.default[role]) || 'auto';
+// A choice can be for one mode only: the key 'segmenter:offline' beats 'segmenter'.
+function resolveEngineId(role, settings, instrument, mode) {
+  const s = settings || defaultEngineSettings(), per = (s.perInstrument && instrument && s.perInstrument[instrument]) || {}, keys = mode ? [role + ':' + mode, role] : [role];
+  let id = keys.map(k => per[k]).find(Boolean) || keys.map(k => s.default && s.default[k]).find(Boolean) || 'auto';
   if (id === 'auto') id = AUTO_ENGINES[role] || 'none';
   return id === 'none' ? null : id;
 }
 // getEngine(role, instrument, mode, settings): the engine to use. mode is 'live' or 'offline' (a non-live engine is skipped for live use).
-// If the chosen engine is unknown or cannot do the mode, falls back to today's engine, so a bad setting never breaks the app.
+// If the chosen engine is unknown, failed its check or cannot do the mode, falls back to today's engine, so a bad setting never breaks the app.
 function getEngine(role, instrument, mode, settings) {
-  const fit = e => e && (!mode || e.caps[mode] !== false);
-  const want = resolveEngineId(role, settings, instrument), by = id => _engines.find(e => e.role === role && e.id === id);
+  const fit = e => e && !e.contractFail && !e.caps.clipInput && (!mode || e.caps[mode] !== false);   // an engine that failed its contract check, or that works on a saved clip (helper) rather than audio, is never picked
+  const want = resolveEngineId(role, settings, instrument, mode), by = id => _engines.find(e => e.role === role && e.id === id);
   if (want && fit(by(want))) return by(want);
   const auto = by(AUTO_ENGINES[role]); return fit(auto) ? auto : null;
 }

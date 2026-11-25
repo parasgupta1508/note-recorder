@@ -329,6 +329,9 @@
       <div class="qk" id="rangeQ"><button data-r="30,400">Bass</button><button data-r="70,1500">Guitar</button><button data-r="180,2800">Violin</button><button data-r="140,1400">Ukulele</button><button data-r="80,1100">Voice</button><button data-r="60,1500">All</button></div>
       <p class="hint2" style="margin:10px 0 0">Tap your instrument, or type your own limits. A narrower range avoids octave mistakes and saves battery. The Tuner already narrows it to your instrument's strings; this applies to the Recorder and Practice.</p></details></div>
 
+  <div class="set-group" data-g="engines"><h3>Engines</h3><p>Which method listens and writes the notes. “Auto” keeps today's behaviour. The Detection presets above stay where they are.</p>
+    <div id="engBody"></div>
+    <div class="row" style="margin-top:10px"><button type="button" class="sec" id="engCompare">Compare in Lab</button></div></div>
   <div class="set-group" data-g="check"><h3>Accuracy check</h3><p>The software test proves the maths. The live check measures your own microphone and instrument.</p>
     <div class="row"><button id="selftest" class="sec">Software test</button><button id="livetest" class="sec">Live check</button></div>
     <p class="hint2" id="lcMsg" style="margin:10px 0 0">Live check: tap, then play one steady note for 4 seconds (turn the microphone on first).</p>
@@ -366,6 +369,7 @@
 <script src="js/core/engines/f0-yin.js"></script>
 <script src="js/core/engines/segmenter-classic.js"></script>
 <script src="js/core/engines/transcriber-basicpitch.js"></script>
+<script src="js/core/engines/contract.js"></script>
 <script src="js/app/base.js"></script>
 <script src="js/app/engines/settings.js"></script>
 <script src="js/app/engines/basicpitch.js"></script>
@@ -377,6 +381,7 @@
 <script src="js/app/metronome.js"></script>
 <script src="js/app/selftest.js"></script>
 <script src="js/app/settings-ui.js"></script>
+<script src="js/app/engines/ui.js"></script>
 <script src="js/app/practice-engine.js"></script>
 <script src="js/app/recorder.js"></script>
 <script src="js/app/chart.js"></script>

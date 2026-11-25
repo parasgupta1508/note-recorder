@@ -133,7 +133,7 @@ function labBusy(b) { LAB.busy = b; for (const id of ['labFetch', 'labMake', 'la
 function labSettings() { const kind = $('labApp').value, mode = $('recMode').value, conf = +$('conf').value; return { app: kind, mode, conf, inst: prof.k, label: kind === 'live' ? `Live · ${REC_NAMES[mode] || mode} · conf ${conf}` : 'Detailed' }; }
 function labRunApp(kind, o = {}) {
   const c = LAB.cur, mode = o.mode || $('recMode').value, conf = o.conf || +$('conf').value, fmin = +$('fmin').value, fmax = +$('fmax').value;
-  if (kind === 'live') return engineFor('segmenter', 'offline').run({ x: c.x, sr: c.sr }, { auto: mode === 'auto', m: REC_MODES[mode] || REC_MODES.fast, fmin, fmax, conf, a4: a4(), chunk: true, onProgress: o.onProgress });
+  if (kind === 'live') return engineFor('segmenter', 'offline').run({ x: c.x, sr: c.sr }, { ...engineOpts(), auto: mode === 'auto', m: REC_MODES[mode] || REC_MODES.fast, fmin, fmax, conf, a4: a4(), chunk: true, onProgress: o.onProgress });
   return detailedNotes(resample(c.x, c.sr, 22050), { lo: fmin, hi: fmax, poly: isPolyInst(), a4: a4(), onStatus: t => labSay(t), onProgress: o.onProgress });
 }
 function labRemember(set, c, refKey) {

@@ -75,7 +75,7 @@ srv.listen(0, async () => {
     say(errs.length === 0, `${label}: no script errors${errs.length ? ' - ' + errs.join(' | ') : ''}`);
   }
   // players: a brand-new device asks who is practising; scores saved under the old names are found again; names with markup are refused
-  const ev = async x => { const r = await send('Runtime.evaluate', { expression: x, awaitPromise: true, returnByValue: true }); return r && r.result && r.result.value; };
+  const ev = async x => { const r = await send('Runtime.evaluate', { expression: x, awaitPromise: true, returnByValue: true }); if (r && r.exceptionDetails) console.log('  (page expression threw: ' + String((r.exceptionDetails.exception && r.exceptionDetails.exception.description) || r.exceptionDetails.text).split(String.fromCharCode(10))[0] + ')'); return r && r.result && r.result.value; };
   errs.length = 0; await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await send('Page.navigate', { url: `http://localhost:${port}/index.html` }); await wait(800); await ev('localStorage.clear()');
   await send('Page.navigate', { url: `http://localhost:${port}/index.html` }); await wait(1200);
@@ -90,6 +90,23 @@ srv.listen(0, async () => {
   await ev("showTab('analysis'); document.querySelector('#anMode button[data-m=cmp]').click(); 1"); await wait(300);
   say(await ev("document.querySelector('#anBody').textContent.includes('Ada') && document.querySelector('#anBody').textContent.includes('Bo')"), 'players: Compare shows both players');
   say(errs.length === 0, 'players: no script errors' + (errs.length ? ' - ' + errs.join(' | ') : ''));
+  // engines: Settings > Engines is generated from the registry; a stub engine proves the choice reaches the Tuner and Recorder paths, and a failing engine cannot be picked
+  errs.length = 0;
+  await ev(`registerEngine({ id: 'stub-f0', role: 'f0', label: 'Stub pitch', version: '1', caps: { live: true, offline: true, needsHelper: false, license: 'test' }, params: { gain: { type: 'range', min: 0, max: 10, step: 1, default: 5, label: 'Gain' } }, calls: 0, frame() { this.calls++; return null; }, run() { return []; } });
+    registerEngine({ id: 'stub-seg', role: 'segmenter', label: 'Stub notes', version: '1', caps: { live: true, offline: true, needsHelper: false, license: 'test' }, params: {}, create() { const g = new Segmenter(() => {}); g.__stub = true; return g; }, gate: recPitchCore, run() { return []; } });
+    registerEngine({ id: 'bad-f0', role: 'f0', label: 'Broken pitch', version: '1', caps: { live: true, offline: true, needsHelper: false, license: 'test' }, params: {}, frame() { return null; }, run() { return [{ nope: 1 }]; } });
+    showTab('settings'); renderEngines(); 1`);
+  say(await ev("[...document.querySelectorAll('#engBody select')].every(s => s.options[0].value === 'auto') && !!document.querySelector('#engBody option[value=stub-f0]') && !document.querySelector('#engBody option[value=lab-mpm]')"), 'engines: Settings lists every registered engine per job (clip-only helper engines left out)');
+  say(await ev("engineFor('f0','live').id === 'yin' && engineFor('segmenter','live').id === 'classic' && engineSummary() === 'Auto (built in)'"), "engines: Auto keeps today's engines");
+  say(await ev("const s = document.querySelector('#engBody select[data-row=\"0\"]'); s.value = 'stub-f0'; s.dispatchEvent(new Event('change', { bubbles: true })); engineFor('f0','live').id === 'stub-f0' && engSet.default['f0:live'] === 'stub-f0'"), 'engines: choosing a pitch engine changes what the Tuner uses');
+  say(await ev("(async () => { const tn = new Float32Array(44100 * 2); for (let i = 11025; i < 55125; i++) tn[i] = 0.4 * Math.sin(2 * Math.PI * 440 * i / 44100); const st = findEngine('f0', 'stub-f0'); st.calls = 0; await engineFor('segmenter','offline').run({ x: tn, sr: 44100 }, { ...engineOpts(), m: REC_MODES.fast, fmin: 180, fmax: 2400, conf: 0.85, a4: 440 }); return st.calls > 10; })()"), 'engines: the choice also reaches file analysis (the Recorder and Lab path)');
+  say(await ev("const s2 = document.querySelector('#engBody select[data-row=\"1\"]'); s2.value = 'stub-seg'; s2.dispatchEvent(new Event('change', { bubbles: true })); seg.__stub === true"), "engines: choosing a note engine changes the Recorder's live segmenter");
+  say(await ev("const r = document.querySelector('#engBody input[type=range][data-p=\"0|gain\"]'); r.value = '8'; r.dispatchEvent(new Event('input', { bubbles: true })); engineParam(findEngine('f0','stub-f0'), 'gain') === 8"), 'engines: parameters are generated from the engine and stored');
+  await ev("document.querySelector('#engBody select[data-row=\"0\"]').value = 'bad-f0'; setEngineSettings({ ...engSet, default: { ...engSet.default, 'f0:live': 'bad-f0' } }); renderEngines(); document.querySelector('#engBody [data-test=\"0\"]').click(); 1"); await wait(400);
+  say(await ev("findEngine('f0','bad-f0').contractFail === true && engineFor('f0','live').id === 'yin' && document.querySelector('#engBody option[value=bad-f0]').disabled"), 'engines: an engine that fails its check is not used and cannot be selected');
+  await ev("document.querySelector('#engBody [data-reset=\"1\"]').click(); 1");
+  say(await ev("document.querySelector('#engBody [data-test=\"1\"]') && (document.querySelector('#engBody [data-test=\"1\"]').click(), true)") && (await wait(600), await ev("/Passed all/.test(document.getElementById('engRes1').textContent)")), 'engines: Test this engine passes for a good engine');
+  say(errs.length === 0, 'engines: no script errors' + (errs.length ? ' - ' + errs.join(' | ') : ''));
   console.log('screenshots in ' + out);
   done(bad ? 1 : 0);
 });

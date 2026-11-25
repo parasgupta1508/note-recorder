@@ -2,7 +2,7 @@
 // Part of the app. Scripts in js/app load in the order listed in index.html and share one scope.
 
 // ----- settings layout (List / Tabs / Classic) -----
-const SG = [['players', 'Players'], ['instrument', 'Instrument'], ['tuning', 'Tuning'], ['mic', 'Microphone'], ['detect', 'Detection'], ['check', 'Accuracy check'], ['data', 'Backup & restore'], ['layout', 'Settings layout'], ['install', 'Install app'], ['dev', 'Developer'], ['reset', 'Reset']], LAY_KEY = 'tuner-setlayout';
+const SG = [['players', 'Players'], ['instrument', 'Instrument'], ['tuning', 'Tuning'], ['mic', 'Microphone'], ['detect', 'Detection'], ['engines', 'Engines'], ['check', 'Accuracy check'], ['data', 'Backup & restore'], ['layout', 'Settings layout'], ['install', 'Install app'], ['dev', 'Developer'], ['reset', 'Reset']], LAY_KEY = 'tuner-setlayout';
 let setLay = 'list', setCur = null; try { setLay = localStorage.getItem(LAY_KEY) || 'list'; } catch {}
 if (!['list', 'tabs', 'classic'].includes(setLay)) setLay = 'list';
 const setSum = k => ({
@@ -11,6 +11,7 @@ const setSum = k => ({
   tuning: () => `A4 ${$('a4').value} Hz · ±${$('tol').value}¢`,
   mic: () => `Noise gate ${(+$('gate').value).toFixed(3)} · Boost ${$('boost').value}×`,
   detect: () => { const h = [...document.querySelectorAll('#detSeg button.on')][0]; return `${h ? h.textContent : 'Custom'} · ${$('smooth').selectedOptions[0].textContent.split(' ')[0]} needle`; },
+  engines: () => typeof engineSummary === 'function' ? engineSummary() : 'Auto (built in)',
   check: () => 'Software test · Live check',
   data: () => 'Save or restore scores and history',
   layout: () => ({ list: 'List', tabs: 'Tabs', classic: 'Classic' })[setLay],
