@@ -37,7 +37,7 @@ function showTab(k) {
   if (tab === 'settings') renderSet();
   if (tab === 'lab' && typeof labShow === 'function') labShow();
   if (tab !== 'rec') pbStop(); else { recUi(); requestDraw(); }
-  if (tab === 'tuner') { drawTMeter(); ensureMic(); }                       // the Tuner has no start button: opening it starts the microphone
+  if (tab === 'tuner') { drawTMeter(); ensureMic().then(() => { if (tab === 'tuner') startAutoCalib(); }); }                     // the Tuner has no start button: opening it starts the microphone
   else if (NO_MIC_TABS.includes(tab)) { if (listening && !recording) stopListening(); $('status').textContent = ''; }
   scrollTo(0, 0);
 }

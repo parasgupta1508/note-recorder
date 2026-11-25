@@ -36,6 +36,17 @@ Each benchmark runs the real code and compares with a saved baseline in `tests/b
 | `node tests/piece-import.js` | MIDI / MusicXML / .mxl importers and the input detector (fixtures are built in `tests/lib/fixtures.js`) | Any change to `midi.js`, `musicxml.js`, `piece.js` |
 | `node tests/engine-contract.js` | Every engine in the registry (`js/core/engines/`): shape, silence, determinism, range, time budget | Adding or changing an engine, or the registry |
 
+### Real-sound tests (speaker → microphone)
+
+Not a ratchet and not part of CI: they need a person at the PC, because the notes are played out loud and recorded with the real microphone (headed Edge with `--use-fake-ui-for-media-stream`, which only auto-accepts the permission prompt). Raise the speaker volume first; the run prints "TOO QUIET / INCONCLUSIVE" (exit 2) when the mic barely hears the speaker. WAV recordings go to `tests/_mic/` (git-ignored).
+
+| Command | What it does |
+|---|---|
+| `node tests/mic-loopback.js` | Plays the notes of the MusicXML scores in `tests/samples/` through the speaker and reads them back with the app's own detector, next to a synthesised control |
+| `node tests/mic-loopback.js --mode app` | Same through the real Tuner screen: note shown, offset, and whether the in-tune beep fires |
+| `node tests/mic-loopback.js --mode listen --sec 10` | Records the mic while you play/sing and prints the notes heard (use for any real-sound check; `--lo/--hi` set the Hz range) |
+| `node tests/tuner-musicxml.js` | Synthesised-only version of the above (no speaker, runs anywhere) |
+
 If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. When you add a detection feature, add a benchmark case for it first. `DBG="guitar mid clean auto" node tests/strings.js` prints expected versus found notes; `KIND=repeat`, `ONLY=ukulele` narrow the Detailed run.
 
 ## Detection facts worth remembering
