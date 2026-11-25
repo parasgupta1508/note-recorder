@@ -21,3 +21,7 @@
 
 - [ ] **Instruments:** remove the extra instruments. Keep only violin, guitar, ukulele, piano/chromatic and voice.
 - [ ] **Consolidate Microphone, Accuracy check and Detection.** They overlap and are confusing now. Merge them into one clearer structure (suggestion to confirm with the owner: one "Listening" group with the mic and calibration, an "Accuracy" check, and the detection presets in one place).
+
+## Scales: two places today
+
+- [ ] **Scales can be learned and practised in two places:** the built-in scale pieces in the Practice menu (the library packs, for example for violin) and the separate Scale drill. Decide with the owner whether to merge them, or keep both with clear roles. Questions to ask: which one is the main way to practise a scale; should progress from both count towards the same "Full scale" measure in Progress; should the Practice menu's scales open the Scale drill instead of a second player.
