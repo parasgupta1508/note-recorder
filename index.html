@@ -59,7 +59,7 @@
 <!-- ============ TUNER ============ -->
 <section id="tab-tuner" class="panel tuner hide" role="tabpanel" aria-labelledby="nav-tuner">
   <div class="t-side stack">
-    <div id="instBox"><div id="instChips"></div><select id="tuningSel" class="hide" aria-label="Tuning"></select></div>
+    <div id="instBox"><div id="instChips" role="group" aria-label="Instrument"></div><button type="button" id="chromBtn" class="sec chrom-btn" aria-pressed="false" title="Show every note instead of the strings">Chromatic: off</button><select id="tuningSel" class="hide" aria-label="Tuning"></select></div>
     <div id="strBox">
       <div class="sub-row" id="strRow"><div class="row"><button id="autoBtn" class="sec on">Auto</button><button id="retune" class="sec" title="Clear the marks and start again">Reset</button></div></div>
       <div id="strChips"></div>
@@ -78,6 +78,7 @@
 
 <!-- ============ SCALE ============ -->
 <section id="tab-scale" class="panel hide">
+  <h2 class="pg-h">Scale drills</h2>
   <div class="sc-grid">
     <div class="stack">
       <div class="actions">
@@ -151,8 +152,9 @@
 
 <!-- ============ ANALYSIS ============ -->
 <section id="tab-analysis" class="panel hide stack" role="tabpanel" aria-labelledby="nav-analysis">
+  <h2 class="pg-h">Progress</h2>
   <div class="an-head">
-    <div class="seg" id="anMode"><button data-m="prog" class="on">Progress</button><button data-m="cmp">Compare players</button></div>
+    <div class="seg" id="anMode" role="group" aria-label="What to show"><button data-m="prog" class="on">Scales</button><button data-m="cmp">Compare players</button></div>
     <label class="field scope"><span>Scale</span><select id="anScope"><option value="cur">Current scale</option><option value="all">All scales</option></select></label>
     <label class="field"><span>Measure</span><select id="anMetric"><option value="score">Note score</option><option value="acc">In-tune %</option><option value="err">Pitch offset (¢)</option></select></label>
     <label class="field"><span>Time axis</span><select id="anX"><option value="play">Per play</option><option value="date">By date</option></select></label>
@@ -162,8 +164,9 @@
 
 <!-- ============ RECORDER ============ -->
 <section id="tab-rec" class="panel hide stack" data-view="sheet">
+  <h2 class="pg-h">Free record</h2>
   <div class="rbar">
-    <button id="rec" disabled>● Record</button>
+    <button id="rec">● Record</button>
     <span id="recInfo">Press Record.</span>
     <div class="segc" role="group" aria-label="Chart style">
       <button id="vwSheet" class="on" aria-pressed="true">Sheet</button>
@@ -194,17 +197,24 @@
 
   <div class="ropts">
     <div class="field top" id="engWrap"><span>Analysis</span>
-      <div class="seg" id="engSeg" role="group" aria-label="Analysis mode"><button data-e="live" class="on">Live</button><button data-e="det">Detailed</button></div>
+      <div class="seg" id="engSeg" role="group" aria-label="Analysis mode"><button data-e="live" class="on">Instant</button><button data-e="det">Careful (slower)</button></div>
       <div class="hint2" id="engHint"></div></div>
-    <label class="field top" title="This sets how certain the app must be before it records a note.&#10;• Notes missing? Choose Fast tempo or Soft &amp; quiet.&#10;• Notes that you didn't play? Choose Standard or Noisy room."><span>Listening</span><select id="recMode"><option value="auto" selected>Auto</option><option value="fast">Fast tempo</option><option value="normal">Standard</option><option value="relaxed">Soft &amp; quiet</option><option value="strict">Noisy room</option></select><div class="hint2" id="recModeDesc"></div></label>
     <div class="field full hide" id="showWrap"><span>Showing</span>
-      <div class="seg" id="showSeg" role="group" aria-label="Which result to show"><button data-s="live" class="on">Live result</button><button data-s="det">Detailed result</button></div></div>
+      <div class="seg" id="showSeg" role="group" aria-label="Which result to show"><button data-s="live" class="on">Instant result</button><button data-s="det">Careful result</button></div></div>
+  </div>
+
+  <details class="more" id="recMore">
+    <summary>More options</summary>
+    <div class="ropts">
+    <label class="field top" title="This sets how certain the app must be before it records a note.&#10;• Notes missing? Choose Fast tempo or Soft &amp; quiet.&#10;• Notes that you didn't play? Choose Standard or Noisy room."><span>Listening</span><select id="recMode"><option value="auto" selected>Auto</option><option value="fast">Fast tempo</option><option value="normal">Standard</option><option value="relaxed">Soft &amp; quiet</option><option value="strict">Noisy room</option></select><div class="hint2" id="recModeDesc"></div></label>
+    
     <label class="field"><span>Replay sound</span><select id="pbMode"><option value="audio">Recorded sound</option><option value="notes">Detected notes</option></select></label>
     <label class="field"><span>Speed</span><select id="pbSpeed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option></select></label>
     <label class="field"><span>Colours</span><select id="recColor"><option value="acc" selected>By accuracy</option><option value="note">By note name</option></select></label>
     <label class="field"><span>Tempo (0 = off)</span><input id="recBpm" type="number" min="0" max="300" value="0" inputmode="numeric"></label>
     <label class="field last"><span>Display size</span><select id="dispSize" title="How big the notes and text are on the chart"><option value="auto" selected>Auto</option><option value="large">Large</option><option value="xl">Extra large</option></select></label>
-  </div>
+    </div>
+  </details>
 
   <details class="more">
     <summary>Stats, note list &amp; export</summary>

@@ -52,7 +52,7 @@ srv.listen(0, async () => {
     else if (m.method === 'Runtime.exceptionThrown') { const d = m.params.exceptionDetails; errs.push((d.exception && d.exception.description || d.text || 'error').split('\n')[0]); } };
   await new Promise(r => ws.onopen = r); await send('Page.enable'); await send('Runtime.enable');
   const wait = ms => new Promise(r => setTimeout(r, ms));
-  for (const [label, w, h] of [['phone', 375, 800], ['desktop', 1280, 900]]) {
+  for (const [label, w, h] of [['phone', 375, 800], ['tablet', 820, 1100], ['desktop', 1280, 900]]) {
     errs.length = 0;
     await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 600 });
     await send('Page.navigate', { url: `http://localhost:${port}/index.html` }); await wait(1500);
@@ -72,6 +72,21 @@ srv.listen(0, async () => {
       await send('Runtime.evaluate', { expression: `document.querySelector('nav.tabs button[data-tab=${it.tab}]').click()` }); await wait(400);
       const s = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(out, `${label}-${it.tab}.png`), Buffer.from(s.data, 'base64'));
     }
+    // screens reached from Practice / Settings: screenshots, overflow, and the declutter rules
+    const evl = async x => { const r = await send('Runtime.evaluate', { expression: x, awaitPromise: true, returnByValue: true }); return r && r.result && r.result.value; };
+    for (const k of ['scale', 'rec', 'lab']) {
+      await evl(`showTab('${k}')`); await wait(500);
+      const ov = await evl('Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth');
+      say(ov <= 0, `${label}: "${k}" has no horizontal overflow${ov > 0 ? ' (' + ov + ' px too wide)' : ''}`);
+      const sh = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(out, `${label}-${k}.png`), Buffer.from(sh.data, 'base64'));
+    }
+    await evl("showTab('tuner')"); await wait(400);
+    say(await evl("[...document.querySelectorAll('#instChips .chip')].map(b => b.textContent).join() === 'Violin,Guitar,Ukulele,Piano'"), `${label}: Tuner offers Violin, Guitar, Ukulele, Piano`);
+    say(await evl("[...document.querySelectorAll('#instChips .chip')].every(b => b.getBoundingClientRect().right <= innerWidth && b.getBoundingClientRect().height >= 40)"), `${label}: Tuner chips fit the screen and are at least 40 px tall`);
+    say(await evl("const b = document.getElementById('chromBtn'), was = inst; b.click(); const flipped = (inst === 'chromatic') !== (was === 'chromatic') && b.getAttribute('aria-pressed') === String(inst === 'chromatic'); b.click(); flipped && (inst === 'chromatic') === (was === 'chromatic')"), `${label}: the Chromatic switch flips and flips back`);
+    await evl("showTab('rec')"); await wait(300);
+    say(await evl("!document.getElementById('rec').disabled"), `${label}: the Record button is usable before the microphone is on`);
+    say(await evl("const m = document.getElementById('recMore'); !m.open && m.contains(document.getElementById('recMode')) && !m.contains(document.getElementById('engSeg')) && document.getElementById('engSeg').textContent.includes('Careful')"), `${label}: Free record hides the extra controls under More options and shows Instant / Careful`);
     say(errs.length === 0, `${label}: no script errors${errs.length ? ' - ' + errs.join(' | ') : ''}`);
   }
   // players: a brand-new device asks who is practising; scores saved under the old names are found again; names with markup are refused

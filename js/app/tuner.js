@@ -11,14 +11,19 @@ function resetTuner() {
   trail.length = 0; tTgMidi = null; tm = { idle: true };
   $('tHint').textContent = ''; $('tAdvice').textContent = ''; buildStrChips(-1);
 }
+// The Tuner offers the instruments this app is for. Piano has no strings, so its chip is the chromatic tuner; the Chromatic switch lets a string player see every note too.
+const TUNER_CHIPS = ['violin', 'guitar', 'ukulele', 'chromatic'];
+let preChrom = null;   // the instrument to go back to when Chromatic is switched off
+$('chromBtn').onclick = () => { if (inst === 'chromatic') { inst = preChrom || 'violin'; preChrom = null; } else { preChrom = inst; inst = 'chromatic'; } resetTuner(); buildInstChips(); };
 function buildInstChips() {
   const fam = FAMILIES.find(f => f[2].includes(inst)) || FAMILIES[0];
   $('instChips').innerHTML = '';
-  for (const f of FAMILIES) {
-    const b = document.createElement('button'); b.className = 'chip' + (f === fam ? ' on' : ''); b.textContent = f[1];
-    b.onclick = () => { if (f === fam) return; inst = f[2][0]; resetTuner(); buildInstChips(); };
+  for (const f of TUNER_CHIPS.map(k => FAMILIES.find(x => x[0] === k))) {
+    const b = document.createElement('button'); b.className = 'chip' + (f === fam ? ' on' : ''); b.textContent = f[0] === 'chromatic' ? 'Piano' : f[1]; b.setAttribute('aria-pressed', f === fam ? 'true' : 'false');
+    b.onclick = () => { if (f === fam) return; preChrom = null; inst = f[2][0]; resetTuner(); buildInstChips(); };
     $('instChips').appendChild(b);
   }
+  const chrom = inst === 'chromatic'; $('chromBtn').textContent = 'Chromatic: ' + (chrom ? 'on' : 'off'); $('chromBtn').setAttribute('aria-pressed', chrom ? 'true' : 'false'); $('chromBtn').classList.toggle('on', chrom);
   const sel = $('tuningSel'); sel.classList.toggle('hide', fam[2].length < 2);
   sel.innerHTML = fam[2].map(k => '<option value="' + k + '">' + PRESETS[k].label.replace(/^[^–(]*[–(]\s*/, '').replace(/\)$/, '') + '  ·  ' + PRESETS[k].strings.map(n => nm(n.replace(/\d+/, ''))).join(' ') + '</option>').join('');
   sel.value = inst;

@@ -97,9 +97,10 @@
 
   /* tuner */
   .tuner{display:flex;flex-direction:column;gap:16px}
-  #instChips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+  #instChips{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:2px}
+  .chrom-btn{margin-top:8px;min-height:44px} .chrom-btn.on{border-color:var(--acc);color:var(--fg)}
   #instChips::-webkit-scrollbar{display:none}
-  #instChips .chip{flex:none}
+  #instChips .chip{flex:none;min-height:44px}
   .readout{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 2px}
   .hint{color:#a9bcff;min-height:22px;font-size:15px;font-weight:550}
   .big{font-size:clamp(76px,24vw,132px);font-weight:700;line-height:1;text-align:center;letter-spacing:-.02em;font-variant-numeric:tabular-nums}

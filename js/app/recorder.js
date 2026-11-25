@@ -79,7 +79,7 @@ let recGen = 0, engine = 'live', liveEv = null, detEv = null, detBusy = false, s
 try { if (localStorage.getItem(ENG_KEY) === 'det') engine = 'det'; } catch {}
 function engUi() {
   for (const b of $('engSeg').children) b.classList.toggle('on', b.dataset.e === engine);
-  $('engHint').textContent = engine === 'det' ? 'Notes appear as you play, then press Stop: the app studies the whole recording and shows a more accurate result (takes a little while). Guitar and ukulele keep every note of a chord; other instruments get one melody line.' + (bpReady === 'loading' ? ' Getting the analysis files…' : bpReady === 'ready' ? ' Ready, and works offline.' : '') : 'Notes appear instantly as you play. Light and fast.';
+  $('engHint').textContent = engine === 'det' ? 'Careful: notes appear as you play, then when you press Stop the app studies the whole recording and shows a more accurate result (it takes a little while). Guitar and ukulele keep every note of a chord; other instruments get one melody line.' + (bpReady === 'loading' ? ' Getting the analysis files…' : bpReady === 'ready' ? ' Ready, and works offline.' : '') : 'Instant: notes appear as you play. Light and fast.';
   const both = !!(liveEv && detEv); $('showWrap').classList.toggle('hide', !both);
   for (const b of $('showSeg').children) b.classList.toggle('on', b.dataset.s === shownRes);
   if (detBusy) $('rec').disabled = true;
@@ -124,7 +124,7 @@ async function analyseDetailed() {
     if (gen !== recGen) { detBusy = false; engUi(); return; }   // the recording was cleared or replaced meanwhile: drop this result
     detEv = res;
     showResult('det');
-    info.textContent = `Detailed result: ${detEv.length} notes (Live found ${liveEv.length}).`;
+    info.textContent = `Careful result: ${detEv.length} notes (Instant found ${liveEv.length}).`;
   } catch (err) {
     console.warn('Detailed analysis failed:', err && (err.stack || err.message || err));
     detEv = null; info.textContent = err && err.message === 'offline' ? 'Detailed analysis needs its files. Connect to the internet once, then it works offline.' : 'Detailed analysis could not run on this device. The Live result is shown.';

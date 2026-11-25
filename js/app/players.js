@@ -15,7 +15,7 @@ function addPlayer(raw) {
   const n = String(raw || '').trim().replace(/\s+/g, ' ');
   if (!validName(n)) return 'Use 1 to 24 letters, numbers or spaces.';
   if (PROFILES.some(p => p.toLowerCase() === n.toLowerCase())) return 'That name is already used.';
-  addPlayerRecord(n); savePlayers(); switchPlayer(n); renderPlayers(); return '';
+  addPlayerRecord(n); savePlayers(); switchPlayer(n); renderPlayers(); $('firstRun').classList.add('hide'); return '';
 }
 function removePlayer(n) {
   if (!PROFILES.includes(n)) return;
