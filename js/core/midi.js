@@ -29,13 +29,17 @@ function parseMidi(input) {
   if (d.length < 14 || tag() !== 'MThd') throw new Error('Not a MIDI file');
   const hl = u32(); u16(); const nTr = u16(), div = u16(); p = 8 + hl;
   if (div & 0x8000) throw new Error('SMPTE time MIDI is not supported');
-  const tempos = [{ tick: 0, us: 500000 }], raw = [];
+  const tempos = [{ tick: 0, us: 500000 }], raw = [], names = [];
+  let timeSig = null;                                              // first time signature [beats, beat unit]
   for (let t = 0; t < nTr && p + 8 <= d.length; t++) {
     if (tag() !== 'MTrk') throw new Error('Bad MIDI track'); const len = u32(), end = Math.min(d.length, p + len); let tick = 0, run = 0;
     const vl = () => { let v = 0, b; do { b = d[p++]; v = (v << 7) | (b & 127); } while (b & 128 && p < end); return v; };
     while (p < end) {
       tick += vl(); let s = d[p];
-      if (s === 0xff) { p++; const ty = d[p++], l = vl(); if (ty === 0x51 && l === 3) tempos.push({ tick, us: (d[p] << 16) | (d[p + 1] << 8) | d[p + 2] }); p += l; continue; }
+      if (s === 0xff) { p++; const ty = d[p++], l = vl(); if (ty === 0x51 && l === 3) tempos.push({ tick, us: (d[p] << 16) | (d[p + 1] << 8) | d[p + 2] });
+        else if (ty === 0x03 && !names[t]) names[t] = String.fromCharCode(...d.subarray(p, p + l)).replace(/[^ -~]/g, '').trim();
+        else if (ty === 0x58 && l >= 2 && !timeSig) timeSig = [d[p], 1 << d[p + 1]];
+        p += l; continue; }
       if (s === 0xf0 || s === 0xf7) { p++; p += vl(); continue; }
       if (s & 128) { run = s; p++; } else if (!run) throw new Error('Bad MIDI data'); s = run;
       const hi = s & 0xf0, c = s & 15;
@@ -54,8 +58,8 @@ function parseMidi(input) {
   for (const e of raw) {
     const k = e.trk + ':' + e.c + ':' + e.m;
     if (e.on) { if (!open.has(k)) open.set(k, []); open.get(k).push(e); }
-    else { const q = open.get(k); if (q && q.length) { const o = q.shift(); notes.push({ midi: o.m, start: secs(o.tick), dur: (secs(e.tick) - secs(o.tick)) * 1000, vel: o.v }); } }
+    else { const q = open.get(k); if (q && q.length) { const o = q.shift(); notes.push({ midi: o.m, start: secs(o.tick), dur: (secs(e.tick) - secs(o.tick)) * 1000, vel: o.v, trk: o.trk, ch: o.c }); } }
   }
   notes.sort((a, b) => a.start - b.start || a.midi - b.midi);
-  return { notes, seconds: notes.length ? Math.max(...notes.map(n => n.start + n.dur / 1000)) : 0, tracks: nTr };
+  return { notes, seconds: notes.length ? Math.max(...notes.map(n => n.start + n.dur / 1000)) : 0, tracks: nTr, names, timeSig, bpm: Math.round(6e7 / tempos[tempos.length > 1 ? 1 : 0].us * 10) / 10 };
 }

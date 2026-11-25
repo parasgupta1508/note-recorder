@@ -4,6 +4,6 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.join(__dirname, '..', '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const files = [...html.matchAll(/src="(js\/core\/[^"]+)"/g)].map(m => m[1]);
-const ctx = vm.createContext({ console, Math, performance: { now: () => Date.now() }, setTimeout, clearTimeout });
+const ctx = vm.createContext({ console, Math, performance: { now: () => Date.now() }, setTimeout, clearTimeout, TextDecoder });
 for (const f of files) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
 module.exports = new Proxy({ root }, { get: (t, name) => (name in t ? t[name] : typeof name === 'string' ? vm.runInContext(`typeof ${name} === 'undefined' ? undefined : ${name}`, ctx) : undefined) });

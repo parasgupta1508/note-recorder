@@ -52,8 +52,30 @@
 
 <!-- ============ PIECES ============ -->
 <section id="tab-pieces" class="panel stack hide" role="tabpanel" aria-labelledby="nav-pieces">
-  <h2 class="pg-h">Pieces</h2>
-  <div class="home-card"><b>Nothing here yet</b><p class="mut">Your library and “Add a piece” arrive in the next updates. Until then, use the Tuner, Scale drills and Free record from the Practice tab.</p></div>
+  <div id="pcHome" class="stack">
+    <h2 class="pg-h">Pieces</h2>
+    <div class="row"><button type="button" id="pcAdd">+ Add a piece</button></div>
+    <div id="pcList"></div>
+  </div>
+  <div id="pcAddView" class="stack hide">
+    <div class="row"><button type="button" id="pcBack" class="sec">‹ Pieces</button></div>
+    <h2 class="pg-h">Add a piece</h2>
+    <ol class="pc-steps" aria-label="Steps"><li id="pcS1" class="on" aria-current="step">Add</li><li id="pcS2">Check</li><li id="pcS3">Saved</li></ol>
+    <div class="seg pc-inst" id="pcInst" role="group" aria-label="Instrument"><button type="button" data-i="violin">Violin</button><button type="button" data-i="guitar">Guitar</button><button type="button" data-i="ukulele">Ukulele</button><button type="button" data-i="piano">Piano</button></div>
+    <div class="pc-card">
+      <div id="pcDrop" class="pc-drop" tabindex="0" role="button" aria-label="Drop a file here, or press Enter to choose one">
+        <b>Drop a recording or sheet music here</b><span class="mut">Audio, video, PDF, MusicXML or MIDI</span>
+        <button type="button" id="pcUpload">Upload a song</button>
+        <input type="file" id="pcFile" class="hide" multiple accept=".mid,.midi,.musicxml,.xml,.mxl,.pdf,audio/*,video/*" aria-label="Choose files">
+      </div>
+      <label class="pc-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><input id="pcLink" type="url" inputmode="url" autocomplete="off" placeholder="Paste a link (YouTube)" aria-label="Paste a link"></label>
+    </div>
+    <button type="button" id="pcRec" class="pc-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span><b>Record audio</b><small>Play into your microphone</small></span><i aria-hidden="true">›</i></button>
+    <div id="pcDetect" role="status"></div>
+    <div id="pcQueue" class="stack"></div>
+    <div class="row hide" id="pcSaveRow"><button type="button" id="pcSaveAll">Save to my pieces</button></div>
+    <p id="pcMsg" class="hint2" role="status"></p>
+  </div>
 </section>
 
 <!-- ============ TUNER ============ -->
@@ -373,6 +395,8 @@
 <script src="js/core/listening.js"></script>
 <script src="js/core/detailed.js"></script>
 <script src="js/core/midi.js"></script>
+<script src="js/core/musicxml.js"></script>
+<script src="js/core/piece.js"></script>
 <script src="js/core/compare.js"></script>
 <script src="js/core/schema.js"></script>
 <script src="js/core/engines/registry.js"></script>
@@ -392,6 +416,7 @@
 <script src="js/app/selftest.js"></script>
 <script src="js/app/settings-ui.js"></script>
 <script src="js/app/engines/ui.js"></script>
+<script src="js/app/pieces.js"></script>
 <script src="js/app/practice-engine.js"></script>
 <script src="js/app/recorder.js"></script>
 <script src="js/app/chart.js"></script>
