@@ -3,19 +3,27 @@
 
 // up = intervals going up, down = intervals going down when they differ (melodic minor), rel = semitones to the relative major (for spelling)
 const SCALE_DEFS = {
-  major:         { label: 'Major',          up: [0, 2, 4, 5, 7, 9, 11], rel: 0 },
-  naturalMinor:  { label: 'Natural minor',  up: [0, 2, 3, 5, 7, 8, 10], rel: 3 },
-  harmonicMinor: { label: 'Harmonic minor', up: [0, 2, 3, 5, 7, 8, 11], rel: 3 },
-  melodicMinor:  { label: 'Melodic minor',  up: [0, 2, 3, 5, 7, 9, 11], down: [0, 2, 3, 5, 7, 8, 10], rel: 3 },
-  majorPent:     { label: 'Major pentatonic', up: [0, 2, 4, 7, 9], rel: 0 },
-  minorPent:     { label: 'Minor pentatonic', up: [0, 3, 5, 7, 10], rel: 3 },
-  blues:         { label: 'Blues',          up: [0, 3, 5, 6, 7, 10], rel: 3 },
-  dorian:        { label: 'Dorian',         up: [0, 2, 3, 5, 7, 9, 10], rel: 10 },
-  mixolydian:    { label: 'Mixolydian',     up: [0, 2, 4, 5, 7, 9, 10], rel: 5 },
-  chromatic:     { label: 'Chromatic',      up: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], rel: 0 },
+  major:         { label: 'Major',            group: 'Scales', up: [0, 2, 4, 5, 7, 9, 11], rel: 0 },
+  naturalMinor:  { label: 'Natural minor',    group: 'Scales', up: [0, 2, 3, 5, 7, 8, 10], rel: 3 },
+  harmonicMinor: { label: 'Harmonic minor',   group: 'Scales', up: [0, 2, 3, 5, 7, 8, 11], rel: 3 },
+  melodicMinor:  { label: 'Melodic minor',    group: 'Scales', up: [0, 2, 3, 5, 7, 9, 11], down: [0, 2, 3, 5, 7, 8, 10], rel: 3 },
+  chromatic:     { label: 'Chromatic',        group: 'Scales', up: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], rel: 0 },
+  dorian:        { label: 'Dorian',           group: 'Modes', up: [0, 2, 3, 5, 7, 9, 10], rel: 10 },
+  phrygian:      { label: 'Phrygian',         group: 'Modes', up: [0, 1, 3, 5, 7, 8, 10], rel: 8 },
+  lydian:        { label: 'Lydian',           group: 'Modes', up: [0, 2, 4, 6, 7, 9, 11], rel: 7 },
+  mixolydian:    { label: 'Mixolydian',       group: 'Modes', up: [0, 2, 4, 5, 7, 9, 10], rel: 5 },
+  locrian:       { label: 'Locrian',          group: 'Modes', up: [0, 1, 3, 5, 6, 8, 10], rel: 1 },
+  majorPent:     { label: 'Major pentatonic', group: 'Pentatonic, blues and others', up: [0, 2, 4, 7, 9], rel: 0 },
+  minorPent:     { label: 'Minor pentatonic', group: 'Pentatonic, blues and others', up: [0, 3, 5, 7, 10], rel: 3 },
+  blues:         { label: 'Blues',            group: 'Pentatonic, blues and others', up: [0, 3, 5, 6, 7, 10], rel: 3 },
+  wholeTone:     { label: 'Whole tone',       group: 'Pentatonic, blues and others', up: [0, 2, 4, 6, 8, 10], rel: 0 },
+  arpMajor:      { label: 'Major arpeggio',   group: 'Arpeggios', up: [0, 4, 7], rel: 0 },
+  arpMinor:      { label: 'Minor arpeggio',   group: 'Arpeggios', up: [0, 3, 7], rel: 3 },
+  dom7:          { label: 'Dominant 7th arpeggio', group: 'Arpeggios', up: [0, 4, 7, 10], rel: 5 },
+  dim7:          { label: 'Diminished 7th arpeggio', group: 'Arpeggios', up: [0, 3, 6, 9], rel: 0 },
 };
-// What a "Randomize" press may pick: the scales an exam asks for (an exam preset is just another list like this one).
-const EXAM_SCALES = { basic: ['major', 'naturalMinor', 'harmonicMinor', 'melodicMinor', 'chromatic', 'majorPent', 'minorPent'] };
+// What a "Randomize" press may pick: the scales and arpeggios an exam asks for (an exam preset is just another list like this one).
+const EXAM_SCALES = { basic: ['major', 'naturalMinor', 'harmonicMinor', 'melodicMinor', 'chromatic', 'majorPent', 'minorPent', 'arpMajor', 'arpMinor', 'dom7', 'dim7'] };
 
 const PC_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const PC_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];

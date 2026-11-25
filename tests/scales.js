@@ -62,16 +62,42 @@ for (const preset of Object.keys(lib.INSTRUMENT_RULES)) for (let pc = 0; pc < 12
 ok(lib.planScale('violin', 0, 9).requestedSpan === 3 && lib.planScale('violin', 0, 0).span === 1, 'span is limited to 1 to 3');
 
 // ---- instrument controls
-const vt = lib.techOptions('violin'), gt = lib.techOptions('guitarDropD'), ct = lib.techOptions('chromatic');
-ok(vt.name === 'Bowing' && vt.options.map(o => o.value).join() === 'separate,slur2,slur4,slur8', 'violin gets Bowing: Separate, Slur 2, 4, 8');
-ok(gt.name === 'Position' && gt.options.map(o => o.value).join() === 'open,mid,auto' && gt.def === 'open', 'guitar gets Position: Open/1st, Mid neck, Auto');
-ok(ct.options.length === 0 && lib.slurSize('guitar', 'slur4') === 1 && lib.slurSize('violin', 'slur4') === 4, 'chromatic has no control; slurs only apply to bowed strings');
+const vt = lib.controls('violin'), gt = lib.controls('guitarDropD'), ct = lib.controls('chromatic'), ut = lib.controls('ukulele');
+ok(vt.bowing.options.map(o => o.value).join() === 'separate,slur2,slur4,slur8', 'violin gets Bowing: Separate, Slur 2, 4, 8');
+ok(vt.position.options.map(o => o.value).join() === '1,2,3,4,5' && vt.position.def === '1', 'violin also gets Position: 1st to 5th');
+ok(gt.bowing === null && gt.position.options.map(o => o.value).join() === 'open,mid,auto' && gt.position.def === 'open' && ut.position.def === 'open', 'guitar and ukulele get Position only: Open/1st, Mid neck, Auto');
+ok(ct.bowing === null && ct.position === null && lib.slurSize('guitar', 'slur4') === 1 && lib.slurSize('violin', 'slur4') === 4, 'piano has no control; slurs only apply to bowed strings');
+ok(lib.PRACTICE_INSTRUMENTS.map(x => x[0]).join() === 'violin,guitar,chromatic,ukulele' && lib.PRACTICE_INSTRUMENTS[2][1] === 'Piano', 'the Scale screen offers Violin, Guitar, Piano, Ukulele');
+ok(lib.practiceInstrument('guitarDropD') === 'guitar' && lib.practiceInstrument('ukuleleLow') === 'ukulele' && lib.practiceInstrument('bass') === 'chromatic' && lib.practiceInstrument('violin') === 'violin' && lib.practiceInstrument('viola') === 'chromatic', 'any tuner preset maps to one of the four');
 ok(lib.ruleFor('violin').wobble > lib.ruleFor('guitar').wobble && lib.ruleFor('violin').smooth > lib.ruleFor('guitar').smooth, 'violin forgives more wobble and smooths vibrato more than guitar');
+
+// ---- modes and arpeggios
+const D = (pc, type) => names(mk('violin', pc, type, 1).tl);
+ok(D(2, 'dorian').startsWith('D4 E4 F4 G4 A4 B4 C5 D5'), 'D dorian');
+ok(D(4, 'phrygian').startsWith('E4 F4 G4 A4 B4 C5 D5 E5'), 'E phrygian');
+ok(D(5, 'lydian').startsWith('F4 G4 A4 B4 C5 D5 E5 F5'), 'F lydian (B natural: spelled with sharps, no flat)');
+ok(D(7, 'mixolydian').startsWith('G3 A3 B3 C4 D4 E4 F4 G4'), 'G mixolydian');
+ok(D(11, 'locrian').startsWith('B3 C4 D4 E4 F4 G4 A4 B4'), 'B locrian');
+ok(D(0, 'wholeTone').startsWith('C4 D4 E4 F#4 G#4 A#4 C5'), 'whole tone');
+ok(D(0, 'arpMajor') === 'C4 E4 G4 C5 G4 E4 C4', 'C major arpeggio, 1 octave: ' + D(0, 'arpMajor'));
+ok(D(9, 'arpMinor') === 'A3 C4 E4 A4 E4 C4 A3', 'A minor arpeggio');
+ok(D(7, 'dom7') === 'G3 B3 D4 F4 G4 F4 D4 B3 G3', 'G dominant 7th arpeggio: ' + D(7, 'dom7'));
+ok(D(0, 'dim7') === 'C4 Eb4 Gb4 A4 C5 A4 Gb4 Eb4 C4' || D(0, 'dim7') === 'C4 D#4 F#4 A4 C5 A4 F#4 D#4 C4', 'C diminished 7th arpeggio (' + D(0, 'dim7') + ')');
+ok(mk('violin', 0, 'arpMajor', 3).tl.length === 3 * 3 * 2 + 1, 'arpeggio over 3 octaves: top note once');
+ok(Object.values(lib.SCALE_DEFS).every(d => d.group) && new Set(Object.values(lib.SCALE_DEFS).map(d => d.group)).size === 4, 'scales are grouped: Scales, Modes, Pentatonic/blues, Arpeggios');
+
+// ---- violin positions
+ok(lib.planScale('violin', 7, 1, '1').start === 55 && lib.planScale('violin', 7, 1, '3').start === 67 && lib.planScale('violin', 0, 1, '2').start === 60, 'violin: a higher position starts the scale higher (3rd position G = G4)');
+let vp = lib.planScale('violin', 0, 3, '5'); ok(vp.span === 2 && vp.clamped && vp.start === 72, 'violin 5th position, 3 octaves: shortened rather than dropped out of position (' + vp.warnings[0] + ')');
+const VS2 = [55, 62, 69, 76];
+ok(lib.fingerHint('violin', 67, VS2, '3').text === 'D string · finger 1 (3rd pos)', 'hint in 3rd position: G on the D string, first finger');
+ok(lib.fingerHint('violin', 55, VS2, '3').text.includes('shift') || lib.fingerHint('violin', 55, VS2, '3').text.includes('open'), 'open G in 3rd position says open (reachable only as an open string)');
+ok(lib.fingerHint('violin', 57, VS2, '1').text === 'G string · finger 1' && lib.fingerHint('violin', 57, VS2, '2') && true, 'hint in 1st position unchanged (A on the G string, finger 1)');
 
 // ---- fingering hints
 const VS = [55, 62, 69, 76], GS = [40, 45, 50, 55, 59, 64], US = [67, 60, 64, 69];
 ok(lib.fingerHint('violin', 69, VS).text === 'open A string' && lib.fingerHint('violin', 71, VS).text === 'A string · finger 1', 'violin hint: open A, B = finger 1');
-ok(lib.fingerHint('violin', 60, VS).text.includes('G string') && lib.fingerHint('violin', 88, VS).text.includes('high position'), 'violin hint: a note above the E string span names a high position');
+ok(lib.fingerHint('violin', 60, VS).text.includes('G string') && /shift up/.test(lib.fingerHint('violin', 88, VS).text), 'violin hint: a note above the E string span says to shift up');
 ok(lib.fingerHint('guitar', 64, GS, 'open').text === 'open string 1' && lib.fingerHint('guitar', 67, GS, 'open').text === 'string 1 · fret 3', 'guitar hint, open position: open E, G = fret 3');
 ok(lib.fingerHint('guitar', 64, GS, 'mid').fret >= 5 && lib.fingerHint('guitar', 64, GS, 'mid').fret <= 9, 'guitar hint, mid neck: stays in frets 5 to 9');
 ok(lib.fingerHint('ukulele', 60, US).text === 'open string 3' && lib.fingerHint('chromatic', 60, []) === null, 'ukulele hint; chromatic gives none');

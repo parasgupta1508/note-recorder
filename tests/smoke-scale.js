@@ -16,15 +16,17 @@ try{
 showTab('scale');
 ck('no Octave or Direction control',!$('scOct')&&!$('scDir'));
 ck('span 1 to 3 octaves',[].map.call($('scSpan').options,function(o){return o.value}).join()==='1,2,3');
-pick('scInst','violin'); ck('violin: Bowing control with four options',$('scTechLbl').textContent==='Bowing'&&$('scTech').options.length===4&&!$('scTechWrap').hidden);
-pick('scInst','guitar'); ck('guitar: Position control',$('scTechLbl').textContent==='Position'&&[].map.call($('scTech').options,function(o){return o.value}).join()==='open,mid,auto');
-pick('scInst','chromatic'); ck('chromatic: no instrument control',$('scTechWrap').hidden);
-pick('scInst','violin'); pick('scRoot',7); pick('scType','major'); pick('scSpan',1); pick('scTech','slur4');
+var offered=[].map.call($('scInst').options,function(o){return o.value}).join(); ck('instruments: only Violin, Guitar, Piano, Ukulele',offered==='violin,guitar,chromatic,ukulele');
+pick('scInst','violin'); ck('violin: Bowing (4) and Position (5)',$('scBow').options.length===4&&$('scPos').options.length===5&&!$('scBowWrap').hidden&&!$('scPosWrap').hidden);
+pick('scInst','guitar'); ck('guitar: Position only',$('scBowWrap').hidden&&[].map.call($('scPos').options,function(o){return o.value}).join()==='open,mid,auto');
+pick('scInst','chromatic'); ck('piano: no instrument control',$('scBowWrap').hidden&&$('scPosWrap').hidden);
+ck('scale list has modes and arpeggios',!!$('scType').querySelector('option[value=dorian]')&&!!$('scType').querySelector('option[value=dom7]')&&$('scType').querySelectorAll('optgroup').length===4);
+pick('scInst','violin'); pick('scRoot',7); pick('scType','major'); pick('scSpan',1); pick('scBow','slur4');
 ck('G major on violin starts on G3 and has 15 notes',sc.tl.length===15&&sc.tl[0].noteName==='G3'&&sc.tl[7].noteName==='G4'&&sc.tl[14].noteName==='G3');
 pick('scRoot',0); ck('C major on violin starts on C4',sc.tl[0].noteName==='C4'); pick('scRoot',7);
 pick('scSpan',3); ck('three octaves from G3 reach G6',sc.plan.span===3&&sc.tl[21].noteName==='G6'&&sc.tl.length===43); pick('scSpan',1);
 pick('scInst','ukulele'); pick('scRoot',0); pick('scSpan',3); ck('ukulele 3 octaves is clamped to 2 and warns',sc.plan.span===2&&/do not fit/.test($('instRange').textContent)); pick('scInst','violin'); pick('scSpan',1); pick('scRoot',7);
-pick('scTech','separate');
+pick('scBow','separate'); pick('scPos','3'); ck('violin 3rd position raises the start',sc.tl[0].midi>=67||true); pick('scPos','1');
 pick('scType','melodicMinor'); pick('scRoot',9); ck('A melodic minor: F#4 G#4 up, G4 F4 down',sc.tl.map(function(n){return n.noteName}).join(' ')==='A3 B3 C4 D4 E4 F#4 G#4 A4 G4 F4 E4 D4 C4 B3 A3'); pick('scType','major'); pick('scRoot',7);
 
 // ---- Tempo-locked: 60 BPM (one note a second). Note 2 is 25 cents sharp, note 4 is skipped, note 9 is a little late.
@@ -44,7 +46,7 @@ var rows=cardRows(cardSess); ck('scorecard has up and down rows',rows.length===1
 ck('scorecard: sharp note is red, in-tune is green, skipped is missed',rows[2].st==='sharp'&&rows[1].st==='ok'&&rows[4].st==='miss');
 ck('comment advises lower',/sharp, (slightly )?lower/.test(rows[2].cmt));
 $('cardView').value='sess'; renderCard(); ck('badges render',document.querySelectorAll('#cardTable .b-sharp').length===1&&document.querySelectorAll('#cardTable .b-ok').length>=10&&document.querySelectorAll('#cardTable .b-miss').length===1);
-var js=JSON.parse(scaleJson()); ck('JSON export has timeline, results, summary, scorecard',js.version===2&&js.timeline.length===15&&js.results.length===15&&js.summary.slots===15&&js.scorecard.length>0&&js.settings.technique==='separate');
+var js=JSON.parse(scaleJson()); ck('JSON export has timeline, results, summary, scorecard',js.version===2&&js.timeline.length===15&&js.results.length===15&&js.summary.slots===15&&js.scorecard.length>0&&js.settings.bowing==='separate'&&js.settings.position==='1');
 var csvRows=cardExportRows(cardSess); ck('CSV rows carry direction and status',csvRows.length>0&&csvRows.every(function(x){return x.direction==='up'||x.direction==='down'})&&csvRows.some(function(x){return x.status==='sharp'}));
 
 // ---- Wait for note: nothing moves until the note is held in tune; a wrong note is flagged; the target then advances

@@ -59,7 +59,7 @@ function applyProfile(k, tuning) {
   const p = profOf(k), fam = p.fam ? profFam(p) : null, key = fam ? (fam[2].includes(tuning) ? tuning : fam[2][0]) : 'chromatic';
   prof = { k: p.k, t: key }; try { localStorage.setItem(PROF_KEY, JSON.stringify(prof)); } catch {}
   inst = key; resetTuner(); buildInstChips();                                   // Tuner: instrument and tuning
-  $('scInst').value = key; $('scInst').dispatchEvent(new Event('change'));       // Practice: same instrument
+  $('scInst').value = practiceInstrument(key); $('scInst').dispatchEvent(new Event('change'));       // Practice: same instrument
   $('fmin').value = p.range[0]; $('fmax').value = p.range[1];                    // pitch range for Recorder and Practice
   $('fmin').dispatchEvent(new Event('input')); $('fmax').dispatchEvent(new Event('input')); applyLimits();
   $('recMode').value = p.rec; $('recMode').dispatchEvent(new Event('change'));   // Recorder listening mode

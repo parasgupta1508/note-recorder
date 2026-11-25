@@ -38,8 +38,8 @@ $('scSig').onchange = () => { buildBeats(); if (metroOn) startMetro(); };
 buildBeats();
 
 // ----- remembered scale / tempo choices -----
-const PREF_IDS = ['scInst', 'scRoot', 'scType', 'scSpan', 'scTech', 'scBpm', 'scSig'], PREF_CHK = ['scStrict', 'scRepeat'], PREF_KEY = 'tuner-scaleprefs-v1';
+const PREF_IDS = ['scInst', 'scRoot', 'scType', 'scSpan', 'scBow', 'scPos', 'scBpm', 'scSig'], PREF_CHK = ['scStrict', 'scRepeat'], PREF_KEY = 'tuner-scaleprefs-v1';
 function savePrefs() { const o = {}; PREF_IDS.forEach(id => o[id] = $(id).value); PREF_CHK.forEach(id => o[id] = $(id).checked); o.scMode = sc.mode; try { localStorage.setItem(PREF_KEY, JSON.stringify(o)); } catch {} }
-function loadPrefs() { try { const o = JSON.parse(localStorage.getItem(PREF_KEY)); if (!o) return; if (o.scMode) setMode(o.scMode, true); PREF_IDS.forEach(id => { if (id === 'scTech') applyLimits(); if (o[id] != null && [...($(id).options || [{ value: o[id] }])].some(op => op.value === String(o[id]))) $(id).value = o[id]; else if (o[id] != null && !$(id).options) $(id).value = o[id]; }); PREF_CHK.forEach(id => { if (typeof o[id] === 'boolean') $(id).checked = o[id]; }); } catch {} }
+function loadPrefs() { try { const o = JSON.parse(localStorage.getItem(PREF_KEY)); if (!o) return; if (o.scMode) setMode(o.scMode, true); PREF_IDS.forEach(id => { if (id === 'scBow') applyLimits(); if (o[id] != null && [...($(id).options || [{ value: o[id] }])].some(op => op.value === String(o[id]))) $(id).value = o[id]; else if (o[id] != null && !$(id).options) $(id).value = o[id]; }); PREF_CHK.forEach(id => { if (typeof o[id] === 'boolean') $(id).checked = o[id]; }); } catch {} }
 $('tab-scale').addEventListener('change', savePrefs);
 

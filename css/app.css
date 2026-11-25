@@ -245,7 +245,7 @@
   @media (min-width:720px){ .two{grid-template-columns:1fr 1fr} .an-head{grid-template-columns:auto 1.6fr 1fr 1fr} .an-head .seg,.an-head .scope{grid-column:auto} }
 
   .tempo{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,.9fr) auto;gap:8px;align-items:end}
-  #scTechWrap[hidden]{display:none}
+  #scBowWrap[hidden],#scPosWrap[hidden]{display:none}
   @media (max-width:520px){ .tempo{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)} .tbtns{grid-column:1/-1} .tbtns button{flex:1} }
   .tbtns{display:flex;gap:6px} .tbtns button{padding:10px 10px;white-space:nowrap} #drone.on,#metro.on{background:var(--acc);color:#fff}
   #scMode{display:flex;width:100%} #scMode button{flex:1;white-space:nowrap;font-size:14px;padding:8px 6px}

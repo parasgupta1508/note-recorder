@@ -4,11 +4,13 @@
 function fillSel(sel, pairs, val) { sel.innerHTML = ''; pairs.forEach(([v, t]) => sel.add(new Option(t, v))); sel.value = val; }
 // The selectors depend on the instrument: its bowing or position control, and a note about its range and where the scale starts.
 function applyLimits() {
-  const inst = $('scInst').value, rule = ruleFor(inst), opts = techOptions(inst), cur = $('scTech').value;
-  $('scTechWrap').hidden = !opts.options.length; $('scTechLbl').textContent = opts.name;
-  fillSel($('scTech'), opts.options.map(o => [o.value, o.label]), opts.options.some(o => o.value === cur) ? cur : opts.def);
+  const inst = $('scInst').value, rule = ruleFor(inst), c = controls(inst);
+  for (const [k, id] of [['bowing', 'scBow'], ['position', 'scPos']]) {       // bowing and position, only where the instrument has them
+    const o = c[k], cur = $(id).value; $(id + 'Wrap').hidden = !o;
+    fillSel($(id), o ? o.options.map(x => [x.value, x.label]) : [], o && o.options.some(x => x.value === cur) ? cur : o ? o.def : '');
+  }
   const p = planNow(), nm = n => spellNote(n, false);
-  $('instRange').innerHTML = `${PRESETS[inst] ? PRESETS[inst].label : rule.label}: ${nm(rule.range[0])}–${nm(rule.range[1])}. Starts on ${p.tl[0].noteName}.` + p.warnings.map(w => ` <span class="warn-t">${w}</span>`).join('');
+  $('instRange').innerHTML = `${rule.label}: ${nm(rule.range[0])}–${nm(rule.range[1])}. Starts on ${p.tl[0].noteName}.` + p.warnings.map(w => ` <span class="warn-t">${w}</span>`).join('');
 }
 function droneRetune() { if (typeof DRONE !== 'undefined' && DRONE.on) droneSet(droneMidiFor(planNow().start)); }
 
@@ -172,10 +174,10 @@ $('scDemo').onclick = () => { if (demoIdx >= 0) stopDemo(); else startDemo(); };
 $('scStart').onclick = startScale;
 $('scStop').onclick = stopScale;
 function settingsChanged() { applyLimits(); stopDemo(); resetPractice(); renderScale(); renderCard(); renderAnalysis(); droneRetune(); }
-['scInst', 'scRoot', 'scType', 'scSpan', 'scTech'].forEach(id => $(id).onchange = settingsChanged);
+['scInst', 'scRoot', 'scType', 'scSpan', 'scBow', 'scPos'].forEach(id => $(id).onchange = settingsChanged);
 $('scRandom').onclick = () => {
-  const inst = $('scInst').value, tech = $('scTech').value, p = randomPrompt(Math.random, EXAM_SCALES.basic, MAX_SPAN);
-  while (p.span > 1 && planScale(inst, p.rootPc, p.span, tech).clamped) p.span--;      // an exam prompt the instrument can actually play
+  const inst = $('scInst').value, pos = $('scPos').value, p = randomPrompt(Math.random, EXAM_SCALES.basic, MAX_SPAN);
+  while (p.span > 1 && planScale(inst, p.rootPc, p.span, pos).clamped) p.span--;      // an exam prompt the instrument can actually play
   $('scRoot').value = p.rootPc; $('scType').value = p.type; $('scSpan').value = p.span; savePrefs(); settingsChanged();
 };
 $('drone').onclick = () => droneToggle();

@@ -8,23 +8,24 @@
 const sc = { seq: [], tl: [], pos: 0, grades: [], attempts: [], running: false, wrong: 0, pass: 1, passes: [], slots: [], slotAt: {}, mode: 'tempo', clock: null, bpm: 80, waitFrames: [], waitOk: 0, label: null, plan: null };
 let demoIdx = -1, liveBuf = [], liveC = [], silentFrames = 99;
 const det = new AttemptDetector(a => onAttempt(a));   // onAttempt lives in practice-engine.js, which loads later
-for (const k in SCALE_DEFS) $('scType').add(new Option(SCALE_DEFS[k].label, k));
+{ const groups = {};   // scales, modes, arpeggios ... as groups in the list
+  for (const k in SCALE_DEFS) { const g = SCALE_DEFS[k].group; if (!groups[g]) { groups[g] = document.createElement('optgroup'); groups[g].label = g; $('scType').appendChild(groups[g]); } groups[g].appendChild(new Option(SCALE_DEFS[k].label, k)); } }
 const ROOT_LABELS = ['C', 'C♯/D♭', 'D', 'D♯/E♭', 'E', 'F', 'F♯/G♭', 'G', 'G♯/A♭', 'A', 'A♯/B♭', 'B'];
 ROOT_LABELS.forEach((n, i) => $('scRoot').add(new Option(n, i)));
 $('scRoot').value = 0;
-for (const k in PRESETS) $('scInst').add(new Option(PRESETS[k].label, k));
+PRACTICE_INSTRUMENTS.forEach(([k, label]) => $('scInst').add(new Option(label, k)));   // Violin, Guitar, Piano (chromatic), Ukulele
 { const z = document.createElement('div'); z.className = 'dev-zone'; z.id = 'devZone'; $('devBar').insertBefore(z, $('devMarker')); }   // the green "in tune" band of the ±50¢ meter
 
 // What the controls ask for, with the instrument's rules applied: start note, effective span, warnings, and the timeline.
 function planNow() {
-  const inst = $('scInst').value, pc = +$('scRoot').value, type = $('scType').value, tech = $('scTech').value, bpm = Math.max(30, Math.min(240, +$('scBpm').value || 80));
-  const plan = planScale(inst, pc, +$('scSpan').value, tech);
-  const tl = buildTimeline({ start: plan.start, type, span: plan.span, bpm, rootPc: pc, slur: slurSize(inst, tech), flats: useFlats ? true : null });
-  return { ...plan, tl, inst, pc, type, tech, bpm };
+  const inst = $('scInst').value, pc = +$('scRoot').value, type = $('scType').value, bow = $('scBow').value, pos = $('scPos').value, bpm = Math.max(30, Math.min(240, +$('scBpm').value || 80));
+  const plan = planScale(inst, pc, +$('scSpan').value, pos);
+  const tl = buildTimeline({ start: plan.start, type, span: plan.span, bpm, rootPc: pc, slur: slurSize(inst, bow), flats: useFlats ? true : null });
+  return { ...plan, tl, inst, pc, type, bow, pos, bpm };
 }
 const currentPlan = planNow;
-const techLabel = (inst, tech) => (techOptions(inst).options.find(o => o.value === tech) || { label: '' }).label;
-const scaleLabel = () => sc.label || (sc.label = (() => { const p = planNow(); return `${p.tl[0].noteName.replace(/-?\d+$/, '')} ${SCALE_DEFS[p.type].label} · ${p.span} oct` + (techLabel(p.inst, p.tech) ? ` · ${techLabel(p.inst, p.tech)}` : ''); })());
+const techLabel = (inst, bow, pos) => { const c = controls(inst), l = o => o ? (o.options.find(x => x.value === (o === c.bowing ? bow : pos)) || { label: '' }).label : ''; return [l(c.bowing), l(c.position)].filter(Boolean).join(' · '); };
+const scaleLabel = () => sc.label || (sc.label = (() => { const p = planNow(); return `${p.tl[0].noteName.replace(/-?\d+$/, '')} ${SCALE_DEFS[p.type].label} · ${p.span} oct` + (techLabel(p.inst, p.bow, p.pos) ? ` · ${techLabel(p.inst, p.bow, p.pos)}` : ''); })());
 const nameParts = n => n.match(/^([A-G][#b]?)(-?\d+)$/);
 const noteHtml = n => { const m = nameParts(n); return m ? `${m[1].replace('#', '♯').replace(/b$/, '♭')}<small>${m[2]}</small>` : n; };
 const stringsOf = inst => (PRESETS[inst] && PRESETS[inst].strings || []).map(nameToMidi);
@@ -52,7 +53,7 @@ function renderScale() {
   }).join('');
   const idx = demo ? demoIdx : sc.running ? sc.pos : -1;
   if (idx >= 0 && idx < seq.length) {
-    const n = sc.tl[idx], fh = sc.plan ? fingerHint(sc.plan.inst, n.midi, stringsOf(sc.plan.inst), sc.plan.tech) : null;
+    const n = sc.tl[idx], fh = sc.plan ? fingerHint(sc.plan.inst, n.midi, stringsOf(sc.plan.inst), sc.plan.pos) : null;
     $('scCur').innerHTML = noteHtml(n.noteName); $('scTarget').textContent = `target ${noteToFreq(n.midi, A).toFixed(2)} Hz`;
     $('scArrow').textContent = n.direction === 'up' ? '↑' : '↓'; $('scFinger').textContent = fh ? fh.text : '';
     if (demo) { neutralLive('Demo playing'); $('scHeard').textContent = 'demo playback'; }
@@ -206,7 +207,7 @@ $('cardCsv').onclick = () => {
 function scaleJson() {
   const p = sc.plan || planNow(), store = $('cardView').value === 'all' ? cardAll : cardSess;
   return JSON.stringify({ app: 'scale-drills', version: 2, exported: new Date().toISOString(), player: profile || null,
-    settings: { instrument: p.inst, root: p.pc, scale: p.type, span: p.span, requestedSpan: p.requestedSpan, technique: p.tech, bpm: sc.bpm || p.bpm, mode: sc.mode, tolerance_cents: tol() },
+    settings: { instrument: p.inst, root: p.pc, scale: p.type, span: p.span, requestedSpan: p.requestedSpan, bowing: controls(p.inst).bowing ? p.bow : null, position: controls(p.inst).position ? p.pos : null, bpm: sc.bpm || p.bpm, mode: sc.mode, tolerance_cents: tol() },
     plan: { start: p.start, top: p.top, warnings: p.warnings }, timeline: sc.tl, results: sc.slots, summary: summariseRun(sc.slots, { tol: tol(), beatMs: 60000 / (sc.bpm || p.bpm) }),
     scorecard: cardExportRows(store), attempts: sc.attempts }, null, 2);
 }
