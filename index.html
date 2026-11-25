@@ -123,7 +123,6 @@
     <div class="center mut" id="tTarget"></div>
     <div class="hide" id="tHeard"></div>
     <div class="hide"><div id="tNote"></div><div id="tVerdict"></div></div>
-    <div class="foot" style="margin-top:6px"><label class="check"><input type="checkbox" id="beep"> Beep when in tune</label></div>
   </div>
 </section>
 
@@ -312,6 +311,7 @@
   <div class="lab-card">
     <div class="lab-h"><b>2 · Reference MIDI</b></div>
     <div id="labEngPick" class="lab-checks"></div>
+    <label class="field"><span>Listen to</span><select id="labStem"><option value="">Full mix</option><option value="vocals">Vocals / lead (separated first)</option><option value="bass">Bass (separated first)</option><option value="other">Other instruments (separated first)</option></select></label>
     <div class="lab-row"><button id="labMake">Make MIDI</button><label class="field grow"><span>or add your own .mid</span><input id="labMid" type="file" accept=".mid,.midi,audio/midi"></label></div>
     <div id="labRefs" class="lab-small"></div>
   </div>

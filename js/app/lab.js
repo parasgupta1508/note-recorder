@@ -11,7 +11,8 @@ const labBase = () => ($('labUrl').value.trim() || LAB.store.url).replace(/\/+$/
 const labSay = (m, warn) => { $('labMsg').textContent = m || ''; $('labMsg').style.color = warn ? 'var(--bad)' : ''; };
 const labProg = p => { const b = $('labProg'); b.classList.toggle('hide', p == null); if (p != null) b.firstElementChild.style.width = Math.round(p * 100) + '%'; };
 const labPct = v => v == null ? '–' : Math.round(v * 100) + '%';
-const labRefName = k => LAB_NAMES[k] || k;
+const labRefName = k => { const [e, st] = k.split('.'); return (LAB_NAMES[e] || e) + (st ? ' · ' + st : ''); };
+const labEngKeys = c => Object.keys(c.refs).sort((a, b) => Object.keys(LAB_NAMES).indexOf(a.split('.')[0]) - Object.keys(LAB_NAMES).indexOf(b.split('.')[0]) || a.length - b.length);
 
 // ---------- helper connection ----------
 async function labFetchJson(path, body) {
@@ -30,7 +31,8 @@ async function labConnect() {
   try {
     LAB.status = await labFetchJson('/api/status?fresh=1'); LAB.ok = true; LAB.store.url = labBase(); labSave();
     $('labState').textContent = 'connected'; $('labState').classList.add('ok'); $('labHelp').classList.add('hide');
-    const t = LAB.status.tools; $('labEngines').textContent = (t.ytdlp ? '' : 'YouTube downloads need setup (node tools/lab/setup.js). ') + (t.ffmpeg ? '' : 'ffmpeg is missing. ');
+    const t = LAB.status.tools; $('labEngines').textContent = (t.ytdlp ? '' : 'YouTube downloads need setup (node tools/lab/setup.js). ') + (t.ffmpeg ? '' : 'ffmpeg is missing. ') + (t.separate ? '' : 'Listening to one instrument needs: node tools/lab/setup.js --separate. ');
+    for (const o of $('labStem').options) if (o.value) o.disabled = !t.separate;
     await labLoadLib();
   } catch {
     LAB.ok = false; LAB.status = null; $('labState').textContent = 'not running'; $('labHelp').classList.remove('hide');
@@ -96,13 +98,13 @@ async function labGetYoutube() {
 // ---------- reference MIDI ----------
 async function labMake() {
   const c = LAB.cur; if (!c) return labSay('Get some audio first.', true); if (!c.id) return labSay('Connect the helper to make MIDI from this audio.', true);
-  const want = [...$('labEngPick').querySelectorAll('input:checked')].map(i => i.value).filter(e => !c.refs[e]); if (!want.length) return labSay(Object.keys(c.refs).length ? 'Those are already made. Nothing to do.' : 'Tick at least one tool.', true);
+  const stem = $('labStem').value, want = [...$('labEngPick').querySelectorAll('input:checked')].map(i => i.value).filter(e => !c.refs[e + (stem ? '.' + stem : '')]); if (!want.length) return labSay(Object.keys(c.refs).length ? 'Those are already made. Nothing to do.' : 'Tick at least one tool.', true);
   labBusy(true);
   try {
     for (let k = 0; k < want.length; k++) {
-      const e = want[k]; labSay(`${labRefName(e)} (${k + 1}/${want.length})…`); labProg(0);
+      const e = want[k], key = e + (stem ? '.' + stem : ''); labSay(`${labRefName(key)} (${k + 1}/${want.length})…`); labProg(0);
       const eng = findEngine('transcriber', 'lab-' + e); if (!eng) throw new Error('No engine registered for ' + e + '.');
-      c.refs[e] = await eng.run({ id: c.id }, { onUpdate: u => { labProg(u.progress); } }); labUi();
+      c.refs[key] = await eng.run({ id: c.id, stem }, { onUpdate: u => { labProg(u.progress); labSay(`${labRefName(key)} (${k + 1}/${want.length}): ${u.log.slice(-1)[0] || ''}`); } }); labUi();
     }
     labSay('MIDI is ready and saved. You will not need to make it again.'); await labLoadLib();
   } catch (e) { labSay(e.message, true); }
@@ -118,7 +120,7 @@ const labSafe = s => String(s).replace(/[^A-Za-z0-9_-]+/g, '_').slice(0, 40) || 
 
 // ---------- reference selection ----------
 function labRefNotes() {
-  const c = LAB.cur, sel = $('labRef').value; let r = sel === 'consensus' ? consensusNotes(['basicpitch', 'mpm', 'pyin', 'crepe', 'custom'].filter(k => c.refs[k]).map(k => c.refs[k]), 2) : (c.refs[sel] || []);
+  const c = LAB.cur, sel = $('labRef').value; let r = sel === 'consensus' ? consensusNotes(labEngKeys(c).filter(k => !k.includes('.')).map(k => c.refs[k]), 2) : (c.refs[sel] || []);
   if ($('labRange').checked) { const lo = Math.round(69 + 12 * Math.log2((+$('fmin').value || 60) / a4())) - 1, hi = Math.round(69 + 12 * Math.log2((+$('fmax').value || 1500) / a4())) + 1; r = r.filter(n => n.midi >= lo && n.midi <= hi); }
   if ($('labMelody').checked) r = labSkyline(r);
   return r;
@@ -178,8 +180,8 @@ function labShowResult() {
     <div class="lab-tiles"><div class="${cls(c.f1)}"><span>Agreement (F1)</span><b>${labPct(c.f1)}</b></div><div class="${cls(c.precision)}"><span>App notes also in reference</span><b>${labPct(c.precision)}</b></div><div class="${cls(c.recall)}"><span>Reference notes the app found</span><b>${labPct(c.recall)}</b></div>
     <div><span>Timing (median)</span><b>${c.onsetMedianMs == null ? '–' : Math.round(c.onsetMedianMs) + ' ms'}</b></div><div><span>Note length vs ref</span><b>${c.durRatioMedian == null ? '–' : Math.round(c.durRatioMedian * 100) + '%'}</b></div><div><span>Time overlap (F1)</span><b>${labPct(c.overlapF1)}</b></div></div>
     <div class="lab-small" style="margin-top:8px">Reference has ${c.nRef} notes, the app found ${c.nGot}. <b>${c.tp}</b> match. ${c.fn ? `Missed ${c.fn}${miss ? ': ' + miss : ''}. ` : ''}${c.fp ? `${c.fp} extra notes only the app heard.` : ''}</div>`;
-  if (L.refKey === 'basicpitch' && !$('labMelody').checked && !isPolyInst()) h += '<div class="lab-note" style="margin-top:8px">This reference lists every note it hears, but Live follows one melody line, so recall will look low. Tick "melody only" for a fairer score.</div>';
-  const keys = ['basicpitch', 'mpm', 'pyin', 'crepe', 'custom'].filter(k => LAB.cur.refs[k]);
+  if (L.refKey.split('.')[0] === 'basicpitch' && !$('labMelody').checked && !isPolyInst()) h += '<div class="lab-note" style="margin-top:8px">This reference lists every note it hears, but Live follows one melody line, so recall will look low. Tick "melody only" for a fairer score.</div>';
+  const keys = labEngKeys(LAB.cur).filter(k => !k.includes('.'));
   if (keys.length > 1) h += `<div class="lab-small mut" style="margin-top:8px">How much the reference tools agree with each other: ${keys.slice(1).map(k => `${esc(labRefName(keys[0]))} vs ${esc(labRefName(k))} <b>${labPct(compareNotes(LAB.cur.refs[keys[0]], LAB.cur.refs[k]).f1)}</b>`).join(' · ')}. Where they disagree, the reference itself is unsure.</div>`;
   if (L.tune) h += `<div class="lab-tbl-wrap" style="margin-top:10px"><table class="lab-tbl"><tr><th>Live settings</th><th>F1</th><th>Found</th><th>Missed</th><th>Extra</th><th></th></tr>${L.tune.map((r, i) => `<tr class="${i ? '' : 'best'}"><td>${esc(REC_NAMES[r.mode])} · ${r.conf}</td><td>${labPct(r.cmp.f1)}</td><td>${r.cmp.tp}</td><td>${r.cmp.fn}</td><td>${r.cmp.fp}</td><td><button class="sec" data-use="${r.mode}|${r.conf}">Use</button></td></tr>`).join('')}</table></div>`;
   $('labRes').innerHTML = h; $('labDl').disabled = !L.got.length; $('labLegend').classList.remove('hide'); labDraw(L);
@@ -209,7 +211,7 @@ function labLearned() {
 
 // ---------- page ----------
 function labUi() {
-  const c = LAB.cur, refs = c ? Object.keys(c.refs) : [], opts = refs.concat(refs.length > 1 ? ['consensus'] : []);
+  const c = LAB.cur, refs = c ? labEngKeys(c) : [], plain = refs.filter(k => !k.includes('.')), opts = refs.concat(plain.length > 1 ? ['consensus'] : []);
   const old = $('labRef').value; $('labRef').innerHTML = opts.map(k => `<option value="${k}">${esc(labRefName(k))}${k === 'consensus' ? '' : ' · ' + c.refs[k].length + ' notes'}</option>`).join('') || '<option value="">— none yet —</option>';
   if (opts.includes(old)) $('labRef').value = old; else if (opts.length) $('labRef').value = opts.includes('consensus') ? 'consensus' : opts[0];
   $('labClipInfo').textContent = c ? `${c.title} · ${c.dur.toFixed(1)} s from ${c.start || 0} s` : '';

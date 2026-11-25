@@ -45,6 +45,11 @@ srv.listen(0, async () => {
     ok(await ev("LAB.store.hist.length>=16"), 'comparisons are remembered'); ok(await ev("$('labHist').textContent.includes('Avg F1')"), '"What it has learned" table is filled');
     await ev("document.querySelector('#labRes [data-use]').click(); 1"); ok(await ev("$('recMode').value===LAB.last.tune[0].mode"), '"Use" applies the best settings to the Recorder');
     await ev("(async()=>{const o=$('labLib'); 1})()"); await ev("labLoadLib()"); ok(await ev("LAB.lib.length>=1 && LAB.lib[0].engines.includes('mpm')"), 'clip and MIDI are saved in the helper library');
+    if (process.env.SEP) {                                                      // optional (slow): separate the instruments first, then find notes in one part
+      ok(await ev("LAB.status.tools.separate"), 'Demucs separation is installed');
+      await ev("$('labStem').value='other'; labMake(); 1"); ok(await until("LAB.cur.refs['mpm.other'] && !LAB.busy", 300000, 'separation + MIDI'), 'notes from the separated "other" part (' + await ev("LAB.cur.refs['mpm.other'] ? LAB.cur.refs['mpm.other'].length : 0") + ' notes)');
+      ok(await ev("[...$('labRef').options].some(o => o.value === 'mpm.other' && o.textContent.includes('other'))"), 'separated part is listed as a reference');
+    }
     ok(!errs.length, 'no script errors during the run ' + errs.join('|').slice(0, 300));
     if (process.env.SHOT) { await send('Emulation.setDeviceMetricsOverride', { width: 420, height: 2300, deviceScaleFactor: 1, mobile: true }); await new Promise(r => setTimeout(r, 500)); const r = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(process.env.SHOT, Buffer.from(r.data, 'base64')); console.log('screenshot ->', process.env.SHOT); }
   } catch (e) { ok(false, 'test crashed: ' + e.message); }

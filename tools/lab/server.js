@@ -13,6 +13,7 @@ const ENGINES = {
   pyin: { name: 'pYIN (librosa)', kind: 'one melody line', needs: 'py' },
   crepe: { name: 'CREPE (torchcrepe)', kind: 'one melody line', needs: 'crepe' },
 };
+const STEMS = ['vocals', 'bass', 'other'];     // drums have no pitch
 const MAX_MIN = 20, MAX_UPLOAD = 150 * 1024 * 1024;
 fs.mkdirSync(FULL, { recursive: true });
 
@@ -32,8 +33,8 @@ const have = async (cmd, args) => { try { await run(cmd, args, { timeout: 15000 
 let toolCache = null;
 async function tools(force) {
   if (toolCache && !force) return toolCache;
-  const py = fs.existsSync(VENV_PY) ? VENV_PY : null, t = { ffmpeg: await have('ffmpeg', ['-version']), python: !!py, ytdlp: false, node: fs.existsSync(path.join(ROOT, '..', 'node_modules', '@spotify')), mpm: fs.existsSync(path.join(ROOT, '..', 'node_modules', 'pitchy')), pyin: false, crepe: false };
-  if (py) { t.ytdlp = await have(py, ['-I', '-m', 'yt_dlp', '--version']); t.pyin = await have(py, ['-I', '-c', 'import librosa, scipy']); t.crepe = await have(py, ['-I', '-c', 'import torchcrepe']); }
+  const py = fs.existsSync(VENV_PY) ? VENV_PY : null, t = { ffmpeg: await have('ffmpeg', ['-version']), python: !!py, ytdlp: false, node: fs.existsSync(path.join(ROOT, '..', 'node_modules', '@spotify')), mpm: fs.existsSync(path.join(ROOT, '..', 'node_modules', 'pitchy')), pyin: false, crepe: false, separate: false };
+  if (py) { t.ytdlp = await have(py, ['-I', '-m', 'yt_dlp', '--version']); t.pyin = await have(py, ['-I', '-c', 'import librosa, scipy']); t.crepe = await have(py, ['-I', '-c', 'import torchcrepe']); t.separate = await have(py, ['-I', '-c', 'import torch, demucs.pretrained, demucs.apply']); }
   return (toolCache = t);
 }
 const engineReady = (t, e) => e === 'basicpitch' ? t.node && t.ffmpeg : e === 'mpm' ? t.mpm && t.ffmpeg : e === 'pyin' ? t.pyin && t.ffmpeg : t.crepe && t.ffmpeg;
@@ -68,22 +69,32 @@ async function fetchYoutube(url, start, len, say) {
 }
 
 // ---------- engines ----------
-async function runEngine(id, engine, say, prog) {
+async function separate(id, say, prog) {                          // Demucs: full mix -> vocals / bass / other / drums, saved as 22,050 Hz mono WAVs
+  const dir = path.join(DATA, id), stems = path.join(dir, 'stems');
+  if (fs.existsSync(path.join(stems, 'stem_vocals.wav'))) return;
+  const t = await tools(true); if (!t.separate) throw new Error('Instrument separation is not installed. Run: node tools/lab/setup.js --separate');
+  const wav = path.join(dir, 'work44.wav');
+  if (!fs.existsSync(wav)) await run('ffmpeg', ['-y', '-v', 'error', '-i', path.join(dir, 'audio.mp3'), '-ac', '2', '-ar', '44100', '-c:a', 'pcm_s16le', wav]);
+  say('Separating the instruments with Demucs (about 3x slower than real time)…');
+  await run(VENV_PY, ['-I', path.join(ROOT, 'engines', 'separate.py'), wav, stems], { onLine: l => { const m = /^PROGRESS ([\d.]+)/.exec(l); if (m) prog(+m[1] * 0.5); } });
+}
+async function runEngine(id, engine, stem, say, prog) {
   const t = await tools(true); if (!engineReady(t, engine)) throw new Error(`${ENGINES[engine].name} is not installed. Run: node tools/lab/setup.js${engine === 'crepe' ? ' --crepe' : ''}`);
-  const dir = path.join(DATA, id), wav = path.join(dir, 'work.wav'), out = path.join(dir, engine + '.json');
-  if (!fs.existsSync(wav)) { say('Converting to 22,050 Hz mono…'); await run('ffmpeg', ['-y', '-v', 'error', '-i', path.join(dir, 'audio.mp3'), '-ac', '1', '-ar', '22050', '-c:a', 'pcm_s16le', wav]); }
-  say(`Running ${ENGINES[engine].name}…`);
-  const onLine = l => { const m = /^PROGRESS ([\d.]+)/.exec(l); if (m) prog(+m[1]); };
+  const dir = path.join(DATA, id), key = engine + (stem ? '.' + stem : ''), out = path.join(dir, key + '.json'); let wav = path.join(dir, 'work.wav');
+  if (stem) { await separate(id, say, prog); wav = path.join(dir, 'stems', `stem_${stem}.wav`); }
+  else if (!fs.existsSync(wav)) { say('Converting to 22,050 Hz mono…'); await run('ffmpeg', ['-y', '-v', 'error', '-i', path.join(dir, 'audio.mp3'), '-ac', '1', '-ar', '22050', '-c:a', 'pcm_s16le', wav]); }
+  say(`Running ${ENGINES[engine].name}${stem ? ' on the ' + stem + ' part' : ''}…`);
+  const base = stem ? 0.5 : 0, onLine = l => { const m = /^PROGRESS ([\d.]+)/.exec(l); if (m) prog(base + +m[1] * (1 - base)); };
   if (engine === 'basicpitch' || engine === 'mpm') await run(process.execPath, [path.join(ROOT, 'engines', engine === 'mpm' ? 'mpm.js' : 'basicpitch.js'), wav, out], { onLine });
   else await run(VENV_PY, ['-I', path.join(ROOT, 'engines', 'f0engine.py'), '--method', engine, wav, out], { onLine });
-  const r = JSON.parse(fs.readFileSync(out, 'utf8')); fs.writeFileSync(path.join(dir, engine + '.mid'), core.writeMidi(r.notes, { name: engine }));
-  return { engine, count: r.notes.length, took: r.took };
+  const r = JSON.parse(fs.readFileSync(out, 'utf8')); fs.writeFileSync(path.join(dir, key + '.mid'), core.writeMidi(r.notes, { name: key }));
+  return { engine: key, count: r.notes.length, took: r.took };
 }
 
 // ---------- library ----------
 function library() {
   return fs.readdirSync(DATA, { withFileTypes: true }).filter(d => d.isDirectory() && ID.test(d.name)).map(d => {
-    try { const info = JSON.parse(fs.readFileSync(path.join(DATA, d.name, 'info.json'), 'utf8')); return { ...info, engines: Object.keys(ENGINES).filter(e => fs.existsSync(path.join(DATA, d.name, e + '.json'))) }; } catch { return null; }
+    try { const info = JSON.parse(fs.readFileSync(path.join(DATA, d.name, 'info.json'), 'utf8')); return { ...info, engines: fs.readdirSync(path.join(DATA, d.name)).map(f => /^((?:basicpitch|mpm|pyin|crepe)(?:\.(?:vocals|bass|other))?)\.json$/.exec(f)).filter(Boolean).map(m => m[1]) }; } catch { return null; }
   }).filter(Boolean).sort((a, b) => b.made - a.made);
 }
 
@@ -101,7 +112,7 @@ http.createServer(async (req, res) => {
   const u = new URL(req.url, 'http://x'), p = u.pathname.split('/').filter(Boolean);
   try {
     if (p[0] !== 'api') return send(res, 404, { error: 'Not found' });
-    if (req.method === 'GET' && p[1] === 'status') { const t = await tools(u.searchParams.has('fresh')); return send(res, 200, { ok: true, tools: t, engines: Object.fromEntries(Object.entries(ENGINES).map(([k, v]) => [k, { ...v, ready: !!engineReady(t, k) }])), maxMinutes: MAX_MIN }); }
+    if (req.method === 'GET' && p[1] === 'status') { const t = await tools(u.searchParams.has('fresh')); return send(res, 200, { ok: true, tools: t, engines: Object.fromEntries(Object.entries(ENGINES).map(([k, v]) => [k, { ...v, ready: !!engineReady(t, k) }])), maxMinutes: MAX_MIN, stems: STEMS }); }
     if (req.method === 'GET' && p[1] === 'library') return send(res, 200, { items: library() });
     if (req.method === 'GET' && p[1] === 'job' && ID.test(p[2] || '') && jobs.has(p[2])) { const j = jobs.get(p[2]); return send(res, 200, { status: j.status, progress: j.progress, log: j.log.slice(-6), result: j.result, error: j.error }); }
     if (req.method === 'POST' && p[1] === 'fetch') { const b = await json(req); return send(res, 200, { job: job(say => fetchYoutube(String(b.url || ''), num(b.start, 0, 0, MAX_MIN * 60), num(b.len, 60, 5, 300), say)).id }); }
@@ -110,11 +121,11 @@ http.createServer(async (req, res) => {
       const vid = 'up' + crypto.createHash('sha1').update(body).digest('hex').slice(0, 10), full = path.join(FULL, vid + '.bin');
       return send(res, 200, { job: job(async say => { if (!(await tools(true)).ffmpeg) throw new Error('ffmpeg is not installed.'); fs.writeFileSync(full, body); return makeClip(full, vid, name, 'upload', start, len, say); }).id });
     }
-    if (req.method === 'POST' && p[1] === 'midi') { const b = await json(req); if (!ID.test(b.id || '') || !ENGINES[b.engine] || !fs.existsSync(path.join(DATA, b.id, 'audio.mp3'))) throw new Error('Unknown clip or engine.'); return send(res, 200, { job: job((say, prog) => runEngine(b.id, b.engine, say, prog)).id }); }
+    if (req.method === 'POST' && p[1] === 'midi') { const b = await json(req); const stem = b.stem ? String(b.stem) : ''; if (stem && !STEMS.includes(stem)) throw new Error('Unknown part.'); if (!ID.test(b.id || '') || !ENGINES[b.engine] || !fs.existsSync(path.join(DATA, b.id, 'audio.mp3'))) throw new Error('Unknown clip or engine.'); return send(res, 200, { job: job((say, prog) => runEngine(b.id, b.engine, stem, say, prog)).id }); }
     if (req.method === 'GET' && p[1] === 'item' && ID.test(p[2] || '')) {
       const f = { 'audio.mp3': 'audio/mpeg', 'notes': 'application/json' }, dir = path.join(DATA, p[2]);
       if (p[3] === 'audio') return fs.existsSync(path.join(dir, 'audio.mp3')) ? send(res, 200, fs.readFileSync(path.join(dir, 'audio.mp3')), 'audio/mpeg') : send(res, 404, { error: 'No audio' });
-      const m = /^(basicpitch|mpm|pyin|crepe)\.(json|mid)$/.exec(p[3] || ''); if (m && fs.existsSync(path.join(dir, p[3]))) return send(res, 200, fs.readFileSync(path.join(dir, p[3])), m[2] === 'mid' ? 'audio/midi' : 'application/json');
+      const m = /^(basicpitch|mpm|pyin|crepe)(?:\.(?:vocals|bass|other))?\.(json|mid)$/.exec(p[3] || ''); if (m && fs.existsSync(path.join(dir, p[3]))) return send(res, 200, fs.readFileSync(path.join(dir, p[3])), m[2] === 'mid' ? 'audio/midi' : 'application/json');
     }
     send(res, 404, { error: 'Not found' });
   } catch (e) { send(res, 400, { error: String(e && e.message || e) }); }

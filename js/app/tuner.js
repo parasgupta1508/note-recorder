@@ -103,7 +103,7 @@ function tunerFrame(t, f) {
       confirmed = true;
       if (tg.idx >= 0 && !tuned.has(tg.idx)) { tuned.add(tg.idx); buildStrChips(tg.idx); }
       $('tNote').classList.remove('pulse'); void $('tNote').offsetWidth; $('tNote').classList.add('pulse');
-      if ($('beep').checked) playTone(1318, 0.12, 'sine', 0.12);
+      playTone(1318, 0.12, 'sine', 0.12);
     }
   } else {
     inTuneSince = null; confirmed = false;
