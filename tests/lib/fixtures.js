@@ -40,10 +40,9 @@ function musicXml() {
 </part></score-partwise>`;
 }
 
-// Zip with META-INF/container.xml and the score, entries deflated like a real .mxl.
-function mxl() {
+// zipOf([[name, Buffer], ...]) -> Uint8Array: a zip with deflated entries (what a .mxl or a downloaded pack looks like).
+function zipOf(files) {
   const crc = b => { let c, t = [], r = 0xffffffff; for (let n = 0; n < 256; n++) { c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } for (const x of b) r = t[(r ^ x) & 255] ^ (r >>> 8); return (r ^ 0xffffffff) >>> 0; };
-  const files = [['META-INF/container.xml', Buffer.from('<?xml version="1.0"?><container><rootfiles><rootfile full-path="score.xml"/></rootfiles></container>')], ['score.xml', Buffer.from(musicXml())]];
   const u16 = v => [v & 255, (v >> 8) & 255], u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
   const out = [], central = []; let off = 0;
   for (const [name, raw] of files) {
@@ -55,4 +54,5 @@ function mxl() {
   const cd = central.flat();
   return Uint8Array.from([...out, ...cd, ...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cd.length), ...u32(off), ...u16(0)]);
 }
-module.exports = { midi, musicXml, mxl };
+const mxl = () => zipOf([['META-INF/container.xml', Buffer.from('<?xml version="1.0"?><container><rootfiles><rootfile full-path="score.xml"/></rootfiles></container>')], ['score.xml', Buffer.from(musicXml())]]);
+module.exports = { midi, musicXml, mxl, zipOf };

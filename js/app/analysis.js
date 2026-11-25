@@ -181,6 +181,7 @@ function switchPlayer(name) {
   try { localStorage.setItem('tuner-profile', profile); } catch {}
   cardAll = profile ? lsGet(ckey(profile), {}) : {}; passAll = profile ? lsGet(pkey(profile), []) : []; cardSess = {};
   resetPractice(); renderScale(); renderCard(); renderAnalysis();
+  if (typeof pcPlayerChanged === 'function') pcPlayerChanged();     // the library follows each player's own instrument
 }
 $('profile').onchange = () => switchPlayer($('profile').value);
 

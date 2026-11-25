@@ -54,14 +54,24 @@
 <section id="tab-pieces" class="panel stack hide" role="tabpanel" aria-labelledby="nav-pieces">
   <div id="pcHome" class="stack">
     <h2 class="pg-h">Pieces</h2>
-    <div class="row"><button type="button" id="pcAdd">+ Add a piece</button></div>
+    <div class="seg pc-inst" id="pcLibInst" role="group" aria-label="Instrument"><button type="button" data-i="violin">Violin</button><button type="button" data-i="guitar">Guitar</button><button type="button" data-i="piano">Piano</button><button type="button" data-i="ukulele">Ukulele</button></div>
+    <input id="pcSearch" type="search" placeholder="Search pieces" aria-label="Search pieces" autocomplete="off">
+    <div class="pc-filters" id="pcFilters" role="group" aria-label="Filters"><button type="button" class="chip" data-f="builtin">Built-in</button><button type="button" class="chip" data-f="mine">Mine</button><button type="button" class="chip" data-f="favourite">Favourites</button></div>
+    <div id="pcCrumb" class="pc-crumb"></div>
     <div id="pcList"></div>
+    <div class="row"><button type="button" id="pcAdd">+ Add a piece</button></div>
+    <details class="more"><summary>Import a pack (folder or .zip)</summary>
+      <div class="stack"><p class="mut">A folder such as Violin / Mozart / Volume 1 with MIDI or MusicXML files becomes categories automatically. It is kept only on this device.</p>
+        <div class="row"><button type="button" id="pcDirBtn" class="sec">Import a folder</button><button type="button" id="pcZipBtn" class="sec">Import a .zip</button></div>
+        <input type="file" id="pcPackDir" class="hide" webkitdirectory multiple aria-label="Choose a folder"><input type="file" id="pcPackZip" class="hide" accept=".zip,application/zip" aria-label="Choose a zip">
+        <div id="pcPacks"></div></div>
+    </details>
   </div>
   <div id="pcAddView" class="stack hide">
     <div class="row"><button type="button" id="pcBack" class="sec">‹ Pieces</button></div>
     <h2 class="pg-h">Add a piece</h2>
     <ol class="pc-steps" aria-label="Steps"><li id="pcS1" class="on" aria-current="step">Add</li><li id="pcS2">Check</li><li id="pcS3">Saved</li></ol>
-    <div class="seg pc-inst" id="pcInst" role="group" aria-label="Instrument"><button type="button" data-i="violin">Violin</button><button type="button" data-i="guitar">Guitar</button><button type="button" data-i="ukulele">Ukulele</button><button type="button" data-i="piano">Piano</button></div>
+    <div class="seg pc-inst" id="pcInst" role="group" aria-label="Instrument"><button type="button" data-i="violin">Violin</button><button type="button" data-i="guitar">Guitar</button><button type="button" data-i="piano">Piano</button><button type="button" data-i="ukulele">Ukulele</button></div>
     <div class="pc-card">
       <div id="pcDrop" class="pc-drop" tabindex="0" role="button" aria-label="Drop a file here, or press Enter to choose one">
         <b>Drop a recording or sheet music here</b><span class="mut">Audio, video, PDF, MusicXML or MIDI</span>
@@ -73,9 +83,28 @@
     <button type="button" id="pcRec" class="pc-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span><b>Record audio</b><small>Play into your microphone</small></span><i aria-hidden="true">›</i></button>
     <div id="pcDetect" role="status"></div>
     <div id="pcQueue" class="stack"></div>
-    <div class="row hide" id="pcSaveRow"><button type="button" id="pcSaveAll">Save to my pieces</button></div>
-    <p id="pcMsg" class="hint2" role="status"></p>
+    <div class="stack hide" id="pcSaveRow"><label class="field"><span>Category</span><input id="pcCat" value="My imports" maxlength="60" list="pcCatList" autocomplete="off"><datalist id="pcCatList"></datalist></label><div class="row"><button type="button" id="pcSaveAll">Save to my pieces</button></div></div>
   </div>
+  <div id="pcPiece" class="stack hide">
+    <div class="row"><button type="button" id="pvBack" class="sec">‹ Pieces</button></div>
+    <h2 class="pg-h" id="pvTitle"></h2><p class="mut" id="pvMeta"></p>
+    <div class="pc-card">
+      <label class="field" id="pvPartWrap"><span>Your part</span><select id="pvPart"></select></label>
+      <label class="pc-check hide" id="pvAccWrap"><input type="checkbox" id="pvAcc"> Play the other parts too</label>
+      <div class="pv-row"><span>Transpose</span><div class="row"><button type="button" id="pvDown" class="sec ic" aria-label="Down one semitone">－</button><b id="pvShift"></b><button type="button" id="pvUp" class="sec ic" aria-label="Up one semitone">＋</button><button type="button" id="pvFit" class="sec">Fit to my instrument</button></div></div>
+      <p id="pvRange" class="hint2"></p>
+    </div>
+    <div class="pc-card">
+      <div class="pv-bars"><label class="field"><span>From bar</span><input id="pvFrom" type="number" min="1" value="1" inputmode="numeric"></label><label class="field"><span>To bar</span><input id="pvTo" type="number" min="1" value="1" inputmode="numeric"></label></div>
+      <label class="pc-check"><input type="checkbox" id="pvLoop"> Loop these bars</label>
+      <label class="field"><span>Speed</span><select id="pvSpeed"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option></select></label>
+      <p id="pvGrid" class="hint2"></p>
+    </div>
+    <div class="pv-actions"><button type="button" id="pvListen">▶ Listen</button><button type="button" id="pvRec" class="sec">Open in Free record</button></div>
+    <p class="hint2" id="pvNote">Scoring your playing against this piece comes with the next phase. For now: listen, loop the hard bars at a slow speed, then play along. “Open in Free record” shows the notes as Sheet or Falling notes.</p>
+    <div class="row"><button type="button" id="pvFav" class="sec">♡ Favourite</button><button type="button" id="pvDel" class="sec">Delete</button></div>
+  </div>
+  <p id="pcMsg" class="hint2" role="status"></p>
 </section>
 
 <!-- ============ TUNER ============ -->
@@ -397,6 +426,7 @@
 <script src="js/core/midi.js"></script>
 <script src="js/core/musicxml.js"></script>
 <script src="js/core/piece.js"></script>
+<script src="js/core/library.js"></script>
 <script src="js/core/compare.js"></script>
 <script src="js/core/schema.js"></script>
 <script src="js/core/engines/registry.js"></script>
@@ -416,7 +446,9 @@
 <script src="js/app/selftest.js"></script>
 <script src="js/app/settings-ui.js"></script>
 <script src="js/app/engines/ui.js"></script>
+<script src="js/app/library-db.js"></script>
 <script src="js/app/pieces.js"></script>
+<script src="js/app/piece-view.js"></script>
 <script src="js/app/practice-engine.js"></script>
 <script src="js/app/recorder.js"></script>
 <script src="js/app/chart.js"></script>

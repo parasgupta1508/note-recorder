@@ -48,6 +48,7 @@ const INST_PROFILES = [
   { k: 'cello',    name: 'Cello',    fam: 'cello',     range: [55, 1200], rec: 'auto' },
   { k: 'ukulele',  name: 'Ukulele',  fam: 'ukulele',   range: [140, 1400], rec: 'auto' },
   { k: 'mandolin', name: 'Mandolin', fam: 'mandolin',  range: [180, 1800], rec: 'auto' },
+  { k: 'piano',    name: 'Piano',    fam: null,        range: [27, 4200], rec: 'auto' },
   { k: 'voice',    name: 'Voice',    fam: null,        range: [80, 1100], rec: 'auto' },
 ];
 const PROF_KEY = 'tuner-instprofile';

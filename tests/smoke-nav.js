@@ -105,43 +105,92 @@ srv.listen(0, async () => {
   await ev("showTab('analysis'); document.querySelector('#anMode button[data-m=cmp]').click(); 1"); await wait(300);
   say(await ev("document.querySelector('#anBody').textContent.includes('Ada') && document.querySelector('#anBody').textContent.includes('Bo')"), 'players: Compare shows both players');
   say(errs.length === 0, 'players: no script errors' + (errs.length ? ' - ' + errs.join(' | ') : ''));
-  // pieces: MIDI, MusicXML and .mxl fixtures go through the one input card into the library; other inputs are recognised and explained
+  // pieces and library: instrument tabs, generated scales, adding files, packs (folder and zip), the piece view, and the instrument switch
   errs.length = 0; const FX = require('./lib/fixtures.js'), b64 = u => Buffer.from(u).toString('base64');
-  await ev("localStorage.removeItem('tuner-pieces-v1'); showTab('pieces'); pcView('home'); 1");
-  say(await ev("!!document.getElementById('pcAdd') && document.getElementById('pcList').textContent.includes('Nothing here yet')"), 'pieces: the Pieces screen starts empty with an Add a piece button');
+  const mkFiles = `const mk = (n, t, b, rel) => { const f = new File([Uint8Array.from(atob(b), c => c.charCodeAt(0))], n, { type: t }); if (rel) Object.defineProperty(f, 'webkitRelativePath', { value: rel }); return f; };`;
+  await ev("(async () => { for (const p of await LIBDB.all()) await LIBDB.del(p.id); for (const k of await LIBDB.packs()) await LIBDB.delPack(k.id); PC.lib = []; PC.packs = []; pcSetInst('violin', true); showTab('pieces'); pcView('home'); })()");
+  say(await ev("[...document.querySelectorAll('#pcLibInst button')].map(b => b.textContent).join() === 'Violin,Guitar,Piano,Ukulele' && document.querySelector('#pcLibInst button.on').textContent === 'Violin'"), 'pieces: instrument tabs Violin, Guitar, Piano, Ukulele');
+  say(await ev("[...document.querySelectorAll('#pcList .pc-folder')].some(f => f.textContent.includes('Scales and arpeggios'))"), 'pieces: the library starts with the generated Scales and arpeggios');
   await ev("document.getElementById('pcAdd').click(); 1");
-  say(await ev("(() => { const dz = document.getElementById('pcDrop'), fi = document.getElementById('pcFile'); return !!dz && /Audio, video, PDF, MusicXML or MIDI/.test(dz.textContent) && /Upload a song/.test(dz.textContent) && fi.multiple && ['.mid', '.musicxml', '.mxl', '.pdf', 'audio/*', 'video/*'].every(x => fi.accept.includes(x)); })() && !!document.getElementById('pcLink') && /Record audio/.test(document.getElementById('pcRec').textContent) && [...document.querySelectorAll('#pcInst button')].map(b => b.textContent).join() === 'Violin,Guitar,Ukulele,Piano'"), 'pieces: one drop zone with Upload a song, a paste-link field, a Record audio row and four instrument chips');
-  say(await ev("!document.querySelector('#tab-pieces input[type=file][capture]') && document.querySelectorAll('#tab-pieces input[type=file]').length === 1"), 'pieces: no photo input and no separate MIDI row (a single file input)');
-  const addFiles = async (how, list) => ev(`(async () => { const mk = (n, t, b) => new File([Uint8Array.from(atob(b), c => c.charCodeAt(0))], n, { type: t }); const fs = ${JSON.stringify(list)}.map(x => mk(x[0], x[1], x[2])); const dt = new DataTransfer(); fs.forEach(f => dt.items.add(f));
+  say(await ev("(() => { const dz = document.getElementById('pcDrop'), fi = document.getElementById('pcFile'); return !!dz && /Audio, video, PDF, MusicXML or MIDI/.test(dz.textContent) && /Upload a song/.test(dz.textContent) && fi.multiple && ['.mid', '.musicxml', '.mxl', '.pdf', 'audio/*', 'video/*'].every(x => fi.accept.includes(x)); })() && !!document.getElementById('pcLink') && /Record audio/.test(document.getElementById('pcRec').textContent) && document.querySelectorAll('#pcInst button').length === 4"), 'pieces: Add a piece has one drop zone with Upload a song, a paste-link field, a Record audio row and instrument chips');
+  say(await ev("!document.querySelector('#tab-pieces input[type=file][capture]') && document.querySelectorAll('#pcAddView input[type=file]').length === 1"), 'pieces: Add a piece has no photo input and no separate MIDI row (a single file input)');
+  const addFiles = async (how, list) => ev(`(async () => { ${mkFiles} const fs = ${JSON.stringify(list)}.map(x => mk(x[0], x[1], x[2])); const dt = new DataTransfer(); fs.forEach(f => dt.items.add(f));
     if ('${how}' === 'drop') document.getElementById('pcDrop').dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true })); else { const i = document.getElementById('pcFile'); i.files = dt.files; i.dispatchEvent(new Event('change', { bubbles: true })); }
     await new Promise(r => setTimeout(r, 700)); return document.getElementById('pcDetect').textContent; })()`);
   const det1 = await addFiles('pick', [['twinkle_tune.mid', 'audio/midi', b64(FX.midi())], ['test.musicxml', 'application/vnd.recordare.musicxml+xml', b64(Buffer.from(FX.musicXml()))], ['test.mxl', 'application/vnd.recordare.musicxml', b64(FX.mxl())]]);
   say(/Detected: MIDI, exact notes/.test(det1) && (det1.match(/exact notes/g) || []).length === 3 && /MusicXML \(compressed\)/.test(det1), 'pieces: three files at once are each detected as exact notes');
-  say(await ev("pcQueue.length === 3 && pcQueue.every(q => q.piece) && pcQueue[0].piece.parts.length === 2 && pcQueue[1].piece.title === 'Test Tune' && document.querySelectorAll('#tab-pieces .pc-parts').length === 3 && !document.getElementById('pcSaveRow').classList.contains('hide')"), 'pieces: each becomes a piece with its parts to choose from and a Save button');
+  say(await ev("PC.adding.length === 3 && PC.adding.every(q => q.piece) && PC.adding[0].piece.parts.length === 2 && PC.adding[1].piece.title === 'Test Tune' && document.querySelectorAll('#tab-pieces .pc-parts').length === 3 && !document.getElementById('pcSaveRow').classList.contains('hide')"), 'pieces: each becomes a piece with its parts to choose from and a Save button');
+  await ev("{ const pr = document.querySelector('input[data-part=\\\"0|1\\\"]'); pr.checked = true; pr.dispatchEvent(new Event('change', { bubbles: true })); const pt = document.querySelector('input[data-title=\\\"1\\\"]'); pt.value = 'My Tune'; pt.dispatchEvent(new Event('input', { bubbles: true })); } 1");
+  say(await ev("PC.adding[0].piece.part === 1 && PC.adding[1].piece.title === 'My Tune'"), 'pieces: the part and title can be changed before saving');
+  await ev("document.querySelector('#pcInst button[data-i=ukulele]').click(); 1");
+  say(await ev("PC.adding[2].piece.instrument === 'ukulele' && PC.adding[2].piece.part === 0"), 'pieces: changing the instrument re-suggests the part');
+  await ev("document.querySelector('#pcInst button[data-i=violin]').click(); document.getElementById('pcCat').value = 'Practice tunes'; document.getElementById('pcSaveAll').click(); 1"); await wait(500);
+  say(await ev("(async () => { const l = await LIBDB.all(); return l.length === 3 && l.every(p => p.exact && p.categoryPath.join() === 'Practice tunes' && p.instrument === 'violin') && document.getElementById('pcMsg').textContent.startsWith('Saved 3 pieces'); })()"), 'pieces: all three are saved on this device in the chosen category (IndexedDB)');
+  await ev("pcView('home'); 1");
+  say(await ev("[...document.querySelectorAll('#pcList .pc-folder')].some(f => f.textContent.includes('Practice tunes') && f.textContent.includes('3 pieces'))"), 'pieces: the new category is listed with its count');
+  const det2 = await addFiles('drop', [['song.mp3', 'audio/mpeg', b64(Buffer.from('ID3-not-really'))], ['sheet.pdf', 'application/pdf', b64(Buffer.from('%PDF-1.4'))], ['notes.docx', '', b64(Buffer.from('PK'))], ['broken.musicxml', 'text/xml', b64(Buffer.from('<html/>'))]]);
+  say(/Detected: audio, will be a Draft/.test(det2) && /Detected: PDF, will be a Draft \(experimental\); needs the helper/.test(det2), 'pieces: dropped audio and PDF are recognised and labelled as Drafts');
+  say(await ev("PC.adding.length === 4 && PC.adding.every(q => !q.piece) && document.getElementById('pcSaveRow').classList.contains('hide') && /not a MusicXML/.test(document.getElementById('pcQueue').textContent) && /not a type this app can read/i.test(document.getElementById('pcQueue').textContent)"), 'pieces: nothing is saved for those; a bad file and an unknown type are refused with a reason');
+  await ev("PC.adding.length = 0; pcRenderQueue(); { const pk = document.getElementById('pcLink'); pk.value = 'https://youtu.be/abc123'; pk.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); } 1");
+  say(await ev("/Detected: YouTube link/.test(document.getElementById('pcDetect').textContent) && /helper/.test(document.getElementById('pcQueue').textContent)"), 'pieces: a pasted YouTube link is recognised and says it needs the helper');
+  await ev("document.getElementById('pcRec').click(); 1");
+  say(await ev("/Free record/.test(document.getElementById('pcMsg').textContent)"), 'pieces: Record audio says what is available now');
   for (const [lab, w, h] of [['desktop', 1280, 900], ['phone', 375, 800]]) {   // the Add a piece screen with files queued, at two widths
+    await ev("PC.adding.length = 0; pcRenderQueue(); 1"); await addFiles('pick', [['twinkle_tune.mid', 'audio/midi', b64(FX.midi())]]);
     await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 600 }); await wait(400);
     const ovp = await ev('Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth'); say(ovp <= 0, `pieces: the Add a piece screen has no horizontal overflow at ${lab} width${ovp > 0 ? ' (' + ovp + ' px)' : ''}`);
     const shp = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(out, `${lab}-pieces-add.png`), Buffer.from(shp.data, 'base64'));
   }
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
-  await ev("{ const pr = document.querySelector('input[data-part=\"0|1\"]'); pr.checked = true; pr.dispatchEvent(new Event('change', { bubbles: true })); const pt = document.querySelector('input[data-title=\"1\"]'); pt.value = 'My Tune'; pt.dispatchEvent(new Event('input', { bubbles: true })); } 1");
-  say(await ev("pcQueue[0].piece.part === 1 && pcQueue[1].piece.title === 'My Tune'"), 'pieces: the part and title can be changed before saving');
-  await ev("document.querySelector('#pcInst button[data-i=ukulele]').click(); 1");
-  say(await ev("pcQueue[2].piece.instrument === 'ukulele' && pcQueue[2].piece.part === 0"), 'pieces: changing the instrument re-suggests the part');
-  await ev("document.getElementById('pcSaveAll').click(); 1");
-  say(await ev("{ const pl = JSON.parse(localStorage.getItem('tuner-pieces-v1')); window.__pl = pl; } __pl.length === 3 && __pl[1].title === 'My Tune' && __pl[0].parts[0].notes.length === 4 && __pl.every(p => p.exact) && pcQueue.length === 0 && document.getElementById('pcMsg').textContent.startsWith('Saved 3 pieces')"), 'pieces: all three are saved to the library on this device');
-  await ev("pcView('home'); 1");
-  say(await ev("document.querySelectorAll('#pcList .pc-item').length === 3 && document.getElementById('pcList').textContent.includes('My Tune')"), 'pieces: the saved pieces are listed');
-  await ev("pcView('add'); 1");
-  const det2 = await addFiles('drop', [['song.mp3', 'audio/mpeg', b64(Buffer.from('ID3-not-really'))], ['sheet.pdf', 'application/pdf', b64(Buffer.from('%PDF-1.4'))], ['notes.docx', '', b64(Buffer.from('PK'))], ['broken.musicxml', 'text/xml', b64(Buffer.from('<html/>'))]]);
-  say(/Detected: audio, will be a Draft/.test(det2) && /Detected: PDF, will be a Draft \(experimental\); needs the helper/.test(det2), 'pieces: dropped audio and PDF are recognised and labelled as Drafts');
-  say(await ev("pcQueue.length === 4 && pcQueue.every(q => !q.piece) && document.getElementById('pcSaveRow').classList.contains('hide') && /not a MusicXML/.test(document.getElementById('pcQueue').textContent) && /not a type this app can read/i.test(document.getElementById('pcQueue').textContent)"), 'pieces: nothing is saved for those; a bad file and an unknown type are refused with a reason');
-  await ev("pcQueue.length = 0; pcRenderQueue(); { const pk = document.getElementById('pcLink'); pk.value = 'https://youtu.be/abc123'; pk.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); } 1");
-  say(await ev("/Detected: YouTube link/.test(document.getElementById('pcDetect').textContent) && /helper/.test(document.getElementById('pcQueue').textContent)"), 'pieces: a pasted YouTube link is recognised and says it needs the helper');
-  await ev("document.getElementById('pcRec').click(); 1");
-  say(await ev("/Free record/.test(document.getElementById('pcMsg').textContent)"), 'pieces: Record audio says what is available now');
-  await ev("pcQueue.length = 0; pcView('home'); document.querySelector('#pcList [data-del=\"0\"]').click && 1");
+  await ev("PC.adding.length = 0; pcRenderQueue(); pcView('home'); 1");
+
+  // packs: the fixture folder Violin/Mozart/Volume 1/*.mid gives the expected category tree (folder import and zip import)
+  const midi = b64(FX.midi());
+  await ev(`(async () => { ${mkFiles} const rows = [['Violin/Mozart/Volume 1/01 Minuet.mid'], ['Violin/Mozart/Volume 1/02 Allegro.mid'], ['Violin/Mozart/Volume 2/Rondo.mid'], ['Violin/Bach/Partita/Gigue.mid']];
+    const dt = new DataTransfer(); rows.forEach(([p]) => dt.items.add(mk(p.split('/').pop(), 'audio/midi', '${midi}', p))); const i = document.getElementById('pcPackDir'); i.files = dt.files; i.dispatchEvent(new Event('change', { bubbles: true })); await new Promise(r => setTimeout(r, 1500)); })()`);
+  say(await ev("PC.packs.length === 1 && PC.packs[0].itemCount === 4 && /Imported 4 pieces/.test(document.getElementById('pcMsg').textContent)"), 'library: a folder import reads every file and records the pack');
+  say(await ev("pcSetInst('violin'); [...document.querySelectorAll('#pcList .pc-folder b')].map(b => b.textContent).sort().join() === 'Bach,Mozart,Practice tunes,Scales and arpeggios'"), 'library: the Violin tree has the categories Bach, Mozart, Practice tunes and Scales and arpeggios');
+  await ev("document.querySelector('#pcList [data-folder=Mozart]').click(); 1");
+  say(await ev("[...document.querySelectorAll('#pcList .pc-folder b')].map(b => b.textContent).join() === 'Volume 1,Volume 2' && document.getElementById('pcCrumb').textContent.includes('Violin') && document.getElementById('pcCrumb').textContent.includes('Mozart')"), 'library: Mozart holds Volume 1 and Volume 2, with a breadcrumb');
+  await ev("document.querySelector('#pcList [data-folder=\"Volume 1\"]').click(); 1");
+  say(await ev("[...document.querySelectorAll('#pcList .pc-item b')].map(b => b.textContent).join() === '01 Minuet,02 Allegro' && document.querySelectorAll('#pcList [data-listen]').length === 2 && document.querySelectorAll('#pcList [data-practise]').length === 2"), 'library: Volume 1 lists its two pieces, each with Listen and Practise');
+  const zip = FX.zipOf([['Guitar/Songs/First Song.mid', Buffer.from(FX.midi())], ['Guitar/Songs/Second Song.mid', Buffer.from(FX.midi())], ['Guitar/notes.txt', Buffer.from('hello')]]);
+  await ev(`(async () => { ${mkFiles} const dt = new DataTransfer(); dt.items.add(mk('guitar_pack.zip', 'application/zip', '${b64(zip)}')); const i = document.getElementById('pcPackZip'); i.files = dt.files; i.dispatchEvent(new Event('change', { bubbles: true })); await new Promise(r => setTimeout(r, 1500)); })()`);
+  say(await ev("PC.packs.length === 2 && /Imported 2 pieces/.test(document.getElementById('pcMsg').textContent) && PC.inst === 'guitar' && [...document.querySelectorAll('#pcList .pc-folder b')].map(b => b.textContent).includes('Songs')"), 'library: a .zip pack imports too, and a Guitar folder puts its pieces on the Guitar tab');
+
+  // the piece view: a generated scale and an imported MIDI piece use the same screen; listen, transpose, loop by bar, open in Free record
+  await ev("pcSetInst('violin', true); 1");
+  say(await ev("(() => { pvOpen('gen:violin:major:0:1', false); return PV.piece.title === 'C major, 1 octave' && PV.piece.parts[0].notes.length === 15 && document.getElementById('pvTitle').textContent === 'C major, 1 octave' && !document.getElementById('pcPiece').classList.contains('hide'); })()"), 'piece view: a generated scale opens in the same screen as an imported piece');
+  say(await ev("pvListen(); const on = PV.playing && PV.nodes.length === 15; pvStop(); on && !PV.playing"), 'piece view: Listen schedules every note of the scale and Stop ends it');
+  await ev("pcView('home'); pcSetInst('violin'); document.querySelector('#pcList [data-folder=Mozart]').click(); document.querySelector('#pcList [data-folder=\"Volume 1\"]').click(); document.querySelector('#pcList [data-practise]').click(); 1");
+  say(await ev("PV.piece.source === 'midi' && PV.piece.parts.length === 2 && pvGrid().bars === 2 && document.getElementById('pvPartWrap').classList.contains('hide') === false"), 'piece view: an imported MIDI piece shows the part picker and a 2-bar grid');
+  say(await ev("document.getElementById('pvUp').click(); document.getElementById('pvShift').textContent === '+1 semitones' && pvMain()[0].midi === 68"), 'piece view: transposing moves every note');
+  await ev("document.getElementById('pvDown').click(); document.getElementById('pvFrom').value = '2'; document.getElementById('pvTo').value = '2'; document.getElementById('pvFrom').dispatchEvent(new Event('change')); document.getElementById('pvLoop').checked = true; document.getElementById('pvLoop').dispatchEvent(new Event('change')); document.getElementById('pvSpeed').value = '0.5'; document.getElementById('pvSpeed').dispatchEvent(new Event('change')); 1");
+  say(await ev("(() => { const r = pvNotesInRange(); return r.notes.length === 1 && r.notes[0].midi === 72 && Math.abs(r.notes[0].start) < 0.01 && Math.abs(r.len - 2) < 0.01 && PV.loop && PV.speed === 0.5; })()"), 'piece view: bars 2 to 2 loop just that bar (the C5), at half speed');
+  say(await ev("pvListen(); const first = PV.nodes.length; const ok = PV.playing && first === 1; pvStop(); ok"), 'piece view: a looped bar plays and stops');
+  for (const [lab, w, h] of [['phone', 375, 800], ['tablet', 820, 1100]]) {   // the piece view and the library at two widths
+    await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 600 }); await wait(400);
+    let ov = await ev('Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth'); say(ov <= 0, `piece view: no horizontal overflow at ${lab} width${ov > 0 ? ' (' + ov + ' px)' : ''}`);
+    let sh = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(out, `${lab}-piece-view.png`), Buffer.from(sh.data, 'base64'));
+    await ev("pcView('home'); pcSetInst('violin'); PC.path = []; pcRenderHome(); 1"); await wait(300);
+    ov = await ev('Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth'); say(ov <= 0, `library: no horizontal overflow at ${lab} width${ov > 0 ? ' (' + ov + ' px)' : ''}`);
+    sh = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(out, `${lab}-library.png`), Buffer.from(sh.data, 'base64'));
+    await ev("pvOpen(PC.lib.find(p => p.title === '01 Minuet').id, false); 1");
+  }
+  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+  await ev("document.getElementById('pvRec').click(); 1"); await wait(500);
+  say(await ev("tab === 'rec' && events.length === 4 && document.getElementById('pbMode').value === 'notes'"), 'piece view: Open in Free record puts the notes in the Recorder to see and replay');
+  await ev("showTab('pieces'); 1");
+
+  // the instrument switch moves the library, the tuner and the scale drills together
+  say(await ev("(() => { pcSetInst('guitar', true); return prof.k === 'guitar' && inst === 'guitar' && document.getElementById('scInst').value === 'guitar' && document.querySelector('#pcLibInst button.on').textContent === 'Guitar'; })()"), 'instrument switch: Guitar changes the library, the Tuner and the Scale drills together');
+  say(await ev("(() => { pcSetInst('piano', true); return prof.k === 'piano' && inst === 'chromatic' && document.getElementById('scInst').value === 'chromatic' && [...document.querySelectorAll('#pcList .pc-folder b')].some(b => b.textContent === 'Scales and arpeggios'); })()"), 'instrument switch: Piano does the same (the Tuner becomes chromatic)');
+  say(await ev("(() => { pcSetInst('violin', true); return prof.k === 'violin' && inst === 'violin' && document.getElementById('scInst').value === 'violin'; })()"), 'instrument switch: back to Violin');
+  await ev("{ const q = document.getElementById('pcSearch'); q.value = 'c major'; q.dispatchEvent(new Event('input')); } 1");
+  say(await ev("document.querySelectorAll('#pcList [data-listen]').length >= 3 && [...document.querySelectorAll('#pcList .pc-item b')].every(b => /^c/i.test(b.textContent) && /major/i.test(b.textContent))"), 'library: search finds the generated C major scales');
+  await ev("{ const q = document.getElementById('pcSearch'); q.value = ''; q.dispatchEvent(new Event('input')); } PC.f = {}; pcRenderHome(); 1");
   say(errs.length === 0, 'pieces: no script errors' + (errs.length ? ' - ' + errs.join(' | ') : ''));
+
   // engines: Settings > Engines is generated from the registry; a stub engine proves the choice reaches the Tuner and Recorder paths, and a failing engine cannot be picked
   errs.length = 0;
   await ev(`registerEngine({ id: 'stub-f0', role: 'f0', label: 'Stub pitch', version: '1', caps: { live: true, offline: true, needsHelper: false, license: 'test' }, params: { gain: { type: 'range', min: 0, max: 10, step: 1, default: 5, label: 'Gain' } }, calls: 0, frame() { this.calls++; return null; }, run() { return []; } });

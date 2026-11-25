@@ -32,6 +32,7 @@ Each benchmark runs the real code and compares with a saved baseline in `tests/b
 | `node tests/detailed-strings.js` | Detailed path with the real Basic Pitch model in Node (about 5 min; needs `tools/node_modules`) | Any change to `bpToEvents`, `markAttacks`, `refineEvents`, `extractMelody`, `resample`, `BP_PARAMS` |
 | `node tests/pitch-sweep.js` | Raw YIN error per semitone and sample rate | Any change to `yin` |
 | `node tests/resample.js` | The resampler keeps pitch and level and does not alias | Any change to `resample` |
+| `node tests/library.js` | Library model: packs to category tree, search, generated scales, transposition and range, bar grid | Any change to `library.js` |
 | `node tests/piece-import.js` | MIDI / MusicXML / .mxl importers and the input detector (fixtures are built in `tests/lib/fixtures.js`) | Any change to `midi.js`, `musicxml.js`, `piece.js` |
 | `node tests/engine-contract.js` | Every engine in the registry (`js/core/engines/`): shape, silence, determinism, range, time budget | Adding or changing an engine, or the registry |
 
@@ -66,5 +67,5 @@ If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. W
 
 ## Other conventions
 
-- When you change any cached file, bump `CACHE` in `sw.js` (currently `tuner-v43`) so installed copies update.
+- When you change any cached file, bump `CACHE` in `sw.js` (currently `tuner-v44`) so installed copies update.
 - Netlify is no longer used. GitHub Pages is the only host.
