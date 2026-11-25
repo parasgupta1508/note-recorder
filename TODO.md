@@ -8,3 +8,16 @@
 - [ ] SwiftF0 (neural pitch): code exists but is switched off. Needs an ONNX runtime and the model file vendored under `vendor/`, then enabling `caps.live`/`caps.offline`.
 - [ ] CREPE: not built (needs a model download). Only worth it if noisy rooms stay a problem.
 - [ ] Compare the Tuner against SoundCorset (Android) on the same notes: settle time and steadiness.
+
+## Progress screen (before building, ask the owner to confirm the details)
+
+- [ ] **Progress per instrument.** A player can track progress separately for each instrument (violin, guitar, ukulele, piano/chromatic, voice). Add an instrument selector on the Progress screen.
+- [ ] **Three measures per instrument:** **Note**, **Full scale**, **Piece**. The Progress screen needs a selector for these three.
+- [ ] **Compare compares like with like:** the same measure on both sides (a note against a note, a scale against a scale, a piece against a piece).
+- [ ] **Progress over time on three graphs:** one for Note, one for Scale, one for Piece.
+- [ ] Ask the owner for the changes they want in Progress as the work goes (what to plot, which score, date range, what "same metric" means for a piece), instead of guessing.
+
+## Settings clean-up
+
+- [ ] **Instruments:** remove the extra instruments. Keep only violin, guitar, ukulele, piano/chromatic and voice.
+- [ ] **Consolidate Microphone, Accuracy check and Detection.** They overlap and are confusing now. Merge them into one clearer structure (suggestion to confirm with the owner: one "Listening" group with the mic and calibration, an "Accuracy" check, and the detection presets in one place).
