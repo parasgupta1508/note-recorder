@@ -20,7 +20,10 @@ showTab('scale'); var scaleRuns=RUNS.length, scalePlan=JSON.stringify(sc.tl.map(
 setGradeMode('strict', true);
 
 // ---- the new main-menu item
-var nav=$('nav-piece'); ck('main menu: "Piece practice" is a new item, next to Practice',!!nav&&/Piece practice/.test(nav.textContent)&&nav.nextElementSibling===$('nav-pieces')&&nav.previousElementSibling===$('nav-home'));
+var nav=$('nav-piece'); ck('main menu: Practice, Scale drills, Piece practice, Pieces, Tuner, Progress, Settings, in that order',[].map.call(document.querySelectorAll('nav.tabs button'),function(b){return b.dataset.tab}).join()==='home,scale,piece,pieces,tuner,analysis,settings'&&/Piece practice/.test(nav.textContent)&&/Scale drills/.test($('nav-scale').textContent));
+ck('Scale drills is no longer a button on the Practice screen, which still has Tuner and Free record',!document.querySelector('#tab-home [data-go=scale]')&&!!document.querySelector('#tab-home [data-go=tuner]')&&!!document.querySelector('#tab-home [data-go=rec]'));
+$('nav-scale').click(); ck('the Scale drills menu item opens the Scale drills and lights itself (not Practice)',tab==='scale'&&!$('tab-scale').classList.contains('hide')&&$('nav-scale').classList.contains('on')&&!$('nav-home').classList.contains('on'));
+showTab('piece');
 nav.click(); ck('opening it shows its own screen and hides the Scale drills',tab==='piece'&&!$('tab-piece').classList.contains('hide')&&$('tab-scale').classList.contains('hide')&&nav.classList.contains('on'));
 ck('it is not inside the Scale drills screen',!$('tab-scale').contains($('tab-piece'))&&!$('tab-piece').contains($('tab-scale')));
 ck('before a piece is chosen: the open screen (choose from my pieces, open a file from this device) and no player, and no GitHub or library listing anywhere',!$('pzLib').hidden&&$('pzPlayer').hidden&&!!$('pzLibPieces')&&!!$('ppPick')&&!$('pzLibSearch')&&!$('ppUrl')&&!$('plRepos')&&!document.querySelector('.set-group[data-g=piecelibs]')&&typeof ghParseUrl==='undefined');
