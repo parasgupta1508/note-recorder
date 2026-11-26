@@ -4,28 +4,30 @@
 .visual{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:8px 8px 6px;display:grid;gap:6px}
 .visual svg{display:block;width:100%;height:auto}
 #tab-scale .visual ~ #scRow1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}   /* the chips stay for screen readers, the notation replaces them on screen */
-.staffbox{min-height:80px}
-.staffbox .sl,.staffbox .bar{stroke:#8a96b4;stroke-width:1}
-.staffbox .bar{stroke-width:1.2}
-.staffbox .clef,.staffbox .ks,.staffbox .acc,.staffbox .oct{fill:var(--fg)} .staffbox .oct{fill:var(--mut)}
-.staffbox .led{stroke:#8a96b4;stroke-width:1.2}
-.staffbox .slur{fill:none;stroke:var(--mut);stroke-width:1.4}
-.staffbox .fing{fill:var(--mut);font-weight:600}
-.staffbox .nh .head{fill:var(--mut)} .staffbox .nh .stem{stroke:var(--mut);stroke-width:1.4}
-.staffbox .nh .halo{fill:var(--acc);opacity:0}
-.staffbox .nh.pend .head{fill:#9aa6c4} .staffbox .nh.pend .stem{stroke:#9aa6c4}
+.staffbox{min-height:80px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#3a4a78 transparent}
+/* one palette for all four displays: navy card, cyan = "now", green / amber / red = in tune / close / off, finger colours on the neck */
+.player{--sv-bg:#0b1020;--sv-line:rgba(170,190,235,.5);--sv-cy:#22d3ee;--sv-cy-d:#0e7490;--sv-note:#eef2ff;--sv-dim:#a9b6d6}
+.staffbox .sl,.staffbox .bar{stroke:var(--sv-line);stroke-width:1.3}
+.staffbox .bar{stroke-width:1.6}
+.staffbox .clef,.staffbox .ks,.staffbox .acc,.staffbox .ts{fill:var(--fg)} .staffbox .oct{fill:var(--sv-dim)} .staffbox .ts{font-family:Georgia,serif}
+.staffbox .led{stroke:var(--sv-line);stroke-width:1.5}
+.staffbox .slur{fill:none;stroke:#cfd8f2;stroke-width:1.8;stroke-linecap:round}
+.staffbox .fing{fill:#fff;font-weight:700}
+.staffbox .nh .head{fill:var(--sv-note)} .staffbox .nh .stem{stroke:var(--sv-note);stroke-width:1.7}
+.staffbox .nh .halo{fill:var(--sv-cy);opacity:0}
+.staffbox .nh.pend .head{fill:var(--sv-note)} .staffbox .nh.pend .stem{stroke:var(--sv-note)}
 .staffbox .nh.ok .head{fill:var(--ok)} .staffbox .nh.ok .stem{stroke:var(--ok)}
 .staffbox .nh.close .head{fill:var(--warn)} .staffbox .nh.close .stem{stroke:var(--warn)}
 .staffbox .nh.bad .head{fill:var(--bad)} .staffbox .nh.bad .stem{stroke:var(--bad)}
-.staffbox .nh.cur .head{fill:#fff} .staffbox .nh.cur .stem{stroke:#fff} .staffbox .nh.cur .halo{opacity:.55}
-.staffbox .cur{stroke:var(--acc);stroke-width:2;stroke-linecap:round;opacity:.9}
+.staffbox .nh.cur .head{fill:#fff} .staffbox .nh.cur .stem{stroke:#fff} .staffbox .nh.cur .halo{opacity:.4}
+.staffbox .cur{stroke:var(--sv-cy);stroke-width:3;stroke-linecap:round;filter:drop-shadow(0 0 5px var(--sv-cy))}
 .neckbox{min-height:20px}
-.neckbox .board{fill:#2a2418} .neckbox .fret{stroke:#6d6450;stroke-width:1} .neckbox .fret.nut{stroke:#d9d3c0;stroke-width:3}
-.neckbox .str{stroke:#c9ccd6} .neckbox .sn,.neckbox .fn{fill:var(--mut)}
-.neckbox .dot{fill:#7f8aa8;opacity:.75}
-.neckbox #svDot .on{fill:var(--acc);stroke:#fff;stroke-width:2} .neckbox #svDot text{fill:#fff;font-weight:700}
-.neckbox .pk{fill:#e8ebf4;stroke:#222;stroke-width:.6} .neckbox .pk.sc{fill:#b9c8ff} .neckbox .pk.blk{fill:#1c2130} .neckbox .pk.blk.sc{fill:#4a62c8}
-.neckbox .pk.on{fill:var(--acc)} .neckbox .pk.blk.on{fill:#9db2ff}
+.neckbox .board{fill:url(#svWood);stroke:#0006;stroke-width:1} .neckbox .fret{stroke:#8d7b62;stroke-width:1.2} .neckbox .fret.nut{stroke:#efe7d2;stroke-width:5}
+.neckbox .str{stroke:url(#svStr)} .neckbox .fn{fill:var(--sv-dim)} .neckbox .sn{fill:var(--fg);font-weight:700} .neckbox .snc{fill:#1b2440;stroke:#5a6a96;stroke-width:1.5}
+.neckbox .dot{fill:#7f8aa8;opacity:.85;stroke:#0008;stroke-width:1}
+.neckbox #svDot{filter:drop-shadow(0 0 7px var(--sv-cy))} .neckbox #svDot .on{fill:var(--sv-cy);stroke:#fff;stroke-width:2.5} .neckbox #svDot .ring{fill:none;stroke:var(--sv-cy);stroke-width:2;opacity:.55} .neckbox #svDot text{fill:#06202a;font-weight:800}
+.neckbox .pk{fill:#f3f5fb;stroke:#1a2030;stroke-width:.8} .neckbox .pk.sc{fill:#bfeaf4} .neckbox .pk.blk{fill:#161c2e} .neckbox .pk.blk.sc{fill:#0e7490}
+.neckbox .pk.on{fill:var(--sv-cy);filter:drop-shadow(0 0 6px var(--sv-cy))} .neckbox .pk.blk.on{fill:#67e8f9}
 @media (prefers-reduced-motion:reduce){ .staffbox .cur{display:none} }
 
 /* ---------- result card ---------- */
@@ -68,21 +70,24 @@
 .vis-bar .field[hidden]{display:none}
 .vis-title{font-size:13px;padding:0 2px}
 .tabbox,.rollbox{min-height:20px} .tabbox[hidden],.rollbox[hidden],.staffbox[hidden],.neckbox[hidden]{display:none}
-.staffbox .nm{fill:var(--mut)}
-.tabbox .tl{stroke:#8a96b4;stroke-width:1} .tabbox .sn,.rollbox .sn{fill:var(--mut)}
-.tabbox .hn rect{fill:#2a3350;stroke:#55618a;stroke-width:1} .tabbox .hn text{fill:var(--fg)} .tabbox .hn .cap{fill:var(--mut);font-weight:400}
-.hn.ok rect{fill:#17402f;stroke:var(--ok)} .hn.close rect{fill:#52410f;stroke:var(--warn)} .hn.bad rect{fill:#552222;stroke:var(--bad)}
-.hn.cur rect{fill:var(--acc);stroke:#fff;stroke-width:2} .hn.pend{opacity:.9}
-.rollbox .rr{fill:#161b27;stroke:#222a3b;stroke-width:.5} .rollbox .rr.blk{fill:#11151e}
-.rollbox .hn rect{fill:#4f6fd8;stroke:none;opacity:.85} .rollbox .hn text{fill:#fff;pointer-events:none}
-.rollbox .hn.ok rect{fill:#22a06b} .rollbox .hn.close rect{fill:#c99a1d} .rollbox .hn.bad rect{fill:#c24545} .rollbox .hn.cur rect{fill:#fff;opacity:1} .rollbox .hn.cur text{fill:#10131c}
-.tabbox .play,.rollbox .play{stroke:var(--acc);stroke-width:2;opacity:.9}
+.staffbox .nm{fill:var(--sv-dim);font-weight:600}
+.tabbox .tl{stroke:var(--sv-line);stroke-width:1.3} .tabbox .sn,.rollbox .sn{fill:var(--fg)} .tabbox .snc{fill:#1b2440;stroke:#5a6a96;stroke-width:1.5} .tabbox .bt,.rollbox .bt{stroke:#ffffff14;stroke-width:1}
+.tabbox .hn rect{fill:#1b2748;stroke:#4a5c93;stroke-width:1.4} .tabbox .hn text{fill:var(--fg)} .tabbox .hn .cap{fill:var(--sv-dim);font-weight:500}
+.hn.ok rect{fill:#134a38;stroke:var(--ok)} .hn.close rect{fill:#5a4510;stroke:var(--warn)} .hn.bad rect{fill:#5c2326;stroke:var(--bad)}
+.tabbox .hn.cur rect{fill:var(--sv-cy-d);stroke:var(--sv-cy);stroke-width:2.2;filter:drop-shadow(0 0 6px var(--sv-cy))}
+.rollbox .rr{fill:#101729;stroke:#1d2740;stroke-width:.6} .rollbox .rr.blk{fill:#0b1121}
+.rollbox .gk{fill:#e9edf7;stroke:#141a2b;stroke-width:.8} .rollbox .gk.blk{fill:#161c2e;stroke:none} .rollbox .gk+.sn{fill:#2b3350;font-weight:600}
+.rollbox .hn rect{fill:url(#rbBlue);stroke:#ffffff40;stroke-width:1} .rollbox .hn text{fill:#fff;font-weight:700;pointer-events:none}
+.rollbox .hn.ok rect{fill:url(#rbOk)} .rollbox .hn.close rect{fill:url(#rbClose)} .rollbox .hn.bad rect{fill:url(#rbBad)}
+.rollbox .hn.close text{fill:#2b1c00} .rollbox .hn.ok text{fill:#04281c}
+.rollbox .hn.cur rect{fill:url(#rbCur);stroke:#fff;stroke-width:1.5;filter:drop-shadow(0 0 7px var(--sv-cy))} .rollbox .hn.cur text{fill:#06202a}
+.tabbox .play,.rollbox .play{stroke:var(--sv-cy);stroke-width:2.5;stroke-linecap:round}
+.tabbox .playglow,.rollbox .playglow{fill:var(--sv-cy);opacity:.1;pointer-events:none} .tabbox .pill{fill:var(--sv-cy)} .tabbox .pilt{fill:#06202a} .rollbox .pmark{fill:var(--sv-cy)}
 .neckbox .dot.f0{fill:#8c93a8} .neckbox .dot.f1{fill:#34d399} .neckbox .dot.f2{fill:#fb923c} .neckbox .dot.f3{fill:#60a5fa} .neckbox .dot.f4{fill:#a78bfa} .neckbox .dot.fx{fill:#7f8aa8}
-.neckbox .dot:not(.sc){opacity:.35} .neckbox .df{fill:#10131c;font-weight:700}
-.sv-leg{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;font-size:12px;color:var(--mut);padding:2px 4px} .sv-leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:-6px}
+.neckbox .dot:not(.sc){opacity:.3} .neckbox .df{fill:#0b1020;font-weight:800} .neckbox .kn{fill:#5b6788}
+.sv-leg{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:12.5px;color:var(--sv-dim);padding:4px 6px 0} .sv-leg i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:-8px;box-shadow:0 0 0 2px #0b1020}
 .sv-leg .f0{background:#8c93a8} .sv-leg .f1{background:#34d399} .sv-leg .f2{background:#fb923c} .sv-leg .f3{background:#60a5fa} .sv-leg .f4{background:#a78bfa}
-.sv-read{font-size:14px;padding:2px 4px;min-height:20px;color:var(--fg)}
-.neckbox .kn{fill:#444}
+.sv-read{font-size:14px;padding:8px 12px;min-height:20px;color:var(--fg);background:#121b33;border:1px solid #2a3a66;border-left:3px solid var(--sv-cy);border-radius:10px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap} .sv-read b{font-size:17px;color:var(--sv-cy)} .sv-read span{color:var(--sv-dim)}
 .vis-bar .seg{flex:1 1 100%;display:flex} .vis-bar .seg button{flex:1 1 0;min-width:0;padding:7px 4px;font-size:13px;overflow:hidden;text-overflow:ellipsis}
 
 /* ---------- the player card (one clean card: what is played, the display, the controls, the live meter) ---------- */
@@ -96,7 +101,7 @@
 .pl-bpm input{width:48px;text-align:center;background:transparent;border:0;font-weight:650;padding:4px 0;min-height:0} .pl-bpm span{color:var(--mut);font-size:12px} .pl-bpm button{padding:2px 10px;min-height:32px;font-size:17px}
 .pl-tools>button{min-height:36px;padding:4px 12px;font-size:13.5px}
 .pl-sel{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px}
-.player .visual{border:0;background:#0f1320;border-radius:12px;padding:8px}
+.player .visual{border:1px solid #1e2a4a;background:radial-gradient(120% 90% at 50% 0%,#141d38 0%,var(--sv-bg) 70%);border-radius:14px;padding:12px 10px 10px;box-shadow:inset 0 1px 0 #ffffff0d,0 8px 24px #0006}
 .pl-bar{height:4px;border-radius:2px;background:var(--raise);overflow:hidden;margin:-2px 0 0} .pl-bar i{display:block;height:100%;width:0;background:var(--acc)}
 .pl-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .pl-btns{display:flex;gap:8px;flex-wrap:wrap} .pl-btns button{min-height:40px;padding:6px 16px;white-space:nowrap}
@@ -106,7 +111,7 @@
 #tab-scale .readout .big{font-size:46px;text-align:left} #tab-scale .tgt{padding-left:24px} #tab-scale .dirarrow{font-size:22px;left:0}
 .rd-text{display:grid;font-size:14px;min-width:0;text-align:left} .rd-text .verdict{font-size:17px;min-height:22px;text-align:left} .rd-text .fing{min-height:0;font-size:14px;text-align:left}
 #tab-scale #scMsg{text-align:left} #tab-scale #scHeard{text-align:left}
-.bandhl{fill:#27d1ea;opacity:.14} .staffbox .sbr{fill:none;stroke:var(--mut);stroke-width:1} .staffbox .sbt{fill:var(--mut)}
+.bandhl{fill:var(--sv-cy,#22d3ee);opacity:.16} .staffbox .sbr{fill:none;stroke:var(--mut);stroke-width:1} .staffbox .sbt{fill:var(--mut)}
 .cardbox>summary{cursor:pointer;font-weight:650;padding:6px 0;margin-bottom:6px}
 .cardbox .cardbar>b{display:none}
 /* the player needs room: one column until the screen is wide, then the scorecard sits beside it */

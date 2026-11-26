@@ -38,7 +38,7 @@ pick('scInst','guitar'); ck('neck: guitar fretboard with 6 strings',$('scNeck').
 pick('scInst','ukulele'); ck('neck: ukulele fretboard with 4 strings',$('scNeck').querySelectorAll('.str').length===4);
 pick('scInst','chromatic'); ck('keys: piano keyboard, no strings',$('scNeck').querySelectorAll('.pk').length>=13&&!$('scNeck').querySelector('.str'));
 pick('scInst','violin'); pick('scType','dorian'); pick('scRoot',2); ck('D dorian is written with the key signature of C major (none)',$('scStaff').querySelectorAll('.ks').length===0);
-pick('scType','major'); pick('scRoot',7); pick('scSpan',3); ck('three octaves: 43 noteheads over several rows',SV.nodes.filter(Boolean).length===43&&SV.rows.length>=3); pick('scSpan',1);
+pick('scType','major'); pick('scRoot',7); pick('scSpan',3); ck('three octaves: 43 noteheads in one scrolling row, never squeezed',SV.nodes.filter(Boolean).length===43&&SV.rows.length===1&&SV.sw>=43*54); pick('scSpan',1);
 pick('scBow','slur4'); ck('slurs are drawn for four notes to a bow',$('scStaff').querySelectorAll('.slur').length>=3); pick('scBow','separate'); ck('no slurs with separate bows',$('scStaff').querySelectorAll('.slur').length===0);
 
 // ---- the four displays

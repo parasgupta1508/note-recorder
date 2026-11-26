@@ -56,7 +56,7 @@ function visLayout(tl, opts) {
     const to = Math.min(tl.length, from + per), parsed = [];
     for (let i = from; i < to; i++) { const p = visParseNote(tl[i].noteName); parsed.push(p ? { ...p, step: p.step + 7 * sh0 } : null); }
     const steps = parsed.filter(Boolean).map(p => p.step), hi = Math.max(...steps), lo = Math.min(...steps);
-    let sh = 0; while (hi - 7 * sh > VIS_HI && sh < 3) sh++; if (sh === 0) while (lo - 7 * sh < VIS_LO && sh > -2) sh--;
+    let sh = 0; if (!opts.noShift) { while (hi - 7 * sh > VIS_HI && sh < 3) sh++; if (sh === 0) while (lo - 7 * sh < VIS_LO && sh > -2) sh--; }
     const row = { from, to: to - 1, shift: sh, label: { 1: '8va', 2: '15ma', 3: '22ma', '-1': '8vb', '-2': '15mb' }[sh] || '', bars: [], notes: [] };
     for (let i = from; i < to; i++) {
       const p = parsed[i - from], x = left + (i - from + 0.5) * sp;
