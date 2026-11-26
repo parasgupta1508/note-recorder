@@ -68,6 +68,16 @@ document.querySelector('#pzView button[data-v=staff]').click();
 ck('no element id is shared with another screen (the Scale drills elements and SVG ids are not reused)',(function(){var mine={},bad=0;[].forEach.call($('tab-piece').querySelectorAll('[id]'),function(e){mine[e.id]=1});[].forEach.call($('pzLib').querySelectorAll('[id]'),function(e){mine[e.id]=1});[].forEach.call(document.querySelectorAll('[id]'),function(e){if(mine[e.id]&&!$('tab-piece').contains(e)&&!$('pzLib').contains(e))bad++});return bad===0})());
 ck('violin hand position per note',Array.isArray(PE.plan.posList)&&PE.plan.posList.length===8);
 
+// ---- pieces saved in the Pieces library join the Open a piece list; a score can be saved into it
+ck('save: a button to keep the opened score, shown for a score that came from a file or GitHub',!$('ppSave').hidden&&!$('ppSave').disabled&&/Save to my pieces/.test($('ppSave').textContent));
+var bp=ppBuildPiece(); ck('save: the library piece has the title, instrument, category, chosen part and the score text',!!bp&&bp.title==='Etude'&&bp.instrument==='violin'&&bp.categoryPath.join()==='My imports'&&bp.part===0&&bp.source==='musicxml'&&bp.parts.length===5&&/<score-partwise/.test(bp.xml)&&bp.verified===true&&!bp.builtin);
+ck('save: GitHub folders become the category (composer, work), without the generic "scores" folder',JSON.stringify(ppFolders('scores/Haydn,_Joseph/String_Quartet_No.1/sq1.mxl'))==='["Haydn, Joseph","String Quartet No.1"]'&&ppFolders('a.mxl').length===0);
+var lp=pieceFromMusicXml(${multi},{title:'Saved Etude',instrument:'violin'}); lp.title='Saved Etude'; lp.categoryPath=['Composer','Book 1']; PLL.items=[lp]; $('pzLib').hidden=false; $('pzPlayer').hidden=true; PLV.q=''; PLV.inst='all'; PLV.lib='all'; plRender();
+ck('library: a saved piece is in the list, marked as on this device, filed by its category',/Saved Etude/.test($('pzLibList').textContent)&&/on this device/.test($('pzLibList').textContent)&&/My pieces/.test($('pzLibRepo').textContent));
+PLV.lib='local'; PLV.inst='violin'; plRender(); ck('library: the instrument filter and the library menu work on saved pieces',$('pzLibList').querySelectorAll('button.pp-file').length===1);
+$('pzLibList').querySelector('button.pp-file').click(); ck('library: opening a saved piece loads it (several parts: the part list), and it cannot be saved again',PP.src==='mine'&&PP.title==='Saved Etude'&&PP.sum.length===5&&$('ppSave').hidden&&!$('pzPlayer').hidden&&$('pzLib').hidden);
+PLL.items=[]; PLV.lib='all'; PLV.inst='all'; ppChoosePart(0);
+
 // ---- the engraved staff (Verovio loads as a module, which a file:// page cannot do: here it must fail politely and the simple staff must come back)
 ck('engraved: a button next to the instrument button, off by default',!!$('pzEngBtn')&&!PW.eng&&$('pzEngBox').hidden);
 $('pzEngBtn').click(); ck('engraved: switching it on shows the engraved box and hides the simple staff',PW.eng&&!$('pzEngBox').hidden&&$('pzStaff').hidden&&$('pzEngBtn').getAttribute('aria-pressed')==='true');
@@ -95,7 +105,7 @@ ck('tempo: skipping the Bb and playing the next A is the 6th note, not a retry o
 // ---- the result is a Trinity-style report, kept per piece
 PE.lastRun=null; peSetMode('wait'); peReset(); PE.running=true; t=0; for(i=0;i<8;i++){ t=play(t,PE.seq[i],1,20); t=quiet(t,12) } t=quiet(t,120);
 setTimeout(function(){ try{
-var run=PE.lastRun; ck('result: a run record for this piece',!!run&&run.rec.type==='piece'&&/^Etude · Violin/.test(run.rec.label)&&run.rec.total>=80&&/^pc/.test(run.rec.sid));
+var run=PE.lastRun; ck('result: a run record for this piece',!!run&&run.rec.type==='piece'&&/Etude · Violin/.test(run.rec.label)&&run.rec.total>=80&&/^pc/.test(run.rec.sid));
 ck('result: the card has the score, the band, the three marks and the coach',!$('pzResult').hidden&&/Distinction|Merit/.test($('pzResult').textContent)&&$('pzResult').querySelectorAll('.rb').length===3&&/What to improve/.test($('pzResult').textContent));
 ck('result: the Result button is on',!$('pzResBtn').disabled);
 ck('history: the run is kept on this device under its own key, with no per-note list',(function(){var a=peRuns();return a.length>=1&&a[a.length-1].sid===run.rec.sid&&a[a.length-1].notes.length===0})());

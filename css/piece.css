@@ -92,3 +92,5 @@
 .engcur{position:absolute;display:none;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--sv-cy,#22d3ee);box-shadow:0 0 8px var(--sv-cy,#22d3ee);pointer-events:none;z-index:2}
 #pzEng g.note.pg-ok,#pzEng g.note.pg-ok *{fill:var(--ok);stroke:var(--ok)} #pzEng g.note.pg-close,#pzEng g.note.pg-close *{fill:var(--warn);stroke:var(--warn)} #pzEng g.note.pg-bad,#pzEng g.note.pg-bad *{fill:var(--bad);stroke:var(--bad)}
 #pzEng g.note.pg-cur,#pzEng g.note.pg-cur *{fill:#22d3ee;stroke:#22d3ee} #pzEng g.note.pg-cur.pg-ok *{fill:var(--ok);stroke:var(--ok)}
+
+#ppSave[hidden]{display:none} .pp-head #ppSave{margin-left:auto} .pp-head #ppSave+.mini{margin-left:0}
