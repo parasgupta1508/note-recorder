@@ -167,13 +167,31 @@ const PLC = {};                                   // library id -> { state: 'loa
 const PLV = { q: '', inst: 'all', lib: 'all' };   // what the list is showing
 const PL_SHOW = 200;                              // rows drawn at once (search to narrow a long list)
 function plSummary() { const n = PLS.filter(r => r.on).length; return `${n} librar${n === 1 ? 'y' : 'ies'} on`; }
+// Where a library's list of scores comes from, in this order (GitHub's own API allows only 60 requests an hour per network, so it is the last resort):
+//   1. the suggested libraries: a list that ships with the app (data/library/, built by tools/build-library-index.js), no GitHub request at all;
+//   2. a list saved on this device in the last 24 hours (the file names only, never a score);
+//   3. GitHub's API, and the result saved for next time. If GitHub says no, an older saved list is used, with a note.
+const PL_TREE = 'tuner-piece-tree-', PL_TTL = 24 * 3600e3;
+const plIdx = id => 'data/library/' + id.replace(/[^A-Za-z0-9]+/g, '_') + '.json';
+const plFromPairs = (pairs, x = {}) => { const m = ghMusicFiles({ tree: pairs.map(([path, size]) => ({ type: 'blob', path, size })) }, { includeXml: true }); return { files: m.files, truncated: !!x.truncated, skipped: x.skipped || 0 }; };
+const plSaved = id => { try { const o = JSON.parse(localStorage.getItem(PL_TREE + id)); return o && Array.isArray(o.files) ? o : null; } catch { return null; } };
 async function plLoadOne(r, force) {
   const c = PLC[r.id]; if (!force && c && (c.state === 'ok' || c.state === 'loading')) return;
   PLC[r.id] = { state: 'loading' }; plRender();
-  try {
+  const ok = (m, note) => { PLC[r.id] = { state: 'ok', files: m.files, truncated: m.truncated, skipped: m.skipped, note: note || '' }; };
+  if (plDefaults().some(d => d.id === r.id)) {   // 1
+    try { const res = await fetch(plIdx(r.id), { cache: 'no-cache' }); if (res.ok) { const j = await res.json(); ok(plFromPairs(j.files, { truncated: j.truncated, skipped: j.skipped })); plRender(); return; } } catch {}
+  }
+  const saved = plSaved(r.id);
+  if (!force && saved && Date.now() - saved.t < PL_TTL) { ok(plFromPairs(saved.files, saved)); plRender(); return; }   // 2
+  try {   // 3
     const tree = JSON.parse(new TextDecoder().decode(await ppFetch(ghTreeUrl(r)))), m = ghMusicFiles(tree, { prefix: r.prefix, includeXml: r.includeXml });
-    PLC[r.id] = { state: 'ok', files: m.files, truncated: m.truncated, skipped: m.skipped };
-  } catch (e) { PLC[r.id] = { state: 'error', error: e.message }; }
+    try { localStorage.setItem(PL_TREE + r.id, JSON.stringify({ t: Date.now(), truncated: m.truncated, skipped: m.skipped, files: m.files.map(f => [f.path, f.size]) })); } catch {}
+    ok(m);
+  } catch (e) {
+    if (saved) ok(plFromPairs(saved.files, saved), `${r.title}: showing the list saved on ${new Date(saved.t).toLocaleDateString()} (${/limiting/.test(e.message) ? 'GitHub is limiting requests right now' : e.message})`);
+    else PLC[r.id] = { state: 'error', error: e.message + (/limiting/.test(e.message) ? ' The suggested libraries do not need GitHub for their lists; a library you added does.' : '') };
+  }
   plRender();
 }
 const plRefresh = force => Promise.all(PLS.filter(r => r.on).map(r => plLoadOne(r, force)));
@@ -192,6 +210,7 @@ function plRender() {
   if (!on.length) bits.push('No library is switched on. Open ⚙ Libraries to add a GitHub repository of scores.');
   if (loading.length) bits.push(`Reading ${loading.map(r => r.title).join(', ')}…`);
   for (const r of failed) bits.push(`${r.title}: ${PLC[r.id].error}`);
+  for (const r of on) if (PLC[r.id] && PLC[r.id].note) bits.push(PLC[r.id].note);
   if (all.length && !loading.length && !failed.length) bits.push(shown.length ? 'Tap a piece to open it.' : 'No piece matches. Try fewer words or another instrument.');
   const trunc = on.filter(r => PLC[r.id] && PLC[r.id].truncated).map(r => r.title);
   if (trunc.length) bits.push(`${trunc.join(', ')}: GitHub cut the list short (a very large repository); add a folder of it as its own library to see the rest.`);
@@ -259,7 +278,7 @@ $('plRepos').onchange = e => {
   else return;
   plSave(); if (typeof renderSet === 'function') renderSet(); plRender();
 };
-$('plRepos').onclick = e => { const b = e.target.closest('button[data-rm]'); if (!b) return; PLS = PLS.filter(r => r.id !== b.dataset.rm); delete PLC[b.dataset.rm]; plSave(); plRenderSettings(); plRender(); };
+$('plRepos').onclick = e => { const b = e.target.closest('button[data-rm]'); if (!b) return; PLS = PLS.filter(r => r.id !== b.dataset.rm); delete PLC[b.dataset.rm]; try { localStorage.removeItem(PL_TREE + b.dataset.rm); } catch {} plSave(); plRenderSettings(); plRender(); };
 $('plAddForm').onsubmit = e => {
   e.preventDefault(); const r = plAdd(PLS, $('plAddUrl').value, $('plAddInst').value), m = $('plAddMsg');
   if (r.error) { m.textContent = r.error; m.className = 'hint2 bad-t'; return; }
