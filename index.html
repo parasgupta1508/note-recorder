@@ -52,7 +52,7 @@
     <div class="pc-filters" id="pcFilters" role="group" aria-label="Filters"><button type="button" class="chip" data-f="builtin">Built-in</button><button type="button" class="chip" data-f="mine">Mine</button><button type="button" class="chip" data-f="favourite">Favourites</button></div>
     <div id="pcCrumb" class="pc-crumb"></div>
     <div id="pcList"></div>
-    <div class="row"><button type="button" id="pcAdd">+ Add a piece</button></div>
+    <div class="row"><button type="button" id="pcAdd">+ Add a piece</button><button type="button" id="pcPractiseFile" class="sec" title="Open a .musicxml, .xml or .mxl file from this device and practise it now, without adding it to the library">📁 Practise a file from this device</button><input type="file" id="ppFile" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml" hidden></div>
     <details class="more"><summary>Import a pack (folder or .zip)</summary>
       <div class="stack"><p class="mut">A folder such as Violin / Mozart / Volume 1 with MIDI or MusicXML files becomes categories automatically. It is kept only on this device.</p>
         <div class="row"><button type="button" id="pcDirBtn" class="sec">Import a folder</button><button type="button" id="pcZipBtn" class="sec">Import a .zip</button></div>
@@ -112,12 +112,10 @@
           <div class="pl-tools"><button id="pzLibBack" class="sec" type="button" hidden>← Back to the piece</button></div>
         </div>
         <div class="pz-open">
-          <button id="pzLibPieces" type="button">🎼 Choose from my pieces</button>
-          <button id="ppPick" class="sec" type="button" title="Open a .musicxml, .xml or .mxl file from this device">📁 Open a file from this device</button>
+          <button id="pzLibPieces" type="button">🎼 Choose a piece in Pieces</button>
         </div>
-        <div class="hint2">My pieces is the Pieces screen: pick the instrument, search, and tap Practise. Add .mxl or .musicxml files there with + Add a piece. The built-in pieces are there too. You can also drop a file here.</div>
+        <div class="hint2">Pieces is where you choose: pick the instrument, search, and tap Practise. To practise a .mxl or .musicxml file from your device, use "Practise a file from this device" there, or add it with + Add a piece.</div>
         <div class="hint2" id="ppMsg" role="status" aria-live="polite"></div>
-        <input type="file" id="ppFile" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml" hidden>
       </div>
       <div class="player" id="pzPlayer">
         <div class="pl-head">

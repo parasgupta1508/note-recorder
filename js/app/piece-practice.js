@@ -1,4 +1,4 @@
-// Piece practice screen: where the music comes from (the Pieces library, or a MusicXML file from this device), which instrument and part, which bars, and the accompaniment.
+// Piece practice screen: where the music comes from (the Pieces screen: its Practise button, or its "Practise a file from this device" button), which instrument and part, which bars, and the accompaniment.
 // The file is parsed by js/core/musicxml.js, the chosen part becomes a timeline (js/core/piece-practice.js), and the engine (piece-engine.js) and the displays (piece-visual.js)
 // play and draw it. This screen is separate from the Scale drills and does not change them.
 // Part of the app. Scripts in js/app load in the order listed in index.html and share one scope.
@@ -210,12 +210,9 @@ async function ppInstallBuiltins() {
   } catch {}
 }
 
-// ----- a local file (button, or drop it on the list) -----
-$('ppPick').onclick = () => $('ppFile').click();
-$('ppFile').onchange = async () => { const f = $('ppFile').files[0]; $('ppFile').value = ''; await ppOpenFile(f); };
-{ const d = $('pzLib');
-  d.addEventListener('dragover', e => { e.preventDefault(); d.classList.add('over'); }); d.addEventListener('dragleave', () => d.classList.remove('over'));
-  d.addEventListener('drop', async e => { e.preventDefault(); d.classList.remove('over'); await ppOpenFile(e.dataTransfer.files[0]); }); }
+// ----- a file from this device: the button is on the Pieces screen ("Practise a file from this device"); the file opens here, and can then be saved with Save to my pieces -----
+$('pcPractiseFile').onclick = () => $('ppFile').click();
+$('ppFile').onchange = async () => { const f = $('ppFile').files[0]; $('ppFile').value = ''; const ok = await ppOpenFile(f); showTab('piece'); if (!ok) ppShowLib(true); };   // a refused file: the reason is shown on the open screen
 
 // ================= the other parts, as sound =================
 // While a piece runs in Tempo mode (or "Hear piece"), the parts the player is not playing are played by the app's own synth, scheduled just ahead on the audio clock.

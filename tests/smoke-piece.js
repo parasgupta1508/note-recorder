@@ -27,9 +27,9 @@ $('nav-rec').click(); ck('the Free record menu item opens the recorder and light
 showTab('piece');
 nav.click(); ck('opening it shows its own screen and hides the Scale drills',tab==='piece'&&!$('tab-piece').classList.contains('hide')&&$('tab-scale').classList.contains('hide')&&nav.classList.contains('on'));
 ck('it is not inside the Scale drills screen',!$('tab-scale').contains($('tab-piece'))&&!$('tab-piece').contains($('tab-scale')));
-ck('before a piece is chosen: the open screen (choose from my pieces, open a file from this device) and no player, and no GitHub or library listing anywhere',!$('pzLib').hidden&&$('pzPlayer').hidden&&!!$('pzLibPieces')&&!!$('ppPick')&&!$('pzLibSearch')&&!$('ppUrl')&&!$('plRepos')&&!document.querySelector('.set-group[data-g=piecelibs]')&&typeof ghParseUrl==='undefined');
+ck('before a piece is chosen: the open screen only points to Pieces (no file button, no GitHub or library listing anywhere) and there is no player',!$('pzLib').hidden&&$('pzPlayer').hidden&&!!$('pzLibPieces')&&!$('tab-piece').querySelector('#ppPick,#ppFile')&&!$('pzLibSearch')&&!$('ppUrl')&&!$('plRepos')&&!document.querySelector('.set-group[data-g=piecelibs]')&&typeof ghParseUrl==='undefined');
 $('pzLibPieces').click(); ck('"Choose from my pieces" goes to the Pieces screen',tab==='pieces'&&!$('tab-pieces').classList.contains('hide')); showTab('piece');
-ck('the file picker takes .musicxml, .xml and .mxl',/\\.musicxml/.test($('ppFile').accept)&&/\\.xml/.test($('ppFile').accept)&&/\\.mxl/.test($('ppFile').accept));
+ck('the Pieces screen has "Practise a file from this device", and its picker takes .musicxml, .xml and .mxl',!!$('tab-pieces').querySelector('#pcPractiseFile')&&$('tab-pieces').contains($('ppFile'))&&/\.musicxml/.test($('ppFile').accept)&&/\.xml/.test($('ppFile').accept)&&/\.mxl/.test($('ppFile').accept));
 ck('the instrument list is the drills\\' four',[].map.call($('pzInst').options,function(o){return o.value}).join()==='violin,guitar,chromatic,ukulele');
 
 // ---- Case B: several instruments
