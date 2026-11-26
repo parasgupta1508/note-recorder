@@ -24,7 +24,7 @@ function resetPractice() {
 // Tempo-locked: one bar of clicks, then each note is due on its beat. The clock is in the microphone loop's time (ctx.currentTime - t0).
 function startCountIn() {
   const c = getCtx(), spb = 60 / sc.bpm, n = sigBeats(), base = c.currentTime + 0.08, wasOn = metroOn;
-  sc.clickAfter = wasOn; startMetro();
+  sc.clickAfter = wasOn; startMetro(base);
   sc.clock = base + n * spb - t0;
   if (!wasOn) sc.countTimer = setTimeout(() => { if (!sc.clickAfter && metroOn) stopMetro(); }, (0.08 + n * spb) * 1000 + 30);
   setMsg('Count-in: start on the downbeat after the clicks');
@@ -36,7 +36,7 @@ $('metro').addEventListener('click', () => { sc.clickAfter = metroOn; });
 function quietCalib(fresh) {
   const stale = performance.now() - (sc.calibAt || -1e9) > 600000;
   if ((!fresh && !stale) || calib || recording || !listening || typeof startAutoCalib !== 'function') return null;   // null: nothing to wait for
-  sc.calibAt = performance.now(); startAutoCalib(); setMsg('Checking the room noise… stay quiet for a moment');
+  sc.calibAt = performance.now(); startAutoCalib(true); setMsg('Checking the room noise… stay quiet for a moment');
   return new Promise(res => {
     const t = performance.now(), iv = setInterval(() => {
       if (!sc.running || !calib || calib.phase !== 1 || performance.now() - t > 4000) { clearInterval(iv); if (calib && calib.phase === 2 && calib.auto) { calib = null; $('status').textContent = ''; } setMsg(''); res(); }
@@ -181,9 +181,10 @@ function stopDemo() {
 }
 function startDemo() {
   finalizeHold(); const p = planNow(); sc.plan = p; sc.tl = p.tl; sc.seq = p.tl.map(n => n.midi); sc.bpm = p.bpm; sc.label = null;
-  if (metroOn) startMetro();                 // the click restarts 0.08 s from now, so beat 1 lines up with the first note
-  demoIdx = 0; SV.demoT0 = getCtx().currentTime + 0.08; $('scDemo').textContent = '■ Stop demo';   // the audio clock time of the first note: the cursor glides on it
-  refPlay(p.tl, { delay: 0.08, onNote: i => { demoIdx = i; renderScale(); }, onEnd: stopDemo });
+  const at = getCtx().currentTime + 0.08;    // one time for the first note, the click and the cursor
+  if (metroOn) startMetro(at);
+  demoIdx = 0; SV.demoT0 = at; $('scDemo').textContent = '■ Stop demo';   // the audio clock time of the first note: the cursor glides on it
+  refPlay(p.tl, { at, onNote: i => { demoIdx = i; renderScale(); }, onEnd: stopDemo });
   renderScale();
 }
 $('scDemo').onclick = () => { if (demoIdx >= 0) stopDemo(); else startDemo(); };

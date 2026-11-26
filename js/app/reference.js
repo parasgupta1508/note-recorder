@@ -21,7 +21,7 @@ function refSchedule(c, g, t0, A, vol) {       // t0: audio time of the scale's 
 // tl: the timeline. opts: { delay (s, default 0.1), onNote(i), onEnd() }. The metronome (if on) is started by the caller with the same delay.
 function refPlay(tl, opts = {}) {
   refStop(); if (!tl.length) return;
-  const c = getCtx(), A = a4(), t0 = c.currentTime + (opts.delay == null ? 0.1 : opts.delay);
+  const c = getCtx(), A = a4(), t0 = opts.at != null ? opts.at : c.currentTime + (opts.delay == null ? 0.1 : opts.delay);
   REF.groups = refGroups(tl); REF.gi = 0; REF.playing = true; REF.onEnd = opts.onEnd || null;
   const pump = () => {
     while (REF.gi < REF.groups.length && t0 + REF.groups[REF.gi][0].startMs / 1000 < c.currentTime + 0.35) {

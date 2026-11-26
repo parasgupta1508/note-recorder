@@ -65,7 +65,7 @@ ck('the result card is inside the player, so full screen shows it',$('scPlayer')
 svFull(true); ck('full screen: the player goes full screen (or the overlay fallback)',document.fullscreenElement===$('scPlayer')||$('scPlayer').classList.contains('fs')||!!$('scFs')); svFull(false); ck('full screen: leaves again',!$('scPlayer').classList.contains('fs'));
 
 // ---- Tempo-locked: 60 BPM (one note a second). Note 2 is 25 cents sharp, note 4 is skipped, note 9 is a little late.
-listening=true; stream={getTracks:function(){return[]}}; sc.running=true; sc.calibAt=0; quietCalib(false); ck('practice start runs the quiet room check first',!!calib&&calib.phase===1&&/room noise/i.test($('scMsg').textContent)); calib.end=0; calibFrame(0.004); ck('room check sets the gate above the room noise (0.016 for a 0.004 room)',Math.abs(+$('gate').value-0.016)<0.0015); calib=null; sc.running=false; sc.calibAt=performance.now(); quietCalib(false); ck('no second check within 10 minutes',!calib);
+listening=true; stream={getTracks:function(){return[]}}; sc.running=true; sc.calibAt=0; quietCalib(false); ck('practice start runs the quiet room check first',!!calib&&calib.phase===1&&/room noise/i.test($('scMsg').textContent)); calib.end=0; calibFrame(0.004); ck('room check sets a gentle gate above the room noise (0.009 for a 0.004 room)',Math.abs(+$('gate').value-0.009)<0.0015); calib=null; sc.running=false; sc.calibAt=performance.now(); quietCalib(false); ck('no second check within 10 minutes',!calib);
 sc.calibAt=performance.now(); listening=true; stream={getTracks:function(){return[]}}; $('scBpm').value=60; $('scRepeat').checked=false; setMode('tempo');
 startScale(); ck('tempo run starts with a count-in clock',sc.running&&sc.clock!==null); sc.clock=0; stopMetro();
 var t=0,i;

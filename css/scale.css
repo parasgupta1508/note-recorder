@@ -19,7 +19,7 @@
 .staffbox .nh.ok .head{fill:var(--ok)} .staffbox .nh.ok .stem{stroke:var(--ok)}
 .staffbox .nh.close .head{fill:var(--warn)} .staffbox .nh.close .stem{stroke:var(--warn)}
 .staffbox .nh.bad .head{fill:var(--bad)} .staffbox .nh.bad .stem{stroke:var(--bad)}
-.staffbox .nh.cur .head{fill:#fff} .staffbox .nh.cur .stem{stroke:#fff} .staffbox .nh.cur .halo{opacity:.4}
+.staffbox .nh.cur.pend .head{fill:#fff} .staffbox .nh.cur.pend .stem{stroke:#fff} .staffbox .nh.cur .head{stroke:#fff;stroke-width:1.6} .staffbox .nh.cur .halo{opacity:.45}
 .staffbox .cur{stroke:var(--sv-cy);stroke-width:3;stroke-linecap:round;filter:drop-shadow(0 0 5px var(--sv-cy))}
 .neckbox{min-height:20px}
 .neckbox .board{fill:url(#svWood);stroke:#0006;stroke-width:1} .neckbox .fret{stroke:#8d7b62;stroke-width:1.2} .neckbox .fret.nut{stroke:#efe7d2;stroke-width:5}

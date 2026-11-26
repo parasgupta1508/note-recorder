@@ -179,9 +179,21 @@ function svReadout(idx) {
   const n = sc.tl[idx], h = SV.hints[idx];
   el.innerHTML = `<b>${svNoteName(idx)}</b>${h ? '<span>' + h.text + '</span>' : ''}`;
 }
+// The note that is sounding NOW: from the same clock as the cursor, the click and the beat dots (so they all change on the same frame), not from what the microphone has heard yet.
+//   Tempo-locked and Hear scale: the note whose beat the clock is in; Wait: the target note.
+function svCurIdx() {
+  const n = sc.tl.length;
+  if (demoIdx >= 0) { const f = svPosF(); return f == null ? demoIdx : Math.min(n - 1, Math.floor(f + 0.02)); }
+  if (!sc.running) return -1;
+  if (sc.mode === 'tempo' && sc.clock != null) { const f = svPosF(); if (f != null) return Math.max(0, Math.min(n - 1, Math.floor(f + 0.02))); }
+  return sc.pos;
+}
 function svPaint() {
-  const demo = demoIdx >= 0, idx = demo ? demoIdx : sc.running ? sc.pos : -1, v = svEffective(sc.plan.inst);
-  const cls = i => `${noteCls(i, demo)}${sc.tl[i].direction === 'down' ? ' dn' : ''}`;
+  const demo = demoIdx >= 0, idx = svCurIdx(), v = svEffective(sc.plan.inst);
+  // colour = how the note was played (once heard), glow ('cur') = where the clock is
+  const grade = i => demo ? (i < idx ? 'ok' : 'pend') : (i < sc.pos && sc.grades[i] ? ({ 'In tune': 'ok', 'Close': 'close', 'Skipped': 'pend' }[sc.grades[i]] || 'bad') : 'pend');
+  const cls = i => `${grade(i)}${i === idx ? ' cur' : ''}${sc.tl[i].direction === 'down' ? ' dn' : ''}`;
+  SV.paintIdx = idx;
   if (v === 'staff') SV.nodes.forEach((g, i) => g.setAttribute('class', `nh ${cls(i)}`));
   if (v === 'tab' || v === 'roll') SV.hwNodes.forEach((g, i) => g && g.setAttribute('class', `hn ${cls(i)}`));
   if (v === 'staff' || v === 'board') {
@@ -233,6 +245,7 @@ function svProgress(now) {   // the bar under the display: time through the scal
 }
 function svFrame() {
   SV.raf = 0; if (!sc.plan) return;
+  if ((sc.running || demoIdx >= 0) && svCurIdx() !== SV.paintIdx) svPaint();   // the glow moves to the next note on the very frame the cursor reaches it
   if (sc.running || demoIdx >= 0) { const b = 60000 / sc.bpm; svProgress(demoIdx >= 0 ? (svPosF() || 0) * b : sc.mode === 'tempo' && sc.clock != null && typeof ctx !== 'undefined' && ctx ? (ctx.currentTime - svLat() - t0 - sc.clock) * 1000 : null); }
   const v = svEffective(sc.plan.inst), busy = sc.running || demoIdx >= 0;
   if (v === 'tab' || v === 'roll') {

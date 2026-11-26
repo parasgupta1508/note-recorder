@@ -41,7 +41,7 @@ function neutralLive(msg = 'Waiting for note…') {
 function noteCls(i, demo) {
   if (demo) return i < demoIdx ? 'ok' : i === demoIdx ? 'cur' : 'pend';
   if (i < sc.pos && sc.grades[i]) return { 'In tune': 'ok', 'Close': 'close', 'Skipped': 'pend' }[sc.grades[i]] || 'bad';
-  return sc.running && i === sc.pos ? 'cur' : 'pend';
+  return sc.running && i === (typeof svCurIdx === 'function' ? svCurIdx() : sc.pos) ? 'cur' : 'pend';
 }
 function renderScale() {
   const seq = sc.seq, A = a4(), demo = demoIdx >= 0;
