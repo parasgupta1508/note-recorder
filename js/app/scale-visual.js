@@ -46,16 +46,17 @@ function svBuildStaff(W) {
   const sp = Math.min(84, Math.max(SV_SP, (W - left - 14) / n)), full = left + n * sp + 14, SW = Math.max(W, Math.ceil(full)); SV.sw = SW;
   const rows = visLayout(tl, { perRow: n, beatsPerBar: sigBeats(), octaveShift: inst === 'guitar' ? 1 : 0, sig, left, spacing: sp, noShift: true });
   const hints = SV.hints, slurs = visSlurs(tl), glyph = typeof clefGlyphs === 'function' && clefGlyphs();
-  let y = 6, out = '';
+  let y = 6, out = '', pre = '';   // pre: clef, key and time signature, drawn in their own layer that stays put while the notes scroll
   SV.geo = []; SV.where = new Array(tl.length); SV.rows = rows;
   rows.forEach((row, r) => {
     const ext = visRowExtent(row), top = y + 46 + SV_ST * (ext.hi - VIS_TOP), yS = s => top + (VIS_TOP - s) * SV_ST, bottom = yS(VIS_BOTTOM), base = yS(Math.min(ext.lo, VIS_BOTTOM)), bowed = svIsBowed(inst), end = base + (bowed ? 66 : 40);
     SV.geo.push({ top, bottom, y0: y, y1: end });
     for (let k = 0; k < 5; k++) out += `<line class="sl" x1="4" x2="${SW - 4}" y1="${top + k * SV_LG}" y2="${top + k * SV_LG}"/>`;
-    out += `<line class="sl" x1="4" x2="4" y1="${top}" y2="${bottom}"/>`;
-    out += glyph ? `<text class="clef" x="8" y="${yS(32) + 9}" font-family='${svFont}' font-size="${SV_LG * 5.4}">\u{1D11E}</text>` : `<text class="clef" x="10" y="${yS(32) + 11}" font-family="serif" font-size="38" font-style="italic" font-weight="700">G</text>`;
-    sig.marks.forEach((m, k) => { out += `<text class="ks" x="${46 + k * 13}" y="${yS(m.step) + 8}" font-size="26" font-family='${svFont}'>${sig.kind === 'flat' ? '♭' : '♯'}</text>`; });
-    if (r === 0) { const bt = sigBeats(), ts = [bt, bt === 2 ? 2 : 4], tx = 50 + 13 * sig.n + 8; out += `<text class="ts" x="${tx}" y="${yS(36) + 6}" text-anchor="middle" font-size="${SV_LG * 2.2}" font-weight="700">${ts[0] || 4}</text><text class="ts" x="${tx}" y="${yS(36) + 6 + SV_LG * 2}" text-anchor="middle" font-size="${SV_LG * 2.2}" font-weight="700">${ts[1] || 4}</text>`; }
+    for (let k = 0; k < 5; k++) pre += `<line class="sl" x1="4" x2="${left}" y1="${top + k * SV_LG}" y2="${top + k * SV_LG}"/>`;
+    pre += `<line class="sl" x1="4" x2="4" y1="${top}" y2="${bottom}"/>`;
+    pre += glyph ? `<text class="clef" x="8" y="${yS(32) + 9}" font-family='${svFont}' font-size="${SV_LG * 5.4}">\u{1D11E}</text>` : `<text class="clef" x="10" y="${yS(32) + 11}" font-family="serif" font-size="38" font-style="italic" font-weight="700">G</text>`;
+    sig.marks.forEach((m, k) => { pre += `<text class="ks" x="${46 + k * 13}" y="${yS(m.step) + 8}" font-size="26" font-family='${svFont}'>${sig.kind === 'flat' ? '♭' : '♯'}</text>`; });
+    if (r === 0) { const bt = sigBeats(), ts = [bt, bt === 2 ? 2 : 4], tx = 50 + 13 * sig.n + 8; pre += `<text class="ts" x="${tx}" y="${yS(36) + 6}" text-anchor="middle" font-size="${SV_LG * 2.2}" font-weight="700">${ts[0] || 4}</text><text class="ts" x="${tx}" y="${yS(36) + 6 + SV_LG * 2}" text-anchor="middle" font-size="${SV_LG * 2.2}" font-weight="700">${ts[1] || 4}</text>`; }
     if (row.label) out += `<text class="oct" x="${left}" y="${y + 20}" font-size="12" font-style="italic">${row.label}</text>`;
     row.bars.forEach(x => { out += `<line class="bar" x1="${x}" x2="${x}" y1="${top}" y2="${bottom}"/>`; });
     for (const g of slurs) {   // the part of a slur that falls in this row
@@ -87,7 +88,7 @@ function svBuildStaff(W) {
     y = end + 6;
   });
   out = `<rect id="svBand" class="bandhl" x="-18" width="36" y="0" height="0" rx="4" style="display:none"/>` + out + `<line id="svCur" class="cur" x1="0" x2="0" y1="0" y2="0" style="display:none"/>`;
-  $('scStaff').innerHTML = `<svg viewBox="0 0 ${SW} ${y}" style="${SW > W ? 'width:' + SW + 'px;max-width:none' : ''}" role="img" aria-label="Scale notation: ${tl.length} notes">${out}</svg>`;
+  $('scStaff').innerHTML = `<div class="stin" style="width:${SW}px"><svg class="stk" style="width:${left}px;height:${y}px" viewBox="0 0 ${left} ${y}" aria-hidden="true"><rect class="stbg" width="${left}" height="${y}"/>${pre}</svg><svg class="stm" viewBox="0 0 ${SW} ${y}" style="width:${SW}px;height:${y}px;margin-top:-${y}px" role="img" aria-label="Scale notation: ${tl.length} notes">${out}</svg></div>`;
   SV.nodes = [...$('scStaff').querySelectorAll('g.nh')].reduce((a, g) => (a[+g.dataset.i] = g, a), []);
   SV.curEl = $('svCur'); SV.bandEl = $('svBand'); SV.curRow = -1;
 }
@@ -243,9 +244,9 @@ function svFrame() {
 function svRender() {
   const box = $('scStaff'); if (!box || !sc.plan) return;
   const p = sc.plan, inst = p.inst, v = svEffective(inst), vis = $('scVis');
-  const W = Math.max(260, Math.floor(vis.clientWidth ? vis.clientWidth - 16 : box.clientWidth || 340));
+  const W = Math.max(260, Math.floor(box.clientWidth && !box.hidden ? box.clientWidth : vis.clientWidth ? vis.clientWidth - 22 : 340));
   // the buttons: Tab is offered only where there are strings; the keyboard is the Fingerboard of a piano
-  document.querySelectorAll('#scView button').forEach(b => { const ok = b.dataset.v !== 'tab' || svTabOk(inst), on = b.dataset.v === v; b.hidden = !ok; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); if (b.dataset.v === 'board') b.textContent = inst === 'chromatic' ? 'Keys' : svIsBowed(inst) ? 'Fingerboard' : 'Fretboard'; });
+  document.querySelectorAll('#scView button').forEach(b => { const ok = b.dataset.v !== 'tab' || svTabOk(inst), on = b.dataset.v === v; b.hidden = !ok; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); const narrow = vis.clientWidth < 440; if (b.dataset.v === 'board') b.textContent = inst === 'chromatic' ? 'Keys' : narrow ? 'Neck' : svIsBowed(inst) ? 'Fingerboard' : 'Fretboard'; if (b.dataset.v === 'roll') b.textContent = narrow ? 'Roll' : 'Piano roll'; });
   $('scVisTitle').textContent = `${svSharp(p.tl[0].noteName.replace(/-?\d+$/, ''))} ${SCALE_DEFS[p.type].label} — ${p.span} ${p.span > 1 ? 'Octaves' : 'Octave'}`;
   $('scShowW').hidden = v !== 'board' || inst === 'chromatic';
   $('scStaff').hidden = v !== 'staff'; $('scTab').hidden = v !== 'tab'; $('scNeck').hidden = !(v === 'board' || (v === 'staff' && SV.showNeck));

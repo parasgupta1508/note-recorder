@@ -101,7 +101,7 @@
 .pl-bpm input{width:48px;text-align:center;background:transparent;border:0;font-weight:650;padding:4px 0;min-height:0} .pl-bpm span{color:var(--mut);font-size:12px} .pl-bpm button{padding:2px 10px;min-height:32px;font-size:17px}
 .pl-tools>button{min-height:36px;padding:4px 12px;font-size:13.5px}
 .pl-sel{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px}
-.player .visual{border:1px solid #1e2a4a;background:radial-gradient(120% 90% at 50% 0%,#141d38 0%,var(--sv-bg) 70%);border-radius:14px;padding:12px 10px 10px;box-shadow:inset 0 1px 0 #ffffff0d,0 8px 24px #0006}
+.player .visual{border:1px solid #1e2a4a;background:#0d1429;border-radius:14px;padding:12px 10px 10px;box-shadow:inset 0 1px 0 #ffffff0d,0 8px 24px #0006}
 .pl-bar{height:4px;border-radius:2px;background:var(--raise);overflow:hidden;margin:-2px 0 0} .pl-bar i{display:block;height:100%;width:0;background:var(--acc)}
 .pl-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .pl-btns{display:flex;gap:8px;flex-wrap:wrap} .pl-btns button{min-height:40px;padding:6px 16px;white-space:nowrap}
@@ -139,3 +139,14 @@
 .pl-foot #scMode button{flex:0 0 auto;font-size:12.5px;padding:5px 10px;min-height:30px;background:transparent;color:var(--sv-dim)} .pl-foot #scMode button.on{background:var(--acc);color:#fff}
 .vis-bar #scNeckBtn{min-height:36px;min-width:42px;padding:2px 10px;font-size:19px;line-height:1;flex:0 0 auto} .vis-bar #scNeckBtn.on{background:var(--acc)} .vis-bar #scNeckBtn[hidden]{display:none}
 .pl-foot{gap:8px 12px}
+
+/* staff: the clef and signatures stay at the left edge while the notes scroll under them */
+.staffbox .stin{position:relative} .staffbox .stin svg{display:block;max-width:none}
+.staffbox .stk{position:sticky;left:0;z-index:2} .staffbox .stbg{fill:#0d1429}
+/* selectors: two columns on a phone so the text is not cut off, three on a tablet, one row on a laptop */
+.pl-sel{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:520px){.pl-sel{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (min-width:900px){.pl-sel{grid-template-columns:repeat(6,minmax(0,1fr))}}
+
+/* view buttons keep a readable width; the Show menu wraps to its own line instead of squeezing them */
+.vis-bar .seg{flex:1 1 230px}

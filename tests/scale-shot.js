@@ -19,7 +19,7 @@ srv.listen(0, async () => {
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const ev = async js => (await send('Runtime.evaluate', { expression: js, returnByValue: true, awaitPromise: true })).result;
   const jobs = [['violin', 'staff'], ['violin', 'tab'], ['violin', 'board'], ['violin', 'roll'], ['guitar', 'tab'], ['guitar', 'board'], ['chromatic', 'staff'], ['chromatic', 'board'], ['violin', 'staff', 3], ['guitar', 'staff'], ['violin', 'staff', 2, 'minor']];
-  const sizes = [['desk', 1100, 900, 1], ['phone', 400, 900, 2]];
+  const sizes = [['laptop', 1366, 800, 1], ['tablet', 820, 1100, 1], ['phone', 390, 844, 2]];
   for (const [sn, w, h, dpr] of sizes) {
     await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: dpr, mobile: w < 600 });
     await send('Page.navigate', { url: `http://localhost:${port}/index.html` }); await wait(1500);
