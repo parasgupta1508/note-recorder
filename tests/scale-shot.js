@@ -32,5 +32,11 @@ srv.listen(0, async () => {
       const f = path.join(out, `scale-${inst}-${view}${span ? '-' + span + 'oct' : ''}${kind ? '-' + kind : ''}-${sn}.png`); fs.writeFileSync(f, Buffer.from(shot.data, 'base64')); console.log(f);
     }
   }
-  const errs = await ev('1'); done(0);
+  // VERSHOT: the version line under Settings
+  await send('Emulation.setDeviceMetricsOverride', { width: 400, height: 800, deviceScaleFactor: 2, mobile: true });
+  await send('Page.navigate', { url: `http://localhost:${port}/index.html` }); await wait(2500);
+  await ev(`document.getElementById('firstRun').classList.add('hide'); showTab('settings'); window.scrollTo(0, 99999)`); await wait(1500);
+  console.log('version line:', (await ev(`document.getElementById('appVer').textContent`)).value);
+  fs.writeFileSync(path.join(out, 'settings-version.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
+  done(0);
 });

@@ -105,3 +105,16 @@ $('impFile').onchange = async e => {
 };
 updBackupInfo();
 
+
+// Which version is running: the number in the offline cache name (CACHE in sw.js, bumped with every change). Shows "update ready" when the server has a newer one.
+(async function showVersion() {
+  const el = $('appVer'); if (!el) return;
+  const num = k => { const m = /^tuner-v(\d+)$/.exec(k || ''); return m ? +m[1] : null; };
+  try {
+    const keys = typeof caches !== 'undefined' ? await caches.keys() : [], run = Math.max(0, ...keys.map(num).filter(n => n != null));
+    if (!run) { el.textContent = 'Version: running without the offline cache (not installed)'; return; }
+    el.textContent = `Version ${run}`;
+    const txt = await (await fetch('sw.js', { cache: 'no-store' })).text(), m = /CACHE = 'tuner-v(\d+)'/.exec(txt);
+    if (m && +m[1] > run) el.textContent = `Version ${run} · version ${m[1]} is ready: close and reopen the app to update`;
+  } catch { if (!/^Version \d/.test(el.textContent)) el.textContent = 'Version unknown'; }
+})();

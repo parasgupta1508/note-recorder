@@ -381,3 +381,5 @@
   }
   @media (min-width:1000px){ .panel{padding:26px} }
   @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
+
+.app-ver{margin:18px 2px 4px;text-align:center;font-size:12px;color:var(--mut);opacity:.75}
