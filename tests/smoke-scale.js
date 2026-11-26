@@ -33,10 +33,14 @@ pick('scType','melodicMinor'); pick('scRoot',9); ck('A melodic minor: F#4 G#4 up
 pick('scInst','violin'); pick('scRoot',7); pick('scType','major'); pick('scSpan',1);
 ck('notation: one notehead per note, a treble clef, one sharp in G major on every row',SV.nodes.length===sc.tl.length&&!!$('scStaff').querySelector('.clef')&&SV.rows.length>=1&&$('scStaff').querySelectorAll('.ks').length===SV.rows.length);
 ck('notation: finger numbers under the notes',$('scStaff').querySelectorAll('.fing').length===sc.tl.length);
+SV.view='board'; svRender();
 ck('neck: violin fingerboard with 4 strings',$('scNeck').querySelectorAll('.str').length===4);
-pick('scInst','guitar'); ck('neck: guitar fretboard with 6 strings',$('scNeck').querySelectorAll('.str').length===6);
-pick('scInst','ukulele'); ck('neck: ukulele fretboard with 4 strings',$('scNeck').querySelectorAll('.str').length===4);
-pick('scInst','chromatic'); ck('keys: piano keyboard, no strings',$('scNeck').querySelectorAll('.pk').length>=13&&!$('scNeck').querySelector('.str'));
+pick('scInst','guitar'); svRender(); ck('neck: guitar fretboard with 6 strings',$('scNeck').querySelectorAll('.str').length===6);
+pick('scInst','ukulele'); svRender(); ck('neck: ukulele fretboard with 4 strings',$('scNeck').querySelectorAll('.str').length===4);
+pick('scInst','chromatic'); svRender(); ck('keys: piano keyboard, no strings',$('scNeck').querySelectorAll('.pk').length>=13&&!$('scNeck').querySelector('.str')); SV.view='staff'; svRender();
+ck('staff view keeps the screen clean: no neck under the notation',$('scNeck').hidden);
+pick('scInst','violin'); $('scNeckBtn').click(); ck('instrument icon shows the neck under the staff on request',!$('scNeck').hidden&&$('scNeck').querySelectorAll('.str').length===4&&$('scNeckBtn').textContent==='🎻'); $('scNeckBtn').click(); ck('and hides it again',$('scNeck').hidden); ck('mode switch is compact and still two options',document.querySelectorAll('#scMode button').length===2&&!!document.querySelector('.pl-foot #scMode'));
+pick('scInst','violin'); pick('scSpan',1); pick('scSig','3'); ck('Beats 3/4: staff redraws with a barline every 3 notes and a 3/4 time signature',SV.rows[0].bars.length===4&&$('scStaff').querySelector('.ts').textContent==='3'); pick('scSig','4');
 pick('scInst','violin'); pick('scType','dorian'); pick('scRoot',2); ck('D dorian is written with the key signature of C major (none)',$('scStaff').querySelectorAll('.ks').length===0);
 pick('scType','major'); pick('scRoot',7); pick('scSpan',3); ck('three octaves: 43 noteheads in one scrolling row, never squeezed',SV.nodes.filter(Boolean).length===43&&SV.rows.length===1&&SV.sw>=43*54); pick('scSpan',1);
 pick('scBow','slur4'); ck('slurs are drawn for four notes to a bow',$('scStaff').querySelectorAll('.slur').length>=3); pick('scBow','separate'); ck('no slurs with separate bows',$('scStaff').querySelectorAll('.slur').length===0);
@@ -88,7 +92,7 @@ var csvRows=cardExportRows(cardSess); ck('CSV rows carry direction and status',c
 // ---- Wait for note: nothing moves until the note is held in tune; a wrong note is flagged; the target then advances
 setMode('wait'); pick('scRoot',7); $('scRepeat').checked=false; startScale();
 ck('wait run: no clock',sc.mode==='wait'&&sc.clock===null&&sc.pos===0);
-svFrame(); ck('the cursor is shown while a run is on',$('svCur').style.display!=='none'&&SV.nodes[0].getAttribute('class').indexOf('cur')>=0&&!!$('svDot')&&$('svDot').style.display!=='none');
+svFrame(); ck('the cursor is shown while a run is on',$('svCur').style.display!=='none'&&SV.nodes[0].getAttribute('class').indexOf('cur')>=0);
 t=0; t=play(t,sc.seq[0],40,20); ck('wait: stays on the note while it is 40c off',sc.pos===0);
 t=quiet(t,10); t=play(t,sc.seq[3],0,12); ck('wait: a wrong note is flagged and does not move on',sc.pos===0&&sc.wrong===1);
 t=quiet(t,10); t=play(t,sc.seq[0],3,16); ck('wait: advances after a steady in-tune hold',sc.pos===1&&sc.slots[0].k==='h'&&sc.slots[0].e===null);

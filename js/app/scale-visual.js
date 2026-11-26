@@ -11,9 +11,11 @@
 
 const SV = { key: '', nodes: [], where: [], rows: [], geo: [], hints: [], places: [], neckDot: null, raf: 0, curRow: -1, W: 0, view: 'staff', hw: null, hwNodes: [], hwCur: 0, hwKey: '', neckKey: '' };
 const SV_LG = 10, SV_ST = SV_LG / 2, SV_SP = 54, SV_PPB = 72;   // staff line gap, pixels per step, space per note, pixels per beat in Tab and Roll
+const SV_NECK_KEY = 'tuner-scneck';
 const SV_VIEWS = ['staff', 'tab', 'board', 'roll'], SV_VIEW_KEY = 'tuner-scview';
 const svSharp = n => n.replace('#', '♯').replace(/^([A-G])b/, '$1♭');
 const svFont = '"Noto Music","Segoe UI Symbol","Apple Symbols",serif';
+try { SV.showNeck = localStorage.getItem(SV_NECK_KEY) === '1'; } catch {}
 try { const v = localStorage.getItem(SV_VIEW_KEY); if (SV_VIEWS.includes(v)) SV.view = v; } catch {}
 
 const svIsFretted = inst => ruleFor(inst).fingering === 'fretted', svIsBowed = inst => ruleFor(inst).fingering === 'bowed';
@@ -53,7 +55,7 @@ function svBuildStaff(W) {
     out += `<line class="sl" x1="4" x2="4" y1="${top}" y2="${bottom}"/>`;
     out += glyph ? `<text class="clef" x="8" y="${yS(32) + 9}" font-family='${svFont}' font-size="${SV_LG * 5.4}">\u{1D11E}</text>` : `<text class="clef" x="10" y="${yS(32) + 11}" font-family="serif" font-size="38" font-style="italic" font-weight="700">G</text>`;
     sig.marks.forEach((m, k) => { out += `<text class="ks" x="${46 + k * 13}" y="${yS(m.step) + 8}" font-size="26" font-family='${svFont}'>${sig.kind === 'flat' ? '♭' : '♯'}</text>`; });
-    if (r === 0) { const ts = String($('scSig') ? $('scSig').value : '4/4').split('/'), tx = 50 + 13 * sig.n + 8; out += `<text class="ts" x="${tx}" y="${yS(36) + 6}" text-anchor="middle" font-size="${SV_LG * 2.2}" font-weight="700">${ts[0] || 4}</text><text class="ts" x="${tx}" y="${yS(36) + 6 + SV_LG * 2}" text-anchor="middle" font-size="${SV_LG * 2.2}" font-weight="700">${ts[1] || 4}</text>`; }
+    if (r === 0) { const bt = sigBeats(), ts = [bt, bt === 2 ? 2 : 4], tx = 50 + 13 * sig.n + 8; out += `<text class="ts" x="${tx}" y="${yS(36) + 6}" text-anchor="middle" font-size="${SV_LG * 2.2}" font-weight="700">${ts[0] || 4}</text><text class="ts" x="${tx}" y="${yS(36) + 6 + SV_LG * 2}" text-anchor="middle" font-size="${SV_LG * 2.2}" font-weight="700">${ts[1] || 4}</text>`; }
     if (row.label) out += `<text class="oct" x="${left}" y="${y + 20}" font-size="12" font-style="italic">${row.label}</text>`;
     row.bars.forEach(x => { out += `<line class="bar" x1="${x}" x2="${x}" y1="${top}" y2="${bottom}"/>`; });
     for (const g of slurs) {   // the part of a slur that falls in this row
@@ -246,11 +248,12 @@ function svRender() {
   document.querySelectorAll('#scView button').forEach(b => { const ok = b.dataset.v !== 'tab' || svTabOk(inst), on = b.dataset.v === v; b.hidden = !ok; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); if (b.dataset.v === 'board') b.textContent = inst === 'chromatic' ? 'Keys' : svIsBowed(inst) ? 'Fingerboard' : 'Fretboard'; });
   $('scVisTitle').textContent = `${svSharp(p.tl[0].noteName.replace(/-?\d+$/, ''))} ${SCALE_DEFS[p.type].label} — ${p.span} ${p.span > 1 ? 'Octaves' : 'Octave'}`;
   $('scShowW').hidden = v !== 'board' || inst === 'chromatic';
-  $('scStaff').hidden = v !== 'staff'; $('scTab').hidden = v !== 'tab'; $('scNeck').hidden = !(v === 'staff' || v === 'board'); $('scRoll').hidden = v !== 'roll';
+  $('scStaff').hidden = v !== 'staff'; $('scTab').hidden = v !== 'tab'; $('scNeck').hidden = !(v === 'board' || (v === 'staff' && SV.showNeck));
+  { const nb = $('scNeckBtn'); nb.hidden = v !== 'staff'; nb.textContent = inst === 'chromatic' ? '🎹' : inst === 'guitar' ? '🎸' : inst === 'ukulele' ? '🪕' : '🎻'; nb.classList.toggle('on', !!SV.showNeck); nb.setAttribute('aria-pressed', SV.showNeck ? 'true' : 'false'); } $('scRoll').hidden = v !== 'roll';
   const base = [p.tl.map(n => n.midi).join(), inst, p.pc, p.type, p.pos, p.bow, sigBeats(), W, useFlats].join('|');
   if (base !== SV.key) { SV.key = base; svPlan(); SV.staffKey = SV.neckKey = SV.hwKey = ''; }
   if (v === 'staff' && SV.staffKey !== base) { SV.staffKey = base; svBuildStaff(W); }
-  const nk = base + '|' + v + '|' + $('scShow').value; if ((v === 'staff' || v === 'board') && SV.neckKey !== nk) { SV.neckKey = nk; svBuildNeck(W, v === 'board'); }
+  const nk = base + '|' + v + '|' + $('scShow').value; if ((v === 'board' || (v === 'staff' && SV.showNeck)) && SV.neckKey !== nk) { SV.neckKey = nk; svBuildNeck(W, v === 'board'); }
   const hk = base + '|' + v + '|' + sc.bpm; if ((v === 'tab' || v === 'roll') && SV.hwKey !== hk) { SV.hwKey = hk; (v === 'tab' ? svBuildTab : svBuildRoll)(W); SV.hwCur = 0; }
   svPaint(); if (!sc.running && demoIdx < 0) svProgress(0);
   if (!SV.raf && (sc.running || demoIdx >= 0 || ((v === 'tab' || v === 'roll') && SV.hw))) SV.raf = requestAnimationFrame(svFrame);
@@ -273,3 +276,7 @@ document.addEventListener('fullscreenchange', () => { SV.key = ''; svRender(); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('scPlayer').classList.contains('fs')) svFull(false); });
 // the scorecard stays hidden until asked for, so the display has the screen
 $('scCardBtn').onclick = () => { const p = $('scCardPanel'), open = p.hidden; p.hidden = !open; $('scCardBtn').setAttribute('aria-expanded', String(open)); if (open) { renderCard(); renderSummary(); p.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } };
+
+$('scSig').addEventListener('change', () => { SV.key = ''; svRender(); });   // the barlines and the time signature follow the Beats choice
+
+$('scNeckBtn').onclick = () => { SV.showNeck = !SV.showNeck; try { localStorage.setItem(SV_NECK_KEY, SV.showNeck ? '1' : '0'); } catch {} SV.neckKey = ''; svRender(); };   // the instrument under the notation is optional
