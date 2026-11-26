@@ -37,16 +37,24 @@ async function pgRender(W) {
 // places (a pickup bar), so the offset is taken from the first note that matches, then every note is found by moment and pitch.
 function pgMap(tk, p) {
   const tm = tk.renderToTimemap({ includeRests: false, includeMeasures: false }), ev = [];
-  for (const e of Array.isArray(tm) ? tm : JSON.parse(tm)) for (const id of e.on || []) { const v = tk.getMIDIValuesForElement(id); ev.push({ id, q: e.qstamp, pitch: v && v.pitch }); }
+  for (const e of Array.isArray(tm) ? tm : JSON.parse(tm)) for (const id of e.on || []) { if (!$('pzEng').querySelector('#' + CSS.escape(id))) continue; const v = tk.getMIDIValuesForElement(id); ev.push({ id, q: e.qstamp, pitch: v && v.pitch }); }   // (a repeated bar's second pass has copies of the notes that are not drawn: skipped)
   const byQ = new Map(); for (const e of ev) { const k = Math.round(e.q * 1000); (byQ.get(k) || byQ.set(k, []).get(k)).push(e); }
   const tl = p.tl, want = i => tl[i].midi - p.shift; let off = null;
   for (const e of ev) if (e.pitch === want(0)) { off = e.q - tl[0].beat; break; }
   if (off == null) return;
-  const used = new Set();
-  tl.forEach((n, i) => {
-    const c = (byQ.get(Math.round((n.beat + off) * 1000)) || []).find(e => e.pitch === want(i) && !used.has(e.id)); if (!c) return;
-    used.add(c.id); const el = $('pzEng').querySelector('#' + CSS.escape(c.id)); if (el) { PG.els[i] = el; PG.mapped++; }
-  });
+  const used = new Set(), take = (i, c) => { used.add(c.id); const el = $('pzEng').querySelector('#' + CSS.escape(c.id)); if (el) { PG.els[i] = el; PG.mapped++; } };
+  tl.forEach((n, i) => { const c = (byQ.get(Math.round((n.beat + off) * 1000)) || []).find(e => e.pitch === want(i) && !used.has(e.id)); if (c) take(i, c); });
+  // A repeat: Verovio's timeline plays the repeated bars twice, ours reads each bar once, so after a repeat the times no longer agree. Notes still unmatched are found by order instead:
+  // the first unused drawn note with the right pitch after the note matched just before them (each drawn note counted once, at its first moment).
+  if (PG.mapped < tl.length) {
+    const seen = new Set(), U = ev.filter(e => !seen.has(e.id) && seen.add(e.id)), at = new Map(U.map((e, j) => [e.id, j]));
+    let last = -1;
+    tl.forEach((n, i) => {
+      const done = PG.els[i] && PG.els[i].id; if (done != null && at.has(done)) { last = at.get(done); return; }
+      if (PG.els[i]) return;
+      for (let j = last + 1; j < U.length; j++) if (U[j].pitch === want(i) && !used.has(U[j].id)) { take(i, U[j]); last = j; break; }
+    });
+  }
 }
 // colour = how the note was played; glow = where the clock is (the same classes as the simple staff, with the pg- prefix)
 function pgPaint(idx, gradeOf, force) {
