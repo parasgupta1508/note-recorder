@@ -1,28 +1,47 @@
-// Scale practice visuals: the notation (staff, key signature, slurs, finger numbers), the instrument view (violin / guitar / ukulele neck or piano keys),
-// and the moving cursor that follows the click. The numbers come from js/core/visual.js; this file only draws.
-// Part of the app. Scripts in js/app load in the order listed in index.html and share one scope.
+// Scale practice displays. Four views of the same timeline, chosen with the buttons above the display:
+//   Staff        notation with key signature, slurs, finger numbers and a cursor that follows the click (the instrument below it)
+//   Tab          one line per string, the fret or finger number on it, scrolling to a playhead
+//   Fingerboard  the neck (violin, guitar, ukulele) or the keys (piano) with the finger to place next
+//   Piano roll   one bar per note on a pitch grid, scrolling to a playhead
+// The numbers come from js/core/visual.js; this file only draws. Part of the app: scripts in js/app share one scope, in the order index.html lists them.
 //
-// Why custom SVG and not a notation library: a scale needs noteheads, a key signature, ledger lines, accidentals and slurs, nothing else. A library would add a
-// large file the offline cache has to hold, and it re-lays-out the whole score on every change. Here the staff is built once per scale; while you play only the
-// colour of a notehead, the cursor and one dot on the neck change, so 60 frames a second cost almost nothing.
+// Why custom SVG and not a notation library: a scale needs noteheads, a key signature, ledger lines, accidentals and slurs, nothing else. A library would add a large file the
+// offline cache has to hold, and it re-lays-out the whole score on every change. Here each view is built once per scale. While you play, a note's colour changes, and one
+// element moves (the cursor on the staff, the group of notes in Tab and Roll), so 60 frames a second cost almost nothing.
 
-const SV = { key: '', nodes: [], where: [], rows: [], geo: [], hints: [], neckKey: '', neckDot: null, raf: 0, curRow: -1, W: 0 };
-const SV_LG = 8, SV_ST = SV_LG / 2, SV_SP = 27;   // staff line gap, pixels per step (half a gap), space per note
+const SV = { key: '', nodes: [], where: [], rows: [], geo: [], hints: [], places: [], neckDot: null, raf: 0, curRow: -1, W: 0, view: 'staff', hw: null, hwNodes: [], hwCur: 0, hwKey: '', neckKey: '' };
+const SV_LG = 8, SV_ST = SV_LG / 2, SV_SP = 27, SV_PPB = 64;   // staff line gap, pixels per step, space per note, pixels per beat in Tab and Roll
+const SV_VIEWS = ['staff', 'tab', 'board', 'roll'], SV_VIEW_KEY = 'tuner-scview';
 const svSharp = n => n.replace('#', '♯').replace(/^([A-G])b/, '$1♭');
 const svFont = '"Noto Music","Segoe UI Symbol","Apple Symbols",serif';
+try { const v = localStorage.getItem(SV_VIEW_KEY); if (SV_VIEWS.includes(v)) SV.view = v; } catch {}
+
+const svIsFretted = inst => ruleFor(inst).fingering === 'fretted', svIsBowed = inst => ruleFor(inst).fingering === 'bowed';
+// Tab and Fingerboard need strings; the piano has keys instead (its Fingerboard view is the keyboard, its Tab view is not offered).
+const svTabOk = inst => !!ruleFor(inst).fingering;
+// The view that is actually shown: the chosen one, unless this instrument cannot show it.
+const svEffective = inst => SV.view === 'tab' && !svTabOk(inst) ? 'staff' : SV.view;
 
 // What the finger or fret is for one note: violin finger numbers, guitar and ukulele fret numbers.
 function svFingerLabel(inst, hint, midi, strings) {
   const pl = visPlace(hint, strings, midi); if (!pl) return '';
-  return ruleFor(inst).fingering === 'bowed' ? pl.finger : pl.offset === 0 ? '0' : String(pl.offset);
+  return svIsBowed(inst) ? pl.finger : pl.offset === 0 ? '0' : String(pl.offset);
 }
+// Everything per note that more than one view needs: the fingering hint and where it falls on the neck. Cached by scale.
+function svPlan() {
+  const p = sc.plan, strings = stringsOf(p.inst), fing = ruleFor(p.inst).fingering;
+  SV.hints = p.tl.map(n => fing ? fingerHint(p.inst, n.midi, strings, p.pos) : null);
+  SV.places = p.tl.map((n, i) => visPlace(SV.hints[i], strings, n.midi));
+  return strings;
+}
+const svNoteName = i => svSharp(sc.tl[i].noteName);
 
+// ================= Staff =================
 function svBuildStaff(W) {
   const p = sc.plan, tl = p.tl, inst = p.inst, strings = stringsOf(inst), flats = prefersFlats(p.pc, p.type, useFlats ? true : null);
   const sig = visKeySig(p.pc, p.type, flats), left = 50 + 11 * sig.n, per = Math.max(6, Math.floor((W - left - 8) / SV_SP));
   const rows = visLayout(tl, { perRow: per, beatsPerBar: sigBeats(), octaveShift: inst === 'guitar' ? 1 : 0, sig, left, spacing: SV_SP });
-  const hints = tl.map(n => ruleFor(inst).fingering ? fingerHint(inst, n.midi, strings, p.pos) : null);
-  const slurs = visSlurs(tl), glyph = typeof clefGlyphs === 'function' && clefGlyphs();
+  const hints = SV.hints, slurs = visSlurs(tl), glyph = typeof clefGlyphs === 'function' && clefGlyphs();
   let y = 6, out = '';
   SV.geo = []; SV.where = new Array(tl.length); SV.rows = rows;
   rows.forEach((row, r) => {
@@ -32,7 +51,7 @@ function svBuildStaff(W) {
     out += `<line class="sl" x1="4" x2="4" y1="${top}" y2="${bottom}"/>`;
     out += glyph ? `<text class="clef" x="8" y="${yS(32) + 7}" font-family='${svFont}' font-size="${SV_LG * 5.2}">\u{1D11E}</text>` : `<text class="clef" x="10" y="${yS(32) + 9}" font-family="serif" font-size="30" font-style="italic" font-weight="700">G</text>`;
     sig.marks.forEach((m, k) => { out += `<text class="ks" x="${36 + k * 10}" y="${yS(m.step) + 6}" font-size="20" font-family='${svFont}'>${sig.kind === 'flat' ? '♭' : '♯'}</text>`; });
-    if (row.label) out += `<text class="oct" x="${left}" y="${top - 6 - SV_ST * Math.max(0, ext.hi - VIS_TOP) + 4}" font-size="11" font-style="italic">${row.label}</text>`;
+    if (row.label) out += `<text class="oct" x="${left}" y="${y + 18}" font-size="11" font-style="italic">${row.label}</text>`;
     row.bars.forEach(x => { out += `<line class="bar" x1="${x}" x2="${x}" y1="${top}" y2="${bottom}"/>`; });
     for (const g of slurs) {   // the part of a slur that falls in this row
       const a = Math.max(g.from, row.from), b = Math.min(g.to, row.to); if (b <= a) continue;
@@ -48,68 +67,135 @@ function svBuildStaff(W) {
       if (n.acc) out += `<text class="acc" x="${n.x - 14}" y="${cy + 5}" font-size="17" font-family='${svFont}'>${{ '#': '♯', b: '♭', n: '♮' }[n.acc]}</text>`;
       out += `<line class="stem" x1="${sx}" y1="${cy}" x2="${sx}" y2="${sy}"/><ellipse class="head" cx="${n.x}" cy="${cy}" rx="5.6" ry="4.1" transform="rotate(-20 ${n.x} ${cy})"/></g>`;
       const f = hints[n.i] ? svFingerLabel(inst, hints[n.i], tl[n.i].midi, strings) : '';
+      out += `<text class="nm" x="${n.x}" y="${end - 20}" text-anchor="middle" font-size="9.5">${svNoteName(n.i)}</text>`;
       if (f !== '') out += `<text class="fing" x="${n.x}" y="${end - 6}" text-anchor="middle" font-size="12">${f}</text>`;
     }
     y = end + 6;
   });
   out += `<line id="svCur" class="cur" x1="0" x2="0" y1="0" y2="0" style="display:none"/>`;
-  SV.hints = hints;
   $('scStaff').innerHTML = `<svg viewBox="0 0 ${W} ${y}" role="img" aria-label="Scale notation: ${tl.length} notes">${out}</svg>`;
   SV.nodes = [...$('scStaff').querySelectorAll('g.nh')].reduce((a, g) => (a[+g.dataset.i] = g, a), []);
   SV.curEl = $('svCur'); SV.curRow = -1;
 }
 
-// ---- the instrument view
-function svBuildNeck(W) {
-  const p = sc.plan, inst = p.inst, tl = p.tl, strings = stringsOf(inst), box = $('scNeck');
+// ================= Neck and keys =================
+// big: the Fingerboard view (taller, all notes optional, a readout of the finger to place); small: the instrument shown under the staff.
+function svBuildNeck(W, big) {
+  const p = sc.plan, inst = p.inst, tl = p.tl, strings = stringsOf(inst), box = $('scNeck'), showAll = big && $('scShow').value === 'all', inScale = new Set(tl.map(n => n.midi % 12));
   if (inst === 'chromatic') {   // piano keys
-    const lo = Math.min(...tl.map(n => n.midi)), hi = Math.max(...tl.map(n => n.midi)), kb = visKeys(lo - 1, hi + 1), kw = Math.min(26, (W - 8) / kb.units), H = 62, inScale = new Set(tl.map(n => n.midi));
+    const lo = Math.min(...tl.map(n => n.midi)), hi = Math.max(...tl.map(n => n.midi)), kb = visKeys(lo - 1, hi + 1), kw = Math.min(big ? 34 : 26, (W - 8) / kb.units), H = big ? 120 : 62, inMidi = new Set(tl.map(n => n.midi));
     let out = '';
-    for (const k of kb.keys.filter(k => !k.black)) out += `<rect class="pk${inScale.has(k.midi) ? ' sc' : ''}" data-m="${k.midi}" x="${4 + k.x * kw}" y="2" width="${kw - 1}" height="${H}" rx="2"/>`;
-    for (const k of kb.keys.filter(k => k.black)) out += `<rect class="pk blk${inScale.has(k.midi) ? ' sc' : ''}" data-m="${k.midi}" x="${4 + k.x * kw}" y="2" width="${k.w * kw}" height="${H * 0.62}" rx="2"/>`;
-    box.innerHTML = `<svg viewBox="0 0 ${Math.max(W, 8 + kb.units * kw)} ${H + 6}" role="img" aria-label="Keyboard">${out}</svg>`; SV.neckDot = null; return;
+    for (const k of kb.keys.filter(k => !k.black)) out += `<rect class="pk${inMidi.has(k.midi) ? ' sc' : ''}" data-m="${k.midi}" x="${4 + k.x * kw}" y="2" width="${kw - 1}" height="${H}" rx="2"/>` + (big ? `<text class="kn" x="${4 + k.x * kw + kw / 2}" y="${H - 4}" text-anchor="middle" font-size="9">${k.midi % 12 === 0 ? 'C' + (Math.floor(k.midi / 12) - 1) : ''}</text>` : '');
+    for (const k of kb.keys.filter(k => k.black)) out += `<rect class="pk blk${inMidi.has(k.midi) ? ' sc' : ''}" data-m="${k.midi}" x="${4 + k.x * kw}" y="2" width="${k.w * kw}" height="${H * 0.62}" rx="2"/>`;
+    box.innerHTML = `<svg viewBox="0 0 ${Math.max(W, 8 + kb.units * kw)} ${H + 6}" role="img" aria-label="Keyboard">${out}</svg>` + (big ? '<div id="svRead" class="sv-read mut" aria-live="polite"></div>' : ''); SV.neckDot = null; return;
   }
-  const bowed = ruleFor(inst).fingering === 'bowed', places = tl.map((n, i) => visPlace(SV.hints[i], strings, n.midi));
-  const rowsN = strings.length, maxOff = Math.max(5, ...places.filter(Boolean).map(q => q.offset)), total = bowed ? Math.max(8, maxOff + 2) : Math.min(15, Math.max(5, maxOff + 1));
-  const x0 = 34, bw = W - x0 - 10, rh = 20, H = 12 + rowsN * rh, xAt = n => x0 + visFretX(n, total) * bw, yRow = r => 10 + r * rh + rh / 2 - 2;
-  const xDot = q => q.offset === 0 ? x0 - 11 : bowed ? xAt(q.offset) : (xAt(q.offset - 1) + xAt(q.offset)) / 2;
-  let out = `<rect class="board" x="${x0}" y="6" width="${bw}" height="${rowsN * rh}" rx="3"/>`;
-  if (!bowed) for (let f = 0; f <= total; f++) out += `<line class="fret${f === 0 ? ' nut' : ''}" x1="${xAt(f)}" x2="${xAt(f)}" y1="6" y2="${6 + rowsN * rh}"/>` + (f > 0 && [3, 5, 7, 9, 12, 15].includes(f) ? `<text class="fn" x="${(xAt(f - 1) + xAt(f)) / 2}" y="${H + 8}" text-anchor="middle" font-size="9">${f}</text>` : '');
-  else out += `<line class="fret nut" x1="${x0}" x2="${x0}" y1="6" y2="${6 + rowsN * rh}"/>`;
-  for (let r = 0; r < rowsN; r++) { out += `<line class="str" x1="${x0 - 14}" x2="${x0 + bw}" y1="${yRow(r)}" y2="${yRow(r)}" stroke-width="${1 + r * 0.25}"/>`; const nm = strings[strings.length - 1 - r]; out += `<text class="sn" x="3" y="${yRow(r) + 4}" font-size="10">${svSharp(midiName(nm).replace(/-?\d+$/, ''))}</text>`; }
-  const seen = new Set();
-  places.forEach(q => { if (!q) return; const k = q.row + ':' + q.offset; if (seen.has(k)) return; seen.add(k); out += `<circle class="dot" cx="${xDot(q)}" cy="${yRow(q.row)}" r="${bowed ? 3.6 : 4.2}"/>`; });
-  out += `<g id="svDot" style="display:none"><circle class="on" r="9"/><text class="dn2" text-anchor="middle" y="4" font-size="11"></text></g>`;
-  box.innerHTML = `<svg viewBox="0 0 ${W} ${H + 14}" role="img" aria-label="${bowed ? 'Fingerboard' : 'Fretboard'}">${out}</svg>`;
-  SV.neckDot = $('svDot'); SV.dotAt = places.map(q => q ? { x: xDot(q), y: yRow(q.row), t: bowed ? q.finger : q.offset === 0 ? '0' : String(q.offset) } : null);
+  const bowed = svIsBowed(inst), places = SV.places, rowsN = strings.length, vp = VIOLIN_POSITIONS[p.pos] ? VIOLIN_POSITIONS[p.pos][1] : VIOLIN_POSITIONS[1][1];
+  const maxOff = Math.max(5, ...places.filter(Boolean).map(q => q.offset)), total = bowed ? Math.max(big ? 9 : 8, maxOff + 2) : Math.min(15, Math.max(big ? 8 : 5, maxOff + 1));
+  const x0 = 38, bw = W - x0 - 10, rh = big ? 30 : 20, H = 14 + rowsN * rh, xAt = n => x0 + visFretX(n, total) * bw, yRow = r => 12 + r * rh + rh / 2 - 2;
+  const xDot = off => off === 0 ? x0 - 12 : bowed ? xAt(off) : (xAt(off - 1) + xAt(off)) / 2, openOf = r => strings[strings.length - 1 - r];
+  let out = `<rect class="board" x="${x0}" y="8" width="${bw}" height="${rowsN * rh}" rx="3"/>`;
+  if (!bowed) for (let f = 0; f <= total; f++) out += `<line class="fret${f === 0 ? ' nut' : ''}" x1="${xAt(f)}" x2="${xAt(f)}" y1="8" y2="${8 + rowsN * rh}"/>` + (f > 0 && (big || [3, 5, 7, 9, 12, 15].includes(f)) ? `<text class="fn" x="${(xAt(f - 1) + xAt(f)) / 2}" y="${H + 9}" text-anchor="middle" font-size="9">${f}</text>` : '');
+  else out += `<line class="fret nut" x1="${x0}" x2="${x0}" y1="8" y2="${8 + rowsN * rh}"/>`;
+  for (let r = 0; r < rowsN; r++) { out += `<line class="str" x1="${x0 - 16}" x2="${x0 + bw}" y1="${yRow(r)}" y2="${yRow(r)}" stroke-width="${1 + (rowsN - 1 - r) * 0.25}"/>`; out += `<text class="sn" x="3" y="${yRow(r) + 4}" font-size="10">${svSharp(midiName(openOf(r)).replace(/-?\d+$/, ''))}</text>`; }
+  const seen = new Set(), dots = [];
+  places.forEach(q => { if (!q) return; const k = q.row + ':' + q.offset; if (seen.has(k)) return; seen.add(k); dots.push({ row: q.row, off: q.offset, scale: true, f: q.finger }); });
+  if (showAll) for (let r = 0; r < rowsN; r++) for (let off = 0; off <= (bowed ? vp.f1 + 6 : total - 0); off++) {   // every note in reach of the position
+    if (seen.has(r + ':' + off)) continue;
+    let f = ''; if (bowed) { const d = FINGER_BY_DELTA[off - vp.f1]; if (off === 0) f = '0'; else if (d) f = d[0]; else continue; } else if (off > total) continue;
+    seen.add(r + ':' + off); dots.push({ row: r, off, scale: inScale.has((openOf(r) + off) % 12), f });
+  }
+  dots.sort((a, b) => a.scale - b.scale).forEach(d => { out += `<circle class="dot${d.scale ? ' sc' : ''} f${/^\d$/.test(d.f) ? d.f : 'x'}" cx="${xDot(d.off)}" cy="${yRow(d.row)}" r="${big ? (d.scale ? 8.5 : 5) : bowed ? 3.6 : 4.2}"/>` + (big && d.scale && d.f !== '' ? `<text class="df" x="${xDot(d.off)}" y="${yRow(d.row) + 3.5}" text-anchor="middle" font-size="10">${d.f}</text>` : ''); });
+  out += `<g id="svDot" style="display:none"><circle class="on" r="${big ? 12 : 9}"/><text class="dn2" text-anchor="middle" y="4" font-size="11"></text></g>`;
+  const legend = big && bowed ? `<div class="sv-leg"><i class="f0"></i>Open<i class="f1"></i>1st finger<i class="f2"></i>2nd finger<i class="f3"></i>3rd finger<i class="f4"></i>4th finger</div>` : '';
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H + 16}" role="img" aria-label="${bowed ? 'Fingerboard' : 'Fretboard'}">${out}</svg>` + legend + (big ? '<div id="svRead" class="sv-read mut" aria-live="polite"></div>' : '');
+  SV.neckDot = $('svDot'); SV.dotAt = places.map(q => q ? { x: xDot(q.offset), y: yRow(q.row), t: bowed ? q.finger : q.offset === 0 ? '0' : String(q.offset) } : null);
 }
 
-// ---- state: colours, the target, the cursor
-function svPaint() {
-  const demo = demoIdx >= 0, idx = demo ? demoIdx : sc.running ? sc.pos : -1;
-  SV.nodes.forEach((g, i) => { g.setAttribute('class', `nh ${noteCls(i, demo)}${sc.tl[i].direction === 'down' ? ' dn' : ''}`); });
-  if (SV.neckDot) {
-    const d = idx >= 0 && idx < sc.tl.length ? SV.dotAt[idx] : null;
-    SV.neckDot.style.display = d ? '' : 'none';
-    if (d) { SV.neckDot.setAttribute('transform', `translate(${d.x} ${d.y})`); SV.neckDot.querySelector('text').textContent = d.t; }
-  } else if (idx >= 0) {
-    $('scNeck').querySelectorAll('.pk.on').forEach(k => k.classList.remove('on'));
-    const k = idx < sc.tl.length ? $('scNeck').querySelector(`.pk[data-m="${sc.tl[idx].midi}"]`) : null; if (k) k.classList.add('on');
-  } else $('scNeck').querySelectorAll('.pk.on').forEach(k => k.classList.remove('on'));
+// ================= Tab and Piano roll: notes scroll toward a playhead =================
+// Both views put every note in one group that is moved as time passes. x = beat number * SV_PPB, so the note on the playhead is the one being played.
+function svHighwayFrame(W, H, dyn, stat, tag, clipX) {
+  const playX = Math.max(70, Math.round(W * 0.3));
+  return { playX, svg: `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${tag}"><defs><clipPath id="hwc"><rect x="${clipX}" y="0" width="${W}" height="${H}"/></clipPath></defs>${stat}<g clip-path="url(#hwc)"><g id="svHw">${dyn}</g></g><line class="play" x1="${playX}" x2="${playX}" y1="2" y2="${H - 2}"/></svg>` };
 }
-// Where the cursor should be: a smooth position between notes while the click runs, the target note otherwise. Returns null when it should be hidden.
+function svBuildTab(W) {
+  const p = sc.plan, tl = p.tl, inst = p.inst, strings = stringsOf(inst), rowsN = strings.length, rh = 28, H = 14 + rowsN * rh, yRow = r => 14 + r * rh + rh / 2 - 6, bowed = svIsBowed(inst);
+  let stat = '', dyn = '';
+  for (let r = 0; r < rowsN; r++) { stat += `<line class="tl" x1="22" x2="${W}" y1="${yRow(r)}" y2="${yRow(r)}"/><text class="sn" x="4" y="${yRow(r) + 4}" font-size="11" font-weight="700">${svSharp(midiName(strings[strings.length - 1 - r]).replace(/-?\d+$/, ''))}</text>`; }
+  tl.forEach((n, i) => {
+    const q = SV.places[i], x = i * SV_PPB; if (!q) return;
+    const lab = bowed ? q.finger : String(q.offset);
+    dyn += `<g class="hn" data-i="${i}"><rect x="${x - 11}" y="${yRow(q.row) - 9}" width="22" height="18" rx="5"/><text x="${x}" y="${yRow(q.row) + 4.5}" text-anchor="middle" font-size="12" font-weight="700">${lab}</text>` +
+      `<text class="cap" x="${x}" y="${H - 1}" text-anchor="middle" font-size="9">${svNoteName(i)}</text></g>`;
+  });
+  const fr = svHighwayFrame(W, H + 4, dyn, stat, `Tab: ${tl.length} notes`, 22); SV.playX = fr.playX;
+  $('scTab').innerHTML = fr.svg; SV.hw = $('svHw');
+  SV.hwNodes = [...$('scTab').querySelectorAll('g.hn')].reduce((a, g) => (a[+g.dataset.i] = g, a), []);
+}
+function svBuildRoll(W) {
+  const p = sc.plan, tl = p.tl, lo = Math.min(...tl.map(n => n.midi)) - 1, hi = Math.max(...tl.map(n => n.midi)) + 1, n = hi - lo + 1, rh = Math.max(6, Math.min(15, Math.floor(250 / n))), H = n * rh + 6, gut = 30;
+  const yOf = m => 3 + (hi - m) * rh, black = m => [1, 3, 6, 8, 10].includes(((m % 12) + 12) % 12);
+  let stat = '', dyn = '';
+  for (let m = lo; m <= hi; m++) stat += `<rect class="rr${black(m) ? ' blk' : ''}" x="${gut}" y="${yOf(m)}" width="${W}" height="${rh}"/>` + (rh >= 9 || m % 12 === 0 ? `<text class="sn" x="3" y="${yOf(m) + rh - 2.5}" font-size="${Math.min(10, rh)}">${svSharp(midiName(m))}</text>` : '');
+  const ppm = SV_PPB / (60000 / sc.bpm);
+  tl.forEach((nt, i) => {
+    const w = Math.max(6, nt.durationMs * ppm - 2);
+    dyn += `<g class="hn" data-i="${i}"><rect x="${i * SV_PPB}" y="${yOf(nt.midi) + 0.5}" width="${w}" height="${rh - 1}" rx="3"/>` + (rh >= 10 && w > 30 ? `<text x="${i * SV_PPB + 4}" y="${yOf(nt.midi) + rh - 3.5}" font-size="${Math.min(10, rh - 3)}">${svNoteName(i)}</text>` : '') + `</g>`;
+  });
+  const fr = svHighwayFrame(W, H, dyn, stat, `Piano roll: ${tl.length} notes`, 30); SV.playX = fr.playX;
+  $('scRoll').innerHTML = fr.svg; SV.hw = $('svHw');
+  SV.hwNodes = [...$('scRoll').querySelectorAll('g.hn')].reduce((a, g) => (a[+g.dataset.i] = g, a), []);
+}
+
+// ================= state, colours, cursor =================
+function svReadout(idx) {
+  const el = $('svRead'); if (!el) return;
+  if (idx < 0 || idx >= sc.tl.length) { el.textContent = sc.plan && sc.plan.inst === 'chromatic' ? 'Start practice to see the key to play.' : 'Start practice to see the finger to place.'; return; }
+  const n = sc.tl[idx], h = SV.hints[idx];
+  el.textContent = `${svNoteName(idx)}${h ? ' · ' + h.text : ''}`;
+}
+function svPaint() {
+  const demo = demoIdx >= 0, idx = demo ? demoIdx : sc.running ? sc.pos : -1, v = svEffective(sc.plan.inst);
+  const cls = i => `${noteCls(i, demo)}${sc.tl[i].direction === 'down' ? ' dn' : ''}`;
+  if (v === 'staff') SV.nodes.forEach((g, i) => g.setAttribute('class', `nh ${cls(i)}`));
+  if (v === 'tab' || v === 'roll') SV.hwNodes.forEach((g, i) => g && g.setAttribute('class', `hn ${cls(i)}`));
+  if (v === 'staff' || v === 'board') {
+    if (SV.neckDot) {
+      const d = idx >= 0 && idx < sc.tl.length ? SV.dotAt[idx] : null;
+      SV.neckDot.style.display = d ? '' : 'none';
+      if (d) { SV.neckDot.setAttribute('transform', `translate(${d.x} ${d.y})`); SV.neckDot.querySelector('text').textContent = d.t; }
+    } else {
+      $('scNeck').querySelectorAll('.pk.on').forEach(k => k.classList.remove('on'));
+      const k = idx >= 0 && idx < sc.tl.length ? $('scNeck').querySelector(`.pk[data-m="${sc.tl[idx].midi}"]`) : null; if (k) k.classList.add('on');
+    }
+    if (v === 'board') svReadout(idx);
+  }
+}
+// Where time is, in ms from the first note: from the click in Tempo-locked mode (negative during the count-in), else eased toward the target note.
+function svNowMs() {
+  const beat = 60000 / sc.bpm, last = (sc.tl.length - 1) * beat;
+  if (demoIdx < 0 && sc.running && sc.mode === 'tempo' && sc.clock != null && typeof ctx !== 'undefined' && ctx) { SV.hwCur = (ctx.currentTime - t0 - sc.clock) * 1000; return Math.max(-2 * beat, Math.min(last, SV.hwCur)); }
+  const target = demoIdx >= 0 ? demoIdx * beat : sc.running ? Math.min(sc.pos, sc.tl.length - 1) * beat : 0;
+  SV.hwCur += (target - SV.hwCur) * 0.25; if (Math.abs(target - SV.hwCur) < 2) SV.hwCur = target;
+  return SV.hwCur;
+}
+// Staff cursor position: a smooth place between notes while the click runs, the target note otherwise. null = hidden.
 function svCursorAt() {
   if (demoIdx >= 0) return demoIdx;
   if (!sc.running || sc.pos >= sc.tl.length) return null;
-  if (sc.mode === 'tempo' && sc.clock != null && typeof ctx !== 'undefined' && ctx) {
-    const f = ((ctx.currentTime - t0 - sc.clock) * 1000) / (60000 / sc.bpm);
-    return Math.max(0, Math.min(sc.tl.length - 1, f));
-  }
+  if (sc.mode === 'tempo' && sc.clock != null && typeof ctx !== 'undefined' && ctx) return Math.max(0, Math.min(sc.tl.length - 1, ((ctx.currentTime - t0 - sc.clock) * 1000) / (60000 / sc.bpm)));
   return sc.pos;
 }
 function svFrame() {
-  SV.raf = 0;
-  const f = svCursorAt(), el = SV.curEl; if (!el || !SV.where.length) return;
+  SV.raf = 0; if (!sc.plan) return;
+  const v = svEffective(sc.plan.inst), busy = sc.running || demoIdx >= 0;
+  if (v === 'tab' || v === 'roll') {
+    if (!SV.hw) return;
+    const now = svNowMs(), ppm = SV_PPB / (60000 / sc.bpm);
+    SV.hw.setAttribute('transform', `translate(${(SV.playX - now * ppm).toFixed(1)} 0)`);
+    if (busy || Math.abs(SV.hwCur) > 1) SV.raf = requestAnimationFrame(svFrame);
+    return;
+  }
+  const f = v === 'staff' ? svCursorAt() : null, el = SV.curEl; if (!el || !SV.where.length) return;
   if (f == null) { el.style.display = 'none'; return; }
   const i = Math.floor(f), a = SV.where[i], b = SV.where[Math.min(SV.where.length - 1, i + 1)];
   if (!a) return;
@@ -121,10 +207,22 @@ function svFrame() {
 
 function svRender() {
   const box = $('scStaff'); if (!box || !sc.plan) return;
-  const W = Math.max(260, Math.floor(box.clientWidth || (box.parentElement && box.parentElement.clientWidth) || 340)), p = sc.plan;
-  const key = [p.tl.map(n => n.midi).join(), p.inst, p.pc, p.type, p.pos, p.bow, sigBeats(), W, useFlats].join('|');
-  if (key !== SV.key) { SV.key = key; svBuildStaff(W); svBuildNeck(Math.max(260, Math.floor($('scNeck').clientWidth || W))); }
+  const p = sc.plan, inst = p.inst, v = svEffective(inst), vis = $('scVis');
+  const W = Math.max(260, Math.floor(vis.clientWidth ? vis.clientWidth - 16 : box.clientWidth || 340));
+  // the buttons: Tab is offered only where there are strings; the keyboard is the Fingerboard of a piano
+  document.querySelectorAll('#scView button').forEach(b => { const ok = b.dataset.v !== 'tab' || svTabOk(inst), on = b.dataset.v === v; b.hidden = !ok; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); if (b.dataset.v === 'board') b.textContent = inst === 'chromatic' ? 'Keys' : svIsBowed(inst) ? 'Fingerboard' : 'Fretboard'; });
+  $('scVisTitle').textContent = scaleLabel().split(' · ').slice(0, 2).join(' · ') + ' · ' + ruleFor(inst).label;
+  $('scShowW').hidden = v !== 'board' || inst === 'chromatic';
+  $('scStaff').hidden = v !== 'staff'; $('scTab').hidden = v !== 'tab'; $('scNeck').hidden = !(v === 'staff' || v === 'board'); $('scRoll').hidden = v !== 'roll';
+  const base = [p.tl.map(n => n.midi).join(), inst, p.pc, p.type, p.pos, p.bow, sigBeats(), W, useFlats].join('|');
+  if (base !== SV.key) { SV.key = base; svPlan(); SV.staffKey = SV.neckKey = SV.hwKey = ''; }
+  if (v === 'staff' && SV.staffKey !== base) { SV.staffKey = base; svBuildStaff(W); }
+  const nk = base + '|' + v + '|' + $('scShow').value; if ((v === 'staff' || v === 'board') && SV.neckKey !== nk) { SV.neckKey = nk; svBuildNeck(W, v === 'board'); }
+  const hk = base + '|' + v + '|' + sc.bpm; if ((v === 'tab' || v === 'roll') && SV.hwKey !== hk) { SV.hwKey = hk; (v === 'tab' ? svBuildTab : svBuildRoll)(W); SV.hwCur = 0; }
   svPaint();
-  if (!SV.raf && (sc.running || demoIdx >= 0)) SV.raf = requestAnimationFrame(svFrame); else if (!sc.running && demoIdx < 0 && SV.curEl) SV.curEl.style.display = 'none';
+  if (!SV.raf && (sc.running || demoIdx >= 0 || ((v === 'tab' || v === 'roll') && SV.hw))) SV.raf = requestAnimationFrame(svFrame);
+  else if (v === 'staff' && !sc.running && demoIdx < 0 && SV.curEl) SV.curEl.style.display = 'none';
 }
-if (typeof ResizeObserver !== 'undefined') { let rz = 0; new ResizeObserver(() => { clearTimeout(rz); rz = setTimeout(() => { if (Math.abs(($('scStaff').clientWidth || 0) - SV.W) > 8) { SV.W = $('scStaff').clientWidth; SV.key = ''; svRender(); } }, 120); }).observe($('scStaff')); }
+document.querySelectorAll('#scView button').forEach(b => b.onclick = () => { SV.view = b.dataset.v; try { localStorage.setItem(SV_VIEW_KEY, SV.view); } catch {} svRender(); });
+$('scShow').onchange = () => svRender();
+if (typeof ResizeObserver !== 'undefined') { let rz = 0; new ResizeObserver(() => { clearTimeout(rz); rz = setTimeout(() => { const w = $('scVis').clientWidth || 0; if (Math.abs(w - SV.W) > 8) { SV.W = w; SV.key = ''; svRender(); } }, 120); }).observe($('scVis')); }

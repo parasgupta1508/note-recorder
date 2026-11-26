@@ -60,3 +60,27 @@
 .rh-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rh-d{font-size:13px;padding:4px 0 2px 62px}
 @media (max-width:480px){ .rb{grid-template-columns:100px 1fr 30px} .rh-d{padding-left:0} .rh-run summary{grid-template-columns:48px 1fr auto auto} .sum-big.four b{font-size:19px} }
+
+/* ---------- display switcher, selectors, Tab, Fingerboard, Piano roll ---------- */
+.sc-sel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px} @media (min-width:560px){.sc-sel{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.vis-bar{display:flex;gap:8px;align-items:end;justify-content:space-between;flex-wrap:wrap}
+.vis-bar .seg{flex:1 1 auto;min-width:0} .vis-bar .seg button{padding:7px 8px;font-size:13.5px;white-space:nowrap}
+.vis-bar .field[hidden]{display:none}
+.vis-title{font-size:13px;padding:0 2px}
+.tabbox,.rollbox{min-height:20px} .tabbox[hidden],.rollbox[hidden],.staffbox[hidden],.neckbox[hidden]{display:none}
+.staffbox .nm{fill:var(--mut)}
+.tabbox .tl{stroke:#8a96b4;stroke-width:1} .tabbox .sn,.rollbox .sn{fill:var(--mut)}
+.tabbox .hn rect{fill:#2a3350;stroke:#55618a;stroke-width:1} .tabbox .hn text{fill:var(--fg)} .tabbox .hn .cap{fill:var(--mut);font-weight:400}
+.hn.ok rect{fill:#17402f;stroke:var(--ok)} .hn.close rect{fill:#52410f;stroke:var(--warn)} .hn.bad rect{fill:#552222;stroke:var(--bad)}
+.hn.cur rect{fill:var(--acc);stroke:#fff;stroke-width:2} .hn.pend{opacity:.9}
+.rollbox .rr{fill:#161b27;stroke:#222a3b;stroke-width:.5} .rollbox .rr.blk{fill:#11151e}
+.rollbox .hn rect{fill:#4f6fd8;stroke:none;opacity:.85} .rollbox .hn text{fill:#fff;pointer-events:none}
+.rollbox .hn.ok rect{fill:#22a06b} .rollbox .hn.close rect{fill:#c99a1d} .rollbox .hn.bad rect{fill:#c24545} .rollbox .hn.cur rect{fill:#fff;opacity:1} .rollbox .hn.cur text{fill:#10131c}
+.tabbox .play,.rollbox .play{stroke:var(--acc);stroke-width:2;opacity:.9}
+.neckbox .dot.f0{fill:#8c93a8} .neckbox .dot.f1{fill:#34d399} .neckbox .dot.f2{fill:#fb923c} .neckbox .dot.f3{fill:#60a5fa} .neckbox .dot.f4{fill:#a78bfa} .neckbox .dot.fx{fill:#7f8aa8}
+.neckbox .dot:not(.sc){opacity:.35} .neckbox .df{fill:#10131c;font-weight:700}
+.sv-leg{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;font-size:12px;color:var(--mut);padding:2px 4px} .sv-leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:-6px}
+.sv-leg .f0{background:#8c93a8} .sv-leg .f1{background:#34d399} .sv-leg .f2{background:#fb923c} .sv-leg .f3{background:#60a5fa} .sv-leg .f4{background:#a78bfa}
+.sv-read{font-size:14px;padding:2px 4px;min-height:20px;color:var(--fg)}
+.neckbox .kn{fill:#444}
+.vis-bar .seg{flex:1 1 100%;display:flex} .vis-bar .seg button{flex:1 1 0;min-width:0;padding:7px 4px;font-size:13px;overflow:hidden;text-overflow:ellipsis}
