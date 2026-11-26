@@ -18,31 +18,33 @@ const evalMean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
 const evalMedian = a => { if (!a.length) return null; const s = a.slice().sort((x, y) => x - y), h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; };
 
 // Pitch score of one played note, from its deviation in cents (sign ignored): full marks within 6 cents, nothing from 50 cents.
-const evalPitchOf = (dev, share = 1) => 100 * (0.8 * evalClamp(1 - Math.max(0, Math.abs(dev) - 6) / 44) + 0.2 * evalClamp(share));
+const evalPitchOf = (dev, share = 1, free = 6, span = 44) => 100 * (0.8 * evalClamp(1 - Math.max(0, Math.abs(dev) - free) / span) + 0.2 * evalClamp(share));   // free: cents with full marks, span: cents over which the marks fall to zero
 const EVAL_WRONG_PENALTY = 3, EVAL_WRONG_CAP = 30;   // points off the pitch score per wrong note, and the most a run can lose that way
 
 // Onsets: a constant lag (microphone, Bluetooth or just playing a little behind) is reported but not punished; only the unevenness is.
-function evalPulse(errs, beatMs) {
+function evalPulse(errs, beatMs, free = 0.08, span = 0.37) {
   const e = errs.filter(x => typeof x === 'number'); if (!e.length) return null;
   const lag = evalMedian(e);
-  return { lag, score: 100 * evalMean(e.map(x => evalClamp(1 - Math.max(0, Math.abs(x - lag) - 0.08 * beatMs) / (0.37 * beatMs)))) };
+  return { lag, score: 100 * evalMean(e.map(x => evalClamp(1 - Math.max(0, Math.abs(x - lag) - free * beatMs) / (span * beatMs)))) };
 }
 // Steadiness of one held note: wobble up to a quarter of the instrument's allowance costs nothing, the full allowance earns nothing.
 const evalSteady = (s, cap) => typeof s === 'number' ? evalClamp(1 - Math.max(0, s - 0.25 * cap) / (0.75 * cap)) : 0.75;
 
-// evaluateRun(slots, { beatMs, mode:'tempo'|'wait', wobbleCap }) -> result, or null for an empty run
+// evaluateRun(slots, { beatMs, mode:'tempo'|'wait', wobbleCap, curve }) -> result, or null for an empty run
+// curve (optional, used by the "practical" grader): { free, span (cents), pulseFree, pulseSpan (beats), wrongPenalty, wrongCap }; the defaults below are the strict grader.
 function evaluateRun(slots, opts = {}) {
   const n = slots.length; if (!n) return null;
   const beatMs = opts.beatMs || 750, cap = opts.wobbleCap || 25, tempo = opts.mode !== 'wait';
+  const cv = Object.assign({ free: 6, span: 44, pulseFree: 0.08, pulseSpan: 0.37, wrongPenalty: EVAL_WRONG_PENALTY, wrongCap: EVAL_WRONG_CAP }, opts.curve);
   const hits = slots.filter(x => x.k === 'h'), dev = x => (typeof x.m === 'number' ? x.m : x.c);
   const wrongNotes = slots.reduce((s, x) => s + (x.wrong || 0), 0), retries = slots.reduce((s, x) => s + (x.rt || 0), 0);
 
   // pitch
-  const notePitch = slots.map(x => x.k === 'h' ? evalPitchOf(dev(x), x.a) : 0);
-  const pitch = evalClamp(evalMean(notePitch) - Math.min(EVAL_WRONG_CAP, EVAL_WRONG_PENALTY * wrongNotes), 0, 100);
+  const notePitch = slots.map(x => x.k === 'h' ? evalPitchOf(dev(x), x.a, cv.free, cv.span) : 0);
+  const pitch = evalClamp(evalMean(notePitch) - Math.min(cv.wrongCap, cv.wrongPenalty * wrongNotes), 0, 100);
 
   // fluency: pulse (Tempo-locked only) and continuity
-  const pu = tempo ? evalPulse(hits.map(x => x.e), beatMs) : null;
+  const pu = tempo ? evalPulse(hits.map(x => x.e), beatMs, cv.pulseFree, cv.pulseSpan) : null;
   const ordered = hits.filter(x => typeof x.e === 'number').sort((a, b) => a.index - b.index);
   let stalls = 0; for (let i = 1; i < ordered.length; i++) if (ordered[i].index === ordered[i - 1].index + 1 && ordered[i].e - ordered[i - 1].e > 0.75 * beatMs) stalls++;   // a gap of most of a beat or more: the player stopped and restarted
   const continuity = 100 * evalClamp((hits.length - 0.5 * retries - stalls) / n);

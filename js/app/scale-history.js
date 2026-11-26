@@ -65,7 +65,7 @@ function queueRun() {
 function flushRun() {
   clearTimeout(sc.runTimer); const pass = sc.runPass; sc.runPass = 0; if (!pass || !sc.plan) return;
   const slots = sc.slots.filter(s => s.pass === pass); if (!slots.length) return;
-  const p = sc.plan, ev = evaluateRun(slots, { beatMs: 60000 / sc.bpm, mode: sc.mode, wobbleCap: ruleFor(p.inst).wobble });
+  const p = sc.plan, ev = scoreRun(slots, { beatMs: 60000 / sc.bpm, mode: sc.mode, wobbleCap: ruleFor(p.inst).wobble });
   const rec = histRecord(ev, { t: Date.now(), player: profile, inst: p.inst, type: p.type, root: p.pc, span: p.span, pos: p.pos, bow: p.bow, bpm: sc.bpm, mode: sc.mode, label: scaleLabel(), pass });
   const prior = runsOf(profile), sameScale = prior.filter(r => r.inst === rec.inst && histScaleKey(r) === histScaleKey(rec)), best = histIsBest(sameScale, rec);
   const coach = coachReview(rec, prior, { best });
@@ -88,7 +88,8 @@ function renderResult() {
   const r = L.rec, list = a => `<ul>${a.map(t => `<li>${esc(t)}</li>`).join('')}</ul>`;
   el.innerHTML = `<div class="res-head"><div class="res-score"><b>${r.total}</b><small>/100</small></div>
     <div><span class="band ${BAND_CLS[r.band]}">${r.band}</span>${L.best ? ' <span class="pbadge">★ Personal best</span>' : ''}
-    <div class="mut res-sub">${esc(r.label.split(' · ').slice(0, 2).join(' · '))} · ${r.bpm} BPM · ${r.mode === 'wait' ? 'Wait for note' : 'Tempo-locked'} · pass ${r.pass}</div>
+    <div class="mut res-sub">${esc(r.label.split(' · ').slice(0, 2).join(' · '))} · ${r.bpm} BPM · ${r.mode === 'wait' ? 'Wait for note' : 'Tempo-locked'} · pass ${r.pass}${r.eng ? ' · ' + (r.eng === 'strict' ? 'Strict' : 'Practical') + ' grading' : ''}</div>
+    ${r.off != null && Math.abs(r.off) >= 8 ? `<div class="mut res-sub">Your whole scale sat ${Math.abs(r.off).toFixed(0)}¢ ${r.off > 0 ? 'sharp' : 'flat'}. Most of that is forgiven in the score, but check your tuning or your first note.</div>` : ''}
     ${L.streak > 1 ? `<div class="mut res-sub">${L.streak}-day practice streak</div>` : ''}</div></div>
     <div class="res-bars">${resBar('Pitch &amp; intonation', 50, r.pitch)}${resBar('Fluency &amp; pulse', 30, r.fluency)}${resBar('Tone &amp; steadiness', 20, r.tone)}</div>
     <div class="mut res-dir">${[resDir('Going up', r.up), resDir('Coming down', r.down)].filter(Boolean).join(' · ')}</div>

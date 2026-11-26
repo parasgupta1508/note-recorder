@@ -12,6 +12,7 @@ function histRecord(ev, info) {
     v: HIST_VERSION, t: info.t, p: info.player || '', inst: info.inst, type: info.type, root: info.root, span: info.span, pos: info.pos || '', bow: info.bow || '',
     bpm: info.bpm, mode: info.mode, label: info.label || '', pass: info.pass || 1,
     total: ev.total, band: ev.band, pitch: histR(ev.pitch, 0), fluency: histR(ev.fluency, 0), tone: histR(ev.tone, 0), pulse: histR(ev.pulse, 0), continuity: histR(ev.continuity, 0),
+    eng: ev.engine || '', off: ev.offset == null ? null : histR(ev.offset),
     lag: histR(ev.lagMs, 0), wrong: ev.wrongNotes, skipped: ev.skipped, retries: ev.retries, stalls: ev.stalls, slots: ev.slots, played: ev.played,
     up: dir(ev.up), down: dir(ev.down),
     notes: ev.notes.map(x => ({ n: x.name, m: x.midi, d: x.d === 'up' ? 'u' : 'd', k: x.played ? 1 : 0, c: histR(x.dev), s: histR(x.s), e: x.e == null ? null : Math.round(x.e) })),

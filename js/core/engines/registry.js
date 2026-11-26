@@ -4,7 +4,7 @@
 //
 // What "auto" means: today's behaviour. It stays pinned to AUTO_ENGINES until the owner approves a change (Phase A decision memo).
 const ENGINE_ROLES = ['f0', 'segmenter', 'transcriber', 'separator', 'omr', 'aligner', 'scorer', 'verifier'];
-const AUTO_ENGINES = { f0: 'yin', segmenter: 'classic', transcriber: 'basicpitch' };
+const AUTO_ENGINES = { f0: 'yin', segmenter: 'classic', transcriber: 'basicpitch', scorer: 'practical' };   // scorer: the scale-drill grader (owner approved Practical as the default; Strict stays a choice)
 const _engines = [];
 function registerEngine(d) {
   if (!d || !d.id || !ENGINE_ROLES.includes(d.role)) throw new Error('registerEngine: needs an id and a known role');
@@ -15,7 +15,7 @@ function registerEngine(d) {
 function unregisterEngine(role, id) { const at = _engines.findIndex(e => e.role === role && e.id === id); if (at >= 0) _engines.splice(at, 1); }
 const listEngines = role => _engines.filter(e => !role || e.role === role);
 // Default settings object (what Settings stores under "engines"). 'auto' follows AUTO_ENGINES.
-const defaultEngineSettings = () => ({ default: { f0: 'auto', segmenter: 'auto', transcriber: 'auto', separator: 'none' }, perInstrument: {}, params: {} });
+const defaultEngineSettings = () => ({ default: { f0: 'auto', segmenter: 'auto', transcriber: 'auto', scorer: 'auto', separator: 'none' }, perInstrument: {}, params: {} });
 // Which engine id a role uses for this instrument, after 'auto' is resolved. Returns null for 'none'.
 // A choice can be for one mode only: the key 'segmenter:offline' beats 'segmenter'.
 function resolveEngineId(role, settings, instrument, mode) {

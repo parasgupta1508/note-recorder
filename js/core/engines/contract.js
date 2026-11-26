@@ -23,6 +23,16 @@ function engineContract(e) {
       ok(n.length === 2 && n[0].midi === 69 && n[1].midi === 72, `${tag}: A4 then C5 found, nothing extra (${n.map(x => x.midi).join(',')})`);
       const perMin = ms / (melody.length / sr) * 60; ok(perMin < 60000, `${tag}: time budget (${Math.round(perMin)} ms per minute of audio, limit 60000)`);
       ok(typeof e.create === 'function' && typeof e.gate === 'function', `${tag}: live parts present (create, gate)`);
+    } else if (e.role === 'scorer') {
+      // a grader: same shape as evaluateRun, deterministic, a perfect run scores high, a bad one low, silence/empty gives null, dev() is the identity at 0 cents
+      const mk = (cf, e2, n = 15) => Array.from({ length: n }, (_, i) => { const c = typeof cf === 'function' ? cf(i) : cf; return { index: i, pass: 1, name: 'N' + i, midi: 60 + i, d: i < 8 ? 'up' : 'down', k: 'h', c, m: c, a: Math.abs(c) <= 10 ? 1 : 0.2, s: 4, e: e2, sp: 2, wrong: 0, rt: 0 }; });   // a function gives each note its own cents
+      const opts = { beatMs: 750, mode: 'tempo', wobbleCap: 40 }, good = e.evaluate(mk(1, 10), opts), bad = e.evaluate(mk(i => (i % 2 ? 45 : -45), 400), opts), again = e.evaluate(mk(1, 10), opts);
+      ok(e.evaluate([], opts) === null, `${tag}: an empty run gives no result`);
+      ok(good && typeof good.total === 'number' && good.total >= 95 && good.band === 'Distinction', `${tag}: a clean run scores 95 or more (${good && good.total})`);
+      ok(bad && bad.total <= good.total - 30, `${tag}: a badly out-of-tune run (notes 45 cents either side) scores at least 30 points below a clean one (${bad && bad.total})`);
+      ok(JSON.stringify(good) === JSON.stringify(again), `${tag}: deterministic`);
+      ok(good && ['total', 'band', 'pitch', 'fluency', 'tone', 'up', 'down', 'notes'].every(k => k in good), `${tag}: result has the fields the history and the charts read`);
+      ok(typeof e.dev === 'function' && Math.abs(e.dev(0, { midi: 62, root: 0, fretless: true })) < 1e-9 && typeof e.shift === 'function' && typeof e.tol === 'function', `${tag}: dev, shift and tol are present and dev(0) = 0`);
     } else if (e.role === 'transcriber') {
       if (e.caps.needsBrowser) {
         ok(typeof e.postprocess === 'function', `${tag}: has postprocess`);

@@ -3,7 +3,7 @@
 // (the same contract check the test suite runs) and Reset. An engine that fails its check is greyed out and can no longer be picked.
 // Part of the app: shared scope, loaded after settings-ui.js.
 
-const ENG_ROWS = [['f0', 'live', 'Tuner algorithm'], ['segmenter', 'live', 'Recorder algorithm (live)'], ['segmenter', 'offline', 'Recorded file algorithm'], ['transcriber', 'offline', 'Detailed analysis algorithm (slower)']];
+const ENG_ROWS = [['f0', 'live', 'Tuner algorithm'], ['f0', 'scale', 'Scale drills: pitch algorithm'], ['scorer', 'live', 'Scale drills: grading'], ['segmenter', 'live', 'Recorder algorithm (live)'], ['segmenter', 'offline', 'Recorded file algorithm'], ['transcriber', 'offline', 'Detailed analysis algorithm (slower)']];
 const engKey = (role, mode) => role === 'transcriber' ? role : role + ':' + mode;
 const engEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const engWhyNot = e => e.contractFail ? 'failed its check' : e.caps.needsHelper && !(typeof LAB !== 'undefined' && LAB.ok) ? 'helper not running' : '';
@@ -14,7 +14,7 @@ function engSave(mutator) { const s = JSON.parse(JSON.stringify(engSet)); s.para
 function renderEngines() {
   const box = $('engBody'); if (!box) return;
   box.innerHTML = ENG_ROWS.map(([role, mode, title], i) => {
-    const dev = !!($('devOn') && $('devOn').checked), cands = listEngines(role).filter(e => !e.caps.clipInput && e.caps[mode] !== false && (!e.caps.dev || dev || engCurrent(role, mode) === e.id)), cur = engCurrent(role, mode), eff = engineFor(role, mode);
+    const dev = !!($('devOn') && $('devOn').checked), cands = listEngines(role).filter(e => !e.caps.clipInput && e.caps[mode === 'scale' ? 'live' : mode] !== false && (mode !== 'scale' || e.frame) && (!e.caps.dev || dev || engCurrent(role, mode) === e.id)), cur = engCurrent(role, mode), eff = engineFor(role, mode);
     const auto = getEngine(role, prof.k, mode, { default: {} });
     const opts = [`<option value="auto"${cur === 'auto' ? ' selected' : ''}>Auto (${engEsc(auto ? auto.label.split(/ [+(]/)[0] : 'none')})</option>`].concat(cands.map(e => { const why = engWhyNot(e); return `<option value="${engEsc(e.id)}"${cur === e.id ? ' selected' : ''}${why ? ' disabled' : ''}>${engEsc(e.label)}${why ? ' (' + why + ')' : ''}</option>`; })).join('');
     const pv = (engSet.params || {})[role + '.' + (eff && eff.id)] || {};

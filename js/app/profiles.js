@@ -110,7 +110,7 @@ function loop() {
     const cut = Math.min(6000, Math.max(1000, hi * 3));
     if (lpA && Math.abs(cut - lpCut) > lpCut * 0.1) { lpCut = cut; lpA.frequency.value = lpB.frequency.value = cut; }
     const rm = recording ? recModeCfg() : null, yb = rm && rm.win && lo >= 80 ? buf.subarray(buf.length - rm.win) : buf;   // fast mode: only the newest 2048 samples, so a quick note change is not smeared
-    const r = engineFor('f0', 'live').frame(yb, ctx.sampleRate, lo, hi), conf = +$('conf').value;
+    const r = f0Engine().frame(yb, ctx.sampleRate, lo, hi), conf = +$('conf').value;
     const near = r && track && Math.abs(centsBetween(r.freq, trkF)) < 45;
     if (r && (gateOn ? r.clarity > conf : near && r.clarity > 0.5) || (near && r.clarity > 0.5)) f = r.freq;
     if (recording && gateOn) { fR = recPitch(r, rms, pk, conf); rA = r; }   // the recorder is stricter than the tuner: fewer wrong notes from noise

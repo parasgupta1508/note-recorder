@@ -88,7 +88,7 @@ function startCalib(phase) {
   calMsg(phase === 1 ? 'Step 1 of 2: stay quiet for 3 seconds…' : 'Step 2 of 2: play one steady note at normal volume for 4 seconds…');
 }
 // Runs by itself whenever the Tuner is opened: 1.5 s of room noise sets the gate, then the first note you play sets the input boost.
-function startAutoCalib(gentle) {   // gentle: scale drills, a lower gate (the pitch detector rejects noise by itself; a high gate would only cut off a soft note)
+function startAutoCalib(gentle) {   // gentle: scale drills, a low gate that never rises above 0.006 (the pitch detector rejects unpitched noise by itself; a high gate would only cut off a soft note)
   if (calib || !listening || recording) return;
   calib = { phase: 1, auto: true, gentle: !!gentle, vals: [], pk: 0, end: performance.now() + 1500 }; $('status').textContent = 'Calibrating… stay quiet for a moment';
 }
@@ -104,7 +104,7 @@ function calibFrame(rms, pk = 0) {
   if (calib.phase === 1) {
     // Auto run: the player may already be playing, so the noise level is taken from the median (a note over part of the window cannot raise it much).
     const auto = calib.auto, p95 = auto ? Math.min(q(0.95), q(0.5) * 3) : q(0.95); calRes = { noise: p95, boost: +$('boost').value };
-    const g = calib.gentle ? clamp(Math.round(Math.max(p95 * 1.5, q(0.5) * 2.2) * 1000) / 1000, 0.002, 0.03) : clamp(Math.round(Math.max(p95 * 2.5, q(0.5) * 4) * 1000) / 1000, 0.002, 0.1); $('gate').value = g; updateGateMark(); saveSettings();
+    const g = calib.gentle ? clamp(Math.round(Math.max(p95 * 1.5, q(0.5) * 2.2) * 1000) / 1000, 0.002, 0.006) : clamp(Math.round(Math.max(p95 * 2.5, q(0.5) * 4) * 1000) / 1000, 0.002, 0.1); $('gate').value = g; updateGateMark(); saveSettings();
     if (auto) { calib = { phase: 2, auto: true, vals: [], pk: 0, end: performance.now() + 15000 }; $('status').textContent = `Room noise ${db(p95).toFixed(0)} dB · play a note to finish calibrating`; return; }
     calib = null; calMsg(`Room noise ${db(p95).toFixed(0)} dB. Get ready…`); setTimeout(() => { if (listening) startCalib(2); else $('calib').disabled = false; }, 1200); return;
   }

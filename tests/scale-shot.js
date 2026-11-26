@@ -38,5 +38,8 @@ srv.listen(0, async () => {
   await ev(`document.getElementById('firstRun').classList.add('hide'); showTab('settings'); window.scrollTo(0, 99999)`); await wait(1500);
   console.log('version line:', (await ev(`document.getElementById('appVer').textContent`)).value);
   fs.writeFileSync(path.join(out, 'settings-version.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
+  // ENGSHOT: Settings > Engines with the scale drill rows
+  await ev(`showTab('settings'); document.querySelector('#setMenu button, #setMenu [data-g=engines]'); (typeof setGroup==='function'?setGroup('engines'):0); document.querySelectorAll('.set-group').forEach(g=>g.classList.toggle('cur', g.dataset.g==='engines')); document.getElementById('tab-settings').classList.remove('home'); 1`); await wait(600);
+  fs.writeFileSync(path.join(out, 'settings-engines.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true })).data, 'base64'));
   done(0);
 });

@@ -14,6 +14,7 @@ function play(t,m,c,n){var k;for(k=0;k<n;k++){var tt=t+k/60,f=fq(m,c);det.frame(
 function quiet(t,n){for(var k=0;k<n;k++){var tt=t+k/60;det.frame(tt,null,440);liveScaleFrame(null,tt);collectHold(null)}return t+n/60}
 try{
 showTab('scale');
+setEngineSettings(Object.assign({}, engSet, { default: Object.assign({}, engSet.default, { 'scorer:live': 'strict' }) }));   // the checks below are about the app logic, in the exact equal-tempered view; the Practical grader has its own checks at the end
 ck('no Octave or Direction control',!$('scOct')&&!$('scDir'));
 ck('span 1 to 3 octaves',[].map.call($('scSpan').options,function(o){return o.value}).join()==='1,2,3');
 var offered=[].map.call($('scInst').options,function(o){return o.value}).join(); ck('instruments: only Violin, Guitar, Piano, Ukulele',offered==='violin,guitar,chromatic,ukulele');
@@ -65,7 +66,7 @@ ck('the result card is inside the player, so full screen shows it',$('scPlayer')
 svFull(true); ck('full screen: the player goes full screen (or the overlay fallback)',document.fullscreenElement===$('scPlayer')||$('scPlayer').classList.contains('fs')||!!$('scFs')); svFull(false); ck('full screen: leaves again',!$('scPlayer').classList.contains('fs'));
 
 // ---- Tempo-locked: 60 BPM (one note a second). Note 2 is 25 cents sharp, note 4 is skipped, note 9 is a little late.
-listening=true; stream={getTracks:function(){return[]}}; sc.running=true; sc.calibAt=0; quietCalib(false); ck('practice start runs the quiet room check first',!!calib&&calib.phase===1&&/room noise/i.test($('scMsg').textContent)); calib.end=0; calibFrame(0.004); ck('room check sets a gentle gate above the room noise (0.009 for a 0.004 room)',Math.abs(+$('gate').value-0.009)<0.0015); calib=null; sc.running=false; sc.calibAt=performance.now(); quietCalib(false); ck('no second check within 10 minutes',!calib);
+listening=true; stream={getTracks:function(){return[]}}; sc.running=true; sc.calibAt=0; quietCalib(false); ck('practice start runs the quiet room check first',!!calib&&calib.phase===1&&/room noise/i.test($('scMsg').textContent)); calib.end=0; calibFrame(0.004); ck('room check sets a gentle gate above the room noise (0.006 for a 0.004 room: capped)',Math.abs(+$('gate').value-0.006)<0.0015); calib=null; sc.running=false; sc.calibAt=performance.now(); quietCalib(false); ck('no second check within 10 minutes',!calib);
 sc.calibAt=performance.now(); listening=true; stream={getTracks:function(){return[]}}; $('scBpm').value=60; $('scRepeat').checked=false; setMode('tempo');
 startScale(); ck('tempo run starts with a count-in clock',sc.running&&sc.clock!==null); sc.clock=0; stopMetro();
 var t=0,i;
@@ -111,6 +112,20 @@ stopScale();
 // ---- Hear scale and drone
 refPlay(sc.tl,{delay:0.05}); ck('Hear scale schedules from the timeline',REF.playing); refStop(); ck('Hear scale stops',!REF.playing);
 droneToggle(true); ck('drone starts',DRONE.on&&DRONE.nodes.length===3); droneToggle(false); ck('drone stops',!DRONE.on);
+
+// ---- the Practical grader and its Settings choices
+pick('scInst','violin'); pick('scRoot',0); pick('scType','major'); resetPractice();
+ck('Settings has a "Scale drills: grading" row and a "Scale drills: pitch algorithm" row',/Scale drills: grading/.test($('engBody').textContent)&&/Scale drills: pitch algorithm/.test($('engBody').textContent));
+ck('Strict is exact: no offset forgiven, tolerance is the Tuner setting',scaleDev(-13,64)===-13&&scaleShift()===0&&scaleTol()===tol());
+setEngineSettings(Object.assign({}, engSet, { default: Object.assign({}, engSet.default, { 'scorer:live': 'auto' }) }));
+ck('Auto grading is Practical',engineFor('scorer','live').id==='practical');
+ck('violin: a just-intonation major third (13 cents low) counts as in tune',scaleDev(-13,64)===0&&scaleDev(-30,64)<-10);
+ck('violin: a high leading tone (+18 cents) is accepted, +45 is not',scaleDev(18,71)===0&&scaleDev(45,71)>20);
+pick('scInst','guitar'); resetPractice(); ck('guitar (equal-tempered): no just-intonation zone',scaleDev(-13,64)===-13);
+pick('scInst','violin'); resetPractice(); sc.devHist=[-10,-10,-10,-10];
+ck('overall offset: 4 notes 10 cents flat shifts the live meter by 7 cents (70% forgiven); fewer than 4 notes shift nothing',Math.abs(scaleShift()+7)<0.01&&(sc.devHist=[-10,-10],scaleShift()===0));
+ck('Practical in-tune tolerance is wider than the Tuner setting',scaleTol()>=12);
+ck('the result card says which grader marked the run',(function(){var e=scoreRun([{index:0,pass:1,name:'a',midi:60,d:'up',k:'h',c:0,m:0,a:1,s:3,e:0,sp:1,wrong:0,rt:0}],{beatMs:750,mode:'tempo',wobbleCap:40});return e&&e.engine==='practical'})());
 listening=false;}catch(e){listening=false;ck('exception '+e.message+' '+(e.stack||'').split('\\n')[1],false)}
 document.title='RESULT|'+r.join('|')},1500)</script>`;
 const f = path.join(__dirname, '..', '_smoke-scale.html'); fs.writeFileSync(f, src.replace('</body>', probe + '</body>'));

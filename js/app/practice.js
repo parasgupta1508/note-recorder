@@ -5,6 +5,16 @@
 // ----- SCALE -----
 // sc.tl is the reference timeline (core/scales.js) used by Hear scale and by the live scoring; sc.seq is its MIDI list.
 // sc.slots holds one result per scale position per pass of this run (what the summary and "Spots to fix" use).
+// ----- the scale-drill grader (Settings > Engines > "Scale drills: grading"): Practical (default) or Strict -----
+// Frames are stored as the grader's deviation (scaleDev: for bowed strings the distance to the nearest acceptable pitch, see js/core/engines/scorer-practical.js).
+// While playing, the player's overall offset so far is also taken out (scaleShift) so a steady 10 cents flat is not shown as every note being wrong.
+const scaleScorer = () => (typeof engineFor === 'function' && engineFor('scorer', 'live')) || findEngine('scorer', 'strict');
+const scorerParams = e => { const o = {}; Object.keys(e.params || {}).forEach(k => { o[k] = typeof engineParam === 'function' ? engineParam(e, k) : e.params[k].default; }); return o; };
+function scaleCtx(midi) { const e = scaleScorer(), inst = sc.plan ? sc.plan.inst : $('scInst').value; return { e, ctx: { midi, root: sc.plan ? sc.plan.pc : 0, fretless: !!ruleFor(inst).bowing, inst, params: scorerParams(e) } }; }
+function scaleDev(cents, midi) { const { e, ctx } = scaleCtx(midi); return e.dev ? e.dev(cents, ctx) : cents; }
+function scaleShift() { const { e, ctx } = scaleCtx(0); return e.shift ? e.shift(sc.devHist || [], ctx) : 0; }
+function scaleTol() { const { e, ctx } = scaleCtx(0); return e.tol ? e.tol(tol(), ctx) : tol(); }
+function scoreRun(slots, opts) { const e = scaleScorer(); return e.evaluate(slots, Object.assign({}, opts, { params: scorerParams(e) })); }
 const sc = { seq: [], tl: [], pos: 0, grades: [], attempts: [], running: false, wrong: 0, pass: 1, passes: [], slots: [], slotAt: {}, mode: 'tempo', clock: null, bpm: 80, waitFrames: [], waitOk: 0, label: null, plan: null };
 let demoIdx = -1, liveBuf = [], liveC = [], silentFrames = 99;
 const det = new AttemptDetector(a => onAttempt(a));   // onAttempt lives in practice-engine.js, which loads later
@@ -74,10 +84,10 @@ function liveScaleFrame(f, t) {
   clockTick(t);
   if (sc.pos >= sc.seq.length) return;
   if (!f) { if (++silentFrames > 8) { neutralLive(); sc.waitFrames = []; sc.waitOk = 0; } return; }   // a bow change or a breath is a short gap, not an error
-  const T = tol(), target = sc.seq[sc.pos], raw = centsOffset(f, target, a4());
-  if (isOctaveGlitch(raw)) return;                         // YIN octave/twelfth glitch: not a pitch the player made
+  const T = scaleTol(), target = sc.seq[sc.pos], rawET = centsOffset(f, target, a4());
+  if (isOctaveGlitch(rawET)) return;                         // YIN octave/twelfth glitch: not a pitch the player made
   silentFrames = 0;
-  const rule = ruleFor($('scInst').value);
+  const rule = ruleFor($('scInst').value), raw0 = scaleDev(rawET, target), raw = raw0 - scaleShift();   // raw0 is stored; raw is what is shown and graded (overall offset forgiven)
   liveC.push(raw); if (liveC.length > 15) liveC.shift();
   const c = liveMedian(liveC.slice(-rule.smooth)), a = Math.abs(c);
   const cls = a <= T ? 'ok' : a <= 25 ? 'warn' : 'bad';
@@ -90,7 +100,7 @@ function liveScaleFrame(f, t) {
   const pct = 100 * liveBuf.reduce((s, x) => s + x, 0) / liveBuf.length;
   $('scAcc').textContent = sc.mode === 'wait' ? `Hold it in tune: ${Math.min(sc.waitOk, rule.holdFrames)}/${rule.holdFrames}` : `Accuracy this note: ${pct.toFixed(0)}% (${liveBuf.length} frames)`;
   $('scAcc').className = 'srow center ' + (pct >= 80 ? 'ok' : pct >= 50 ? 'warn' : 'bad') + '-t';
-  if (sc.mode === 'wait') waitFrame(raw, a <= T, rule);
+  if (sc.mode === 'wait') waitFrame(raw0, a <= T, rule);
 }
 
 // ----- per-note scorecard (keybr-style) -----
@@ -133,7 +143,7 @@ function collectHold(f) {
   if (!hold) return;
   if (f) {
     const c = centsBetween(f, noteToFreq(hold.midi, a4()));
-    if (Math.abs(c) <= 65) { hold.frames.push(c); hold.gap = 0; } else if (isOctaveGlitch(c)) { if (++hold.gap >= 4) finalizeHold(); } else finalizeHold();
+    if (Math.abs(c) <= 65) { hold.frames.push(scaleDev(c, hold.midi)); hold.gap = 0; } else if (isOctaveGlitch(c)) { if (++hold.gap >= 4) finalizeHold(); } else finalizeHold();
   } else if (++hold.gap >= 4) finalizeHold();
 }
 function finalizeHold() {
@@ -146,6 +156,7 @@ function finalizeHold() {
   }
   addEv(h.midi, { k: 'h', c, a, s, e: h.e, d: h.d, sl: h.sl, i: h.i }, true);
   Object.assign(slotFor(h.ix, h.pass), { k: 'h', c, a, s, e: h.e, m, sp });
+  (sc.devHist = sc.devHist || []).push(m != null ? m : c);   // the grader's view of the player's overall offset
   renderCard(); renderSummary();
   if (sc.runPass && h.pass === sc.runPass) flushRun();   // the last note of a finished pass has just been scored
 }
