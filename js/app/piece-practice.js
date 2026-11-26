@@ -164,7 +164,7 @@ function ppOpenLibPiece(id) {
 function ppShowLib(show) { $('pzLib').hidden = !show; $('pzPlayer').hidden = show; if (show) $('pzLibBack').hidden = !PP.parsed; else ppBusy(''); }
 function ppEnter() { ppInstallBuiltins(); peUi(); }   // the screen was opened
 $('pzLibBack').onclick = () => ppShowLib(false);
-$('ppChange').onclick = () => { if (PE.running || PE.demo >= 0) peStop(); ppShowLib(true); };
+$('ppChange').onclick = () => { if (PE.running || PE.demo >= 0) peStop(); showTab('pieces'); };   // back to the Pieces screen, where pieces are chosen
 $('pzLibPieces').onclick = () => showTab('pieces');
 
 // ----- Save to my pieces: the opened score goes into the Pieces library on this device (IndexedDB), filed under its composer or folder, and then works offline -----

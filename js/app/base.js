@@ -26,7 +26,7 @@ async function playTone(hz, dur = 1.2, type = 'triangle', vol = 0.25) {
 
 // ----- tabs -----
 let tab = 'scale';
-const TAB_PARENT = { lab: 'settings' };   // screens reached from another tab keep that tab lit
+const TAB_PARENT = { lab: 'settings', piece: 'pieces' };   // screens reached from another tab keep that tab lit
 const NO_MIC_TABS = ['pieces', 'analysis'];                  // the microphone is switched off when you go to one of these
 function showTab(k) {
   tab = k; const lit = TAB_PARENT[k] || k;
