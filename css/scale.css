@@ -1,0 +1,62 @@
+/* Scale practice: notation, instrument view, result card, score history. Colours come from the variables in app.css. */
+
+/* ---------- notation and instrument ---------- */
+.visual{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:8px 8px 6px;display:grid;gap:6px}
+.visual svg{display:block;width:100%;height:auto}
+#tab-scale .visual ~ #scRow1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}   /* the chips stay for screen readers, the notation replaces them on screen */
+.staffbox{min-height:80px}
+.staffbox .sl,.staffbox .bar{stroke:#8a96b4;stroke-width:1}
+.staffbox .bar{stroke-width:1.2}
+.staffbox .clef,.staffbox .ks,.staffbox .acc,.staffbox .oct{fill:var(--fg)} .staffbox .oct{fill:var(--mut)}
+.staffbox .led{stroke:#8a96b4;stroke-width:1.2}
+.staffbox .slur{fill:none;stroke:var(--mut);stroke-width:1.4}
+.staffbox .fing{fill:var(--mut);font-weight:600}
+.staffbox .nh .head{fill:var(--mut)} .staffbox .nh .stem{stroke:var(--mut);stroke-width:1.4}
+.staffbox .nh .halo{fill:var(--acc);opacity:0}
+.staffbox .nh.pend .head{fill:#9aa6c4} .staffbox .nh.pend .stem{stroke:#9aa6c4}
+.staffbox .nh.ok .head{fill:var(--ok)} .staffbox .nh.ok .stem{stroke:var(--ok)}
+.staffbox .nh.close .head{fill:var(--warn)} .staffbox .nh.close .stem{stroke:var(--warn)}
+.staffbox .nh.bad .head{fill:var(--bad)} .staffbox .nh.bad .stem{stroke:var(--bad)}
+.staffbox .nh.cur .head{fill:#fff} .staffbox .nh.cur .stem{stroke:#fff} .staffbox .nh.cur .halo{opacity:.55}
+.staffbox .cur{stroke:var(--acc);stroke-width:2;stroke-linecap:round;opacity:.9}
+.neckbox{min-height:20px}
+.neckbox .board{fill:#2a2418} .neckbox .fret{stroke:#6d6450;stroke-width:1} .neckbox .fret.nut{stroke:#d9d3c0;stroke-width:3}
+.neckbox .str{stroke:#c9ccd6} .neckbox .sn,.neckbox .fn{fill:var(--mut)}
+.neckbox .dot{fill:#7f8aa8;opacity:.75}
+.neckbox #svDot .on{fill:var(--acc);stroke:#fff;stroke-width:2} .neckbox #svDot text{fill:#fff;font-weight:700}
+.neckbox .pk{fill:#e8ebf4;stroke:#222;stroke-width:.6} .neckbox .pk.sc{fill:#b9c8ff} .neckbox .pk.blk{fill:#1c2130} .neckbox .pk.blk.sc{fill:#4a62c8}
+.neckbox .pk.on{fill:var(--acc)} .neckbox .pk.blk.on{fill:#9db2ff}
+@media (prefers-reduced-motion:reduce){ .staffbox .cur{display:none} }
+
+/* ---------- result card ---------- */
+.result{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.result[hidden]{display:none}
+.res-head{display:flex;gap:14px;align-items:center}
+.res-score{display:flex;align-items:baseline;gap:2px} .res-score b{font-size:46px;line-height:1;font-weight:750} .res-score small{color:var(--mut);font-size:16px}
+.res-sub{font-size:13.5px}
+.band{display:inline-block;border-radius:999px;padding:2px 11px;font-size:13.5px;font-weight:650;border:1.5px solid}
+.band.dist{color:#b8f5d9;background:#17402f;border-color:var(--ok)} .band.merit{color:#cfdcff;background:#1f2c55;border-color:var(--acc)}
+.band.pass{color:#fde8a6;background:#52410f;border-color:var(--warn)} .band.below{color:#fecaca;background:#552222;border-color:var(--bad)}
+.pbadge{display:inline-block;color:#1b1500;background:var(--warn);border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:700}
+.res-bars{display:grid;gap:7px;margin:12px 0 6px}
+.rb{display:grid;grid-template-columns:minmax(110px,1.2fr) 2fr 34px;gap:8px;align-items:center;font-size:14px} .rb small{color:var(--mut)}
+.rb-t{height:9px;border-radius:5px;background:var(--raise);overflow:hidden} .rb-t i{display:block;height:100%;background:var(--acc);border-radius:5px} .rb b{text-align:right}
+.res-dir{font-size:13.5px}
+.result h4{margin:12px 0 2px;font-size:14.5px} .result ul{margin:2px 0 0;padding-left:20px} .result li{margin:3px 0}
+.result h4:nth-of-type(1){color:var(--ok)} .result h4:nth-of-type(2){color:var(--warn)}
+
+/* ---------- history ---------- */
+.rh-filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 12px}
+.sum-big.four{grid-template-columns:repeat(4,minmax(0,1fr))} .sum-big.four small{display:block;margin-top:2px;font-size:11px;font-weight:600}
+.sum-big.four b{font-size:22px} .sum-big.four small.band{font-size:10px;padding:1px 6px}
+.runchart{width:100%;height:auto;margin:6px 0}
+.runchart .gl{stroke:var(--line);stroke-dasharray:3 4} .runchart .gt{fill:var(--mut);font-size:12px}
+.runchart .ln{fill:none;stroke:var(--acc);stroke-width:2;stroke-linejoin:round}
+.runchart .pt{stroke:var(--surface);stroke-width:1.5} .runchart .pt.dist{fill:var(--ok)} .runchart .pt.merit{fill:var(--acc)} .runchart .pt.pass{fill:var(--warn)} .runchart .pt.below{fill:var(--bad)} .runchart .pt.pb{stroke:#fff;stroke-width:2.5}
+.rh-subs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0}
+.rh-subs div{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:6px 8px;display:grid;grid-template-columns:1fr auto;font-size:13px} .rh-subs i{grid-column:1/-1;font-style:normal;letter-spacing:1px;color:var(--acc)}
+.rh-run{border-top:1px solid var(--line);padding:6px 0}
+.rh-run summary{display:grid;grid-template-columns:54px 1fr auto auto;gap:8px;align-items:center;cursor:pointer;list-style:none;font-size:14px} .rh-run summary::-webkit-details-marker{display:none}
+.rh-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rh-d{font-size:13px;padding:4px 0 2px 62px}
+@media (max-width:480px){ .rb{grid-template-columns:100px 1fr 30px} .rh-d{padding-left:0} .rh-run summary{grid-template-columns:48px 1fr auto auto} .sum-big.four b{font-size:19px} }

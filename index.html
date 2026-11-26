@@ -15,6 +15,7 @@
 <title>Practice Companion</title>
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/lab.css">
+<link rel="stylesheet" href="css/scale.css">
 </head>
 <body>
 <header class="appbar"><div class="in">
@@ -169,6 +170,8 @@
         <div class="row"><button id="scCsv" class="sec">CSV</button><button id="scJson" class="sec">JSON</button></div>
       </details>
 
+      <!-- the notation and the instrument, drawn by js/app/scale-visual.js; the note chips below stay as a fallback and for screen readers -->
+      <div class="visual" id="scVis"><div id="scStaff" class="staffbox"></div><div id="scNeck" class="neckbox"></div></div>
       <!-- Row 1: all scale notes -->
       <div id="scRow1"></div>
       <div id="scRange" class="hint2 center"></div>
@@ -194,6 +197,7 @@
     </div>
 
     <div class="stack">
+      <div id="scResult" class="result" hidden aria-live="polite"></div>
       <div id="scSum"></div>
       <!-- per-note scorecard: which notes are weak / strong, built up over repeated passes -->
       <div>
@@ -212,7 +216,7 @@
 <section id="tab-analysis" class="panel hide stack" role="tabpanel" aria-labelledby="nav-analysis">
   <h2 class="pg-h">Progress</h2>
   <div class="an-head">
-    <div class="seg" id="anMode" role="group" aria-label="What to show"><button data-m="prog" class="on">Scales</button><button data-m="cmp">Compare players</button></div>
+    <div class="seg" id="anMode" role="group" aria-label="What to show"><button data-m="prog" class="on">Scales</button><button data-m="runs">Scale scores</button><button data-m="cmp">Compare players</button></div>
     <label class="field scope"><span>Scale</span><select id="anScope"><option value="cur">Current scale</option><option value="all">All scales</option></select></label>
     <label class="field"><span>Measure</span><select id="anMetric"><option value="score">Note score</option><option value="acc">In-tune %</option><option value="err">Pitch offset (¢)</option></select></label>
     <label class="field"><span>Time axis</span><select id="anX"><option value="play">Per play</option><option value="date">By date</option></select></label>
@@ -464,6 +468,8 @@
 <script src="js/app/selftest.js"></script>
 <script src="js/app/settings-ui.js"></script>
 <script src="js/app/practice-engine.js"></script>
+<script src="js/app/scale-visual.js"></script>
+<script src="js/app/scale-history.js"></script>
 <script src="js/app/recorder.js"></script>
 <script src="js/app/chart.js"></script>
 <script src="js/app/audio.js"></script>

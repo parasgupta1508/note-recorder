@@ -37,6 +37,12 @@ function neutralLive(msg = 'Waiting for note…') {
   $('devRead').textContent = '–'; $('devRead').className = '';
   $('scAcc').textContent = msg; $('scAcc').className = 'srow center'; liveC = [];
 }
+// The colour class of scale position i: ok / close / bad (graded), cur (the target), pend (not reached or skipped). The chips and the notation share it.
+function noteCls(i, demo) {
+  if (demo) return i < demoIdx ? 'ok' : i === demoIdx ? 'cur' : 'pend';
+  if (i < sc.pos && sc.grades[i]) return { 'In tune': 'ok', 'Close': 'close', 'Skipped': 'pend' }[sc.grades[i]] || 'bad';
+  return sc.running && i === sc.pos ? 'cur' : 'pend';
+}
 function renderScale() {
   const seq = sc.seq, A = a4(), demo = demoIdx >= 0;
   if (seq.length) {
@@ -45,10 +51,7 @@ function renderScale() {
   }
   $('scRow1').className = seq.length > 12 ? 'dense wrap' : seq.length > 9 ? 'dense' : ''; $('scStop').disabled = !(sc.running || demo);
   $('scRow1').innerHTML = sc.tl.map((n, i) => {
-    let cls;
-    if (demo) cls = i < demoIdx ? 'ok' : i === demoIdx ? 'cur' : 'pend';
-    else if (i < sc.pos && sc.grades[i]) cls = { 'In tune': 'ok', 'Close': 'close', 'Skipped': 'pend' }[sc.grades[i]] || 'bad';
-    else cls = sc.running && i === sc.pos ? 'cur' : 'pend';
+    const cls = noteCls(i, demo);
     return `<span class="chip mini ${cls}${n.direction === 'down' ? ' dn' : ''}" title="${n.direction === 'up' ? 'going up' : 'going down'}${sc.grades[i] === 'Skipped' && !demo ? ' · skipped' : ''}">${n.noteName.replace('b', '♭').replace('#', '♯')}</span>`;
   }).join('');
   const idx = demo ? demoIdx : sc.running ? sc.pos : -1;
@@ -60,6 +63,7 @@ function renderScale() {
   } else if (complete()) {
     $('scCur').textContent = '✓'; $('scTarget').textContent = 'Scale complete'; $('scArrow').textContent = ''; $('scFinger').textContent = ''; neutralLive('');
   } else { $('scCur').textContent = '–'; $('scTarget').textContent = 'Press Start practice'; $('scArrow').textContent = ''; $('scFinger').textContent = ''; neutralLive(); }
+  svRender();   // notation, instrument view and cursor (scale-visual.js loads later; this only runs once everything has loaded)
 }
 function setMsg(text, cls = 'mut') { $('scMsg').textContent = text; $('scMsg').className = 'center ' + (cls === 'mut' ? 'mut' : cls + '-t'); }
 
@@ -134,16 +138,21 @@ function collectHold(f) {
 }
 function finalizeHold() {
   const h = hold; hold = null; if (!h) return;
-  let c = h.c0, a = Math.abs(h.c0) <= h.T ? 1 : 0, s = null;   // s stays null when the note was too short to measure wobble
-  if (h.frames.length >= 4) { const st = holdStats(h.frames, h.T, ruleFor(h.i).smooth); c = st.c; s = st.s; a = st.a; }
+  let c = h.c0, a = Math.abs(h.c0) <= h.T ? 1 : 0, s = null, m = null, sp = null;   // s stays null when the note was too short to measure wobble
+  if (h.frames.length >= 4) {
+    const st = holdStats(h.frames, h.T, ruleFor(h.i).smooth); c = st.c; s = st.s; a = st.a;
+    const body = smoothCents(h.frames.slice(Math.min(3, h.frames.length >> 2)), ruleFor(h.i).smooth);   // the evaluation judges the pitch after the attack
+    m = evalMedian(body); sp = Math.abs(h.c0 - m);                                                      // sp: how far the first frame was from where the note settled
+  }
   addEv(h.midi, { k: 'h', c, a, s, e: h.e, d: h.d, sl: h.sl, i: h.i }, true);
-  Object.assign(slotFor(h.ix, h.pass), { k: 'h', c, a, s, e: h.e });
+  Object.assign(slotFor(h.ix, h.pass), { k: 'h', c, a, s, e: h.e, m, sp });
   renderCard(); renderSummary();
+  if (sc.runPass && h.pass === sc.runPass) flushRun();   // the last note of a finished pass has just been scored
 }
 // One result per scale position per pass of this run.
 function slotFor(i, pass = sc.pass) {
   const key = pass + ':' + i; let s = sc.slotAt[key];
-  if (!s) { const n = sc.tl[i]; s = sc.slotAt[key] = { pass, index: i, name: n.noteName, midi: n.midi, d: n.direction, k: 's', c: null, a: 0, s: null, e: null, wrong: 0 }; sc.slots.push(s); }
+  if (!s) { const n = sc.tl[i]; s = sc.slotAt[key] = { pass, index: i, name: n.noteName, midi: n.midi, d: n.direction, k: 's', c: null, m: null, a: 0, s: null, e: null, sp: null, wrong: 0, rt: 0 }; sc.slots.push(s); }
   return s;
 }
 const SPARK = '▁▂▃▄▅▆▇█';

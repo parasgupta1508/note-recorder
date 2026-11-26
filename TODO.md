@@ -9,6 +9,14 @@
 - [ ] CREPE: not built (needs a model download). Only worth it if noisy rooms stay a problem.
 - [ ] Compare the Tuner against SoundCorset (Android) on the same notes: settle time and steadiness.
 
+## Scale evaluation follow-ups
+
+- [ ] Check the rubric against real microphone recordings (violin, guitar, ukulele, piano) and tune the constants in `js/core/evaluation.js` (6 cents full marks, tone wobble allowance, the 0.08 beat grace on pulse). Synthetic frames only so far.
+- [ ] Coach: add rules for string crossings and position shifts once the position model knows which notes are shifts.
+- [ ] Notation: a bass clef for low piano scales, and a grand staff view; guitar is written an octave above where it sounds.
+- [ ] The Recorder's new fingerboard model (`js/core/fingerboard.js`, other session) overlaps `visPlace` in `js/core/visual.js`: merge them when that work lands.
+- [ ] Progress per instrument and the three measures (below) should read the new scored runs as the "Full scale" measure.
+
 ## Progress screen (before building, ask the owner to confirm the details)
 
 - [ ] **Progress per instrument.** A player can track progress separately for each instrument (violin, guitar, ukulele, piano/chromatic, voice). Add an instrument selector on the Progress screen.

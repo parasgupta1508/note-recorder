@@ -68,6 +68,13 @@ If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. W
 - UI correction and pluggable engine registry (build this first, work packages UI0-UI6): `docs/ui-and-engines-plan.md`.
 - Practice Companion build plan (pieces, scoring against a reference score, tempo ladder, teacher report): `docs/practice-companion-plan.md`. Work one phase at a time and stop at each gate.
 
+## Scale evaluation, history, coach and visuals
+
+- Pure code in `js/core/`: `evaluation.js` (Trinity-style 100-point rubric: 50% pitch, 30% fluency and pulse, 20% tone and steadiness; bands Distinction 87+, Merit 75+, Pass 60+), `history.js` (the compact record of a run, trend, personal best, day streak), `coach.js` (rule-based teacher feedback from the run plus earlier runs), `visual.js` (staff, key signature, ledger lines, slurs, neck and keyboard geometry). Tested by `node tests/evaluation.js`.
+- App code: `scale-visual.js` draws the notation, the neck or keys and the cursor (custom SVG, built once per scale, only classes and one cursor change while playing); `scale-history.js` evaluates a finished pass, stores it (IndexedDB `tuner-runs`, localStorage fallback, in-memory list `RUNS`), shows the result card and the Progress tab's "Scale scores" view. Runs are part of the backup file.
+- One run = one pass up and down. `endPass()` queues it; it is evaluated once the last note's hold has been scored (`finalizeHold`). A steady timing lag is reported but not punished (only unevenness is), so microphone or Bluetooth latency does not cost marks.
+- The rubric constants (6 cents full marks, 3 points per wrong note, wobble allowance per instrument in `js/core/instruments.js`) are this app's model, not an official Trinity mark scheme. Tune them against real recordings once gold clips exist.
+
 ## Lab page (reference MIDI and comparison)
 
 - `js/app/lab.js` + `css/lab.css` (the Lab tab) talk to the local helper `tools/lab/server.js` (zero-dependency Node, 127.0.0.1 only, runs programs with argument lists, never a shell). It fetches YouTube audio with yt-dlp (`python -m yt_dlp` from `tools/lab/.venv`; the `yt-dlp.exe` launcher is blocked by this PC's Application Control policy) and ffmpeg, and makes reference MIDI with the engines in `tools/lab/engines/`. Setup: `node tools/lab/setup.js`.

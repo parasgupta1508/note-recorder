@@ -130,6 +130,8 @@ function fillScopeOptions() {
 }
 function renderAnalysis() {
   if (tab !== 'analysis') return;
+  document.querySelectorAll('#anScope, #anMetric, #anX').forEach(el => el.closest('.field').classList.toggle('hide', anMode === 'runs'));
+  if (anMode === 'runs') return renderRunHistory();
   fillScopeOptions();
   const m = METRICS[$('anMetric').value], scope = $('anScope').value, byDate = $('anX').value === 'date', lowerBetter = m === METRICS.err;
   if (anMode === 'cmp') return renderCompare(m, scope, lowerBetter);

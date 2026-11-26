@@ -15,7 +15,7 @@ function applyLimits() {
 function droneRetune() { if (typeof DRONE !== 'undefined' && DRONE.on) droneSet(droneMidiFor(planNow().start)); }
 
 function resetPractice() {
-  finalizeHold(); clearTimeout(sc.countTimer); sc.pass = 1; sc.passes = [];
+  finalizeHold(); clearTimeout(sc.countTimer); clearTimeout(sc.runTimer); sc.runPass = 0; sc.pass = 1; sc.passes = []; clearResult();
   const p = planNow(); sc.plan = p; sc.tl = p.tl; sc.seq = p.tl.map(n => n.midi); sc.bpm = p.bpm; sc.label = null;
   sc.pos = 0; sc.grades = []; sc.attempts = []; sc.wrong = 0; sc.running = false; sc.slots = []; sc.slotAt = {}; sc.clock = null; sc.waitFrames = []; sc.waitOk = 0;
   liveBuf = []; liveC = []; silentFrames = 99; det.cur = null; det.lastMidi = null;
@@ -74,7 +74,7 @@ function clockTick(t) {
 function endPass(note) {
   const tl = sc.tl, done = sc.attempts.filter(x => x.pass === sc.pass && x.played === x.expected), n = done.filter(x => x.grade === 'In tune').length;
   const wr = sc.attempts.filter(x => x.pass === sc.pass && /^Wrong/.test(x.grade)).length, pct = 100 * n / (tl.length + wr);   // wrong notes count against the pass
-  sc.passes.push({ pct }); savePass(pct);
+  sc.passes.push({ pct }); savePass(pct); queueRun();
   if ($('scRepeat').checked) {                       // loop: the next pass starts one bar after the end of this grid; the scorecard keeps growing
     if (sc.mode === 'tempo' && sc.clock != null) sc.clock += (tl.length + sigBeats()) * 60 / sc.bpm;
     setMsg(`Pass ${sc.pass} done — ${pct.toFixed(0)}% in tune. ${sc.mode === 'tempo' ? 'Next pass starts after one bar of clicks' : 'Play the first note to start pass ' + (sc.pass + 1)}`, 'ok');
@@ -93,7 +93,7 @@ function onAttempt(a) {
   // Re-playing the note just played is a retry: scored as another play of that note, never a skip or a wrong note.
   // If the clock had already skipped it, this is a late play: it replaces the skip.
   if (sc.pos > 0 && a.midi === seq[sc.pos - 1] && a.midi !== exp) {
-    const p = sc.pos - 1, g = gradeCents(a.cents, T), late = sc.grades[p] === 'Skipped';
+    const p = sc.pos - 1, g = gradeCents(a.cents, T), late = sc.grades[p] === 'Skipped'; if (!late) slotFor(p).rt++;   // a retry is a restart: the evaluation counts it against continuity
     finalizeHold(); hold = newHold(a, T, p, late ? terr(p) : null); sc.grades[p] = g; liveBuf = []; liveC = []; silentFrames = 99; neutralLive();
     setMsg(`${late ? 'Late: ' : 'Retry '}${midiName(a.midi)} ${scCents(a.cents)} — ${g}`, cls3(g)); renderScale(); return;
   }
@@ -137,7 +137,8 @@ function advanceWait(rule) {
   const T = tol(), i = sc.pos, n = sc.tl[i], st = holdStats(sc.waitFrames, T, rule.smooth); if (!st) return;
   const g = gradeCents(st.c, T), hz = noteToFreq(n.midi, a4()) * Math.pow(2, st.c / 1200);
   addEv(n.midi, { k: 'h', c: st.c, a: st.a, s: st.n >= 4 ? st.s : null, d: n.direction, sl: scaleLabel(), i: $('scInst').value }, true);
-  Object.assign(slotFor(i), { k: 'h', c: st.c, a: st.a, s: st.n >= 4 ? st.s : null, e: null });
+  const body = smoothCents(sc.waitFrames.slice(Math.min(3, sc.waitFrames.length >> 2)), rule.smooth), med = evalMedian(body);   // the evaluation judges the pitch after the attack
+  Object.assign(slotFor(i), { k: 'h', c: st.c, a: st.a, s: st.n >= 4 ? st.s : null, e: null, m: med, sp: Math.abs(sc.waitFrames[0] - med) });
   sc.attempts.push({ index: i + 1, expected: n.noteName, played: n.noteName, hz, cents: st.c, time_s: 0, pass: sc.pass, direction: n.direction, timing_ms: null, grade: g });
   sc.grades[i] = g; sc.pos++; sc.waitFrames = []; sc.waitOk = 0; liveBuf = []; liveC = []; silentFrames = 99; neutralLive();
   setMsg(`${n.noteName} ${scCents(st.c)} — ${g}`, cls3(g));

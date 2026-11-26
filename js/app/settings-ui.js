@@ -51,7 +51,7 @@ const bkMsg = (t, cls) => { $('bkMsg').textContent = t; $('bkMsg').className = '
 function updBackupInfo() { $('verInfo').textContent = `Data version on this device: v${dataVer()}`; }
 async function doBackup(share) {
   const v = dataVer() + 1, profiles = {};
-  PROFILES.forEach(p => profiles[p] = { scorecard: profEvents(p), passes: profPasses(p) });
+  PROFILES.forEach(p => profiles[p] = { scorecard: profEvents(p), passes: profPasses(p), runs: runsOf(p) });
   const text = JSON.stringify({ app: APP_ID, format: 1, version: v, created: new Date().toISOString(), profiles });
   const name = `tuner-backup-v${v}-${stamp().slice(0, 10)}.json`;
   let shared = false;
@@ -93,10 +93,10 @@ $('impFile').onchange = async e => {
     if (b.version <= cur) { bkMsg(`Not imported: this backup is v${b.version} and this device is already at v${cur}. Only a higher version can be imported.`, 'bad-t'); return; }
     const found = Object.keys(b.profiles).filter(p => validName(p) && b.profiles[p] && typeof b.profiles[p] === 'object');
     if (!found.length) throw new Error('it contains no players');
-    const cleaned = {}; found.forEach(p => cleaned[p] = { sc: cleanEv(b.profiles[p].scorecard), ps: cleanPass(b.profiles[p].passes) });
-    const sum = found.map(p => `${p}: ${Object.values(cleaned[p].sc).reduce((s, a) => s + a.length, 0)} plays, ${cleaned[p].ps.length} passes`).join('\n');
+    const cleaned = {}; found.forEach(p => cleaned[p] = { sc: cleanEv(b.profiles[p].scorecard), ps: cleanPass(b.profiles[p].passes), rn: runsClean(b.profiles[p].runs, p) });
+    const sum = found.map(p => `${p}: ${Object.values(cleaned[p].sc).reduce((s, a) => s + a.length, 0)} plays, ${cleaned[p].ps.length} passes, ${cleaned[p].rn.length} scored runs`).join('\n');
     if (!confirm(`Import backup v${b.version}${b.created ? ' from ' + String(b.created).slice(0, 10) : ''}?\nThis REPLACES the data for ${found.join(' and ')} on this device (now v${cur}).\n\n${sum}`)) { bkMsg('Import cancelled.'); return; }
-    found.forEach(p => { lsSet(ckey(p), cleaned[p].sc); lsSet(pkey(p), cleaned[p].ps); addPlayerRecord(p); });
+    found.forEach(p => { lsSet(ckey(p), cleaned[p].sc); lsSet(pkey(p), cleaned[p].ps); runsReplaceFor(p, cleaned[p].rn); addPlayerRecord(p); });
     savePlayers(); renderPlayers(); if (!profile) switchPlayer(found[0]);
     try { localStorage.setItem(VER_KEY, String(b.version)); } catch {}
     cardAll = lsGet(ckey(profile), {}); passAll = lsGet(pkey(profile), []); cardSess = {};

@@ -21,6 +21,7 @@ function removePlayer(n) {
   if (!PROFILES.includes(n)) return;
   if (!confirm(`Remove ${n} and delete their saved scores from this device? A backup file can bring them back.`)) return;
   try { localStorage.removeItem(ckey(n)); localStorage.removeItem(pkey(n)); } catch {}
+  runsDeleteFor(n);
   PROFILES.splice(PROFILES.indexOf(n), 1); delete PCOLOR[n]; savePlayers();
   if (profile === n) switchPlayer(PROFILES[0] || '');
   renderPlayers(); if (!PROFILES.length) openFirstRun();

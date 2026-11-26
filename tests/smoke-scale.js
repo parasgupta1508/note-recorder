@@ -29,6 +29,18 @@ pick('scInst','ukulele'); pick('scRoot',0); pick('scSpan',3); ck('ukulele 3 octa
 pick('scBow','separate'); pick('scPos','3'); ck('violin 3rd position raises the start',sc.tl[0].midi>=67||true); pick('scPos','1');
 pick('scType','melodicMinor'); pick('scRoot',9); ck('A melodic minor: F#4 G#4 up, G4 F4 down',sc.tl.map(function(n){return n.noteName}).join(' ')==='A3 B3 C4 D4 E4 F#4 G#4 A4 G4 F4 E4 D4 C4 B3 A3'); pick('scType','major'); pick('scRoot',7);
 
+// ---- notation and instrument view
+pick('scInst','violin'); pick('scRoot',7); pick('scType','major'); pick('scSpan',1);
+ck('notation: one notehead per note, a treble clef, one sharp in G major on every row',SV.nodes.length===sc.tl.length&&!!$('scStaff').querySelector('.clef')&&SV.rows.length>=1&&$('scStaff').querySelectorAll('.ks').length===SV.rows.length);
+ck('notation: finger numbers under the notes',$('scStaff').querySelectorAll('.fing').length===sc.tl.length);
+ck('neck: violin fingerboard with 4 strings',$('scNeck').querySelectorAll('.str').length===4);
+pick('scInst','guitar'); ck('neck: guitar fretboard with 6 strings',$('scNeck').querySelectorAll('.str').length===6);
+pick('scInst','ukulele'); ck('neck: ukulele fretboard with 4 strings',$('scNeck').querySelectorAll('.str').length===4);
+pick('scInst','chromatic'); ck('keys: piano keyboard, no strings',$('scNeck').querySelectorAll('.pk').length>=13&&!$('scNeck').querySelector('.str'));
+pick('scInst','violin'); pick('scType','dorian'); pick('scRoot',2); ck('D dorian is written with the key signature of C major (none)',$('scStaff').querySelectorAll('.ks').length===0);
+pick('scType','major'); pick('scRoot',7); pick('scSpan',3); ck('three octaves: 43 noteheads over several rows',SV.nodes.filter(Boolean).length===43&&SV.rows.length>=3); pick('scSpan',1);
+pick('scBow','slur4'); ck('slurs are drawn for four notes to a bow',$('scStaff').querySelectorAll('.slur').length>=3); pick('scBow','separate'); ck('no slurs with separate bows',$('scStaff').querySelectorAll('.slur').length===0);
+
 // ---- Tempo-locked: 60 BPM (one note a second). Note 2 is 25 cents sharp, note 4 is skipped, note 9 is a little late.
 listening=true; stream={getTracks:function(){return[]}}; $('scBpm').value=60; $('scRepeat').checked=false; setMode('tempo');
 startScale(); ck('tempo run starts with a count-in clock',sc.running&&sc.clock!==null); sc.clock=0; stopMetro();
@@ -47,16 +59,27 @@ ck('scorecard: sharp note is red, in-tune is green, skipped is missed',rows[2].s
 ck('comment advises lower',/sharp, (slightly )?lower/.test(rows[2].cmt));
 $('cardView').value='sess'; renderCard(); ck('badges render',document.querySelectorAll('#cardTable .b-sharp').length===1&&document.querySelectorAll('#cardTable .b-ok').length>=10&&document.querySelectorAll('#cardTable .b-miss').length===1);
 var js=JSON.parse(scaleJson()); ck('JSON export has timeline, results, summary, scorecard',js.version===2&&js.timeline.length===15&&js.results.length===15&&js.summary.slots===15&&js.scorecard.length>0&&js.settings.bowing==='separate'&&js.settings.position==='1');
+// the finished pass is evaluated and kept
+ck('tempo run is scored out of 100 with a band and 15 notes',!!sc.lastRun&&sc.lastRun.rec.total>0&&sc.lastRun.rec.total<=100&&/^(Distinction|Merit|Pass|Below Pass)$/.test(sc.lastRun.rec.band)&&sc.lastRun.rec.notes.length===15);
+ck('skipped and late notes cost fluency, the sharp note costs pitch',sc.lastRun.rec.skipped===1&&sc.lastRun.rec.fluency<100&&sc.lastRun.rec.pitch<100&&sc.lastRun.rec.pitch>50&&sc.lastRun.rec.up.n===8&&sc.lastRun.rec.down.n===7);
+ck('the run is in the history and the result card is shown with both coach lists',RUNS.some(function(x){return x.t===sc.lastRun.rec.t})&&!$('scResult').hidden&&/doing well/.test($('scResult').textContent)&&/What to improve/.test($('scResult').textContent)&&/Pitch/.test($('scResult').textContent));
+ck('a first run says it is the baseline',/baseline/.test($('scResult').textContent)||RUNS.length>1);
 var csvRows=cardExportRows(cardSess); ck('CSV rows carry direction and status',csvRows.length>0&&csvRows.every(function(x){return x.direction==='up'||x.direction==='down'})&&csvRows.some(function(x){return x.status==='sharp'}));
 
 // ---- Wait for note: nothing moves until the note is held in tune; a wrong note is flagged; the target then advances
 setMode('wait'); pick('scRoot',7); $('scRepeat').checked=false; startScale();
 ck('wait run: no clock',sc.mode==='wait'&&sc.clock===null&&sc.pos===0);
+svFrame(); ck('the cursor is shown while a run is on',$('svCur').style.display!=='none'&&SV.nodes[0].getAttribute('class').indexOf('cur')>=0&&!!$('svDot')&&$('svDot').style.display!=='none');
 t=0; t=play(t,sc.seq[0],40,20); ck('wait: stays on the note while it is 40c off',sc.pos===0);
 t=quiet(t,10); t=play(t,sc.seq[3],0,12); ck('wait: a wrong note is flagged and does not move on',sc.pos===0&&sc.wrong===1);
 t=quiet(t,10); t=play(t,sc.seq[0],3,16); ck('wait: advances after a steady in-tune hold',sc.pos===1&&sc.slots[0].k==='h'&&sc.slots[0].e===null);
 for(i=1;i<15;i++){t=quiet(t,10);t=play(t,sc.seq[i],i===3?-1:2,16)}
 t=quiet(t,10); ck('wait: whole scale completed with no timing score',sc.pos===15&&!sc.running&&summariseRun(sc.slots,{tol:10,beatMs:1000}).timing===null);
+ck('wait run is evaluated too: no pulse, fluency is continuity',!!sc.lastRun&&sc.lastRun.rec.mode==='wait'&&sc.lastRun.rec.pulse===null&&sc.lastRun.rec.fluency===sc.lastRun.rec.continuity&&sc.lastRun.rec.wrong>=1);
+listening=false; showTab('analysis'); document.querySelector('#anMode button[data-m=runs]').click();
+ck('Scale scores view: tiles, a chart and the run list',/Personal best/.test($('anBody').textContent)&&!!$('anBody').querySelector('svg.runchart')&&$('anBody').querySelectorAll('.rh-run').length>=2&&/Runs/.test($('anBody').textContent));
+document.querySelector('#anMode button[data-m=prog]').click(); showTab('scale'); listening=true; stream={getTracks:function(){return[]}};
+ck('backup keeps runs and refuses junk',runsClean(runsOf(profile),profile).length===runsOf(profile).length&&runsClean([{},{t:1,total:5,notes:[],type:'nope'}],'x').length===0);
 ck('wait: octave glitch frames never move or fail the target',(function(){startScale();var p0=sc.pos;for(var k=0;k<30;k++){var tt=k/60,f=fq(sc.seq[0],1200);liveScaleFrame(f,tt)}return sc.pos===p0&&sc.wrong===0})());
 stopScale();
 // ---- Hear scale and drone
