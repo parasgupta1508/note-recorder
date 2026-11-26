@@ -55,6 +55,10 @@ svFrame(); ck('Piano roll scrolls: the notes group is moved to the playhead',/tr
 pick('scInst','chromatic'); view('tab'); ck('piano: Tab is not offered and the Staff is shown instead',document.querySelector('#scView button[data-v=tab]').hidden&&!$('scStaff').hidden&&$('scTab').hidden);
 view('board'); ck('piano: the Fingerboard view is the keyboard',$('scNeck').querySelectorAll('.pk').length>=13&&!$('scNeck').querySelector('.str'));
 view('staff'); pick('scInst','violin');
+ck('the scorecard is hidden until asked for, so the display has the screen',$('scCardPanel').hidden&&$('scCardBtn').getAttribute('aria-expanded')==='false');
+$('scCardBtn').click(); ck('the Scorecard button shows the scorecard and the weak spots',!$('scCardPanel').hidden&&$('scCardBtn').getAttribute('aria-expanded')==='true'); $('scCardBtn').click(); ck('and hides them again',$('scCardPanel').hidden);
+ck('the result card is inside the player, so full screen shows it',$('scPlayer').contains($('scResult')));
+svFull(true); ck('full screen: the player goes full screen (or the overlay fallback)',document.fullscreenElement===$('scPlayer')||$('scPlayer').classList.contains('fs')||!!$('scFs')); svFull(false); ck('full screen: leaves again',!$('scPlayer').classList.contains('fs'));
 
 // ---- Tempo-locked: 60 BPM (one note a second). Note 2 is 25 cents sharp, note 4 is skipped, note 9 is a little late.
 listening=true; stream={getTracks:function(){return[]}}; $('scBpm').value=60; $('scRepeat').checked=false; setMode('tempo');

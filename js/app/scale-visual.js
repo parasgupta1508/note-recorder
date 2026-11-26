@@ -244,3 +244,17 @@ function svRender() {
 document.querySelectorAll('#scView button').forEach(b => b.onclick = () => { SV.view = b.dataset.v; try { localStorage.setItem(SV_VIEW_KEY, SV.view); } catch {} svRender(); });
 $('scShow').onchange = () => svRender();
 if (typeof ResizeObserver !== 'undefined') { let rz = 0; new ResizeObserver(() => { clearTimeout(rz); rz = setTimeout(() => { const w = $('scVis').clientWidth || 0; if (Math.abs(w - SV.W) > 8) { SV.W = w; SV.key = ''; svRender(); } }, 120); }).observe($('scVis')); }
+
+// ---- full screen for the whole player card (the controls and the result stay usable); Esc leaves. Browsers without element full screen (iPhone) get a fixed overlay instead.
+function svFull(on) {
+  const el = $('scPlayer'), now = document.fullscreenElement === el || el.classList.contains('fs');
+  if (on === undefined) on = !now;
+  if (on && !now) { if (el.requestFullscreen) el.requestFullscreen().catch(() => el.classList.add('fs')); else el.classList.add('fs'); }
+  else if (!on && now) { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); el.classList.remove('fs'); }
+  setTimeout(() => { SV.key = ''; svRender(); }, 200);
+}
+$('scFs').onclick = () => svFull();
+document.addEventListener('fullscreenchange', () => { SV.key = ''; svRender(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('scPlayer').classList.contains('fs')) svFull(false); });
+// the scorecard stays hidden until asked for, so the display has the screen
+$('scCardBtn').onclick = () => { const p = $('scCardPanel'), open = p.hidden; p.hidden = !open; $('scCardBtn').setAttribute('aria-expanded', String(open)); if (open) { renderCard(); renderSummary(); p.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } };

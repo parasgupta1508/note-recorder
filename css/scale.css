@@ -111,4 +111,13 @@
 .cardbox .cardbar>b{display:none}
 /* the player needs room: one column until the screen is wide, then the scorecard sits beside it */
 .sc-grid{grid-template-columns:minmax(0,1fr)}
-@media (min-width:1100px){ .sc-grid{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)} }
+#scCardPanel[hidden]{display:none}
+
+/* ---------- full screen display, hidden scorecard ---------- */
+.vis-bar #scFs{min-height:36px;min-width:42px;padding:2px 10px;font-size:18px;line-height:1;flex:0 0 auto}
+.vis-bar .seg{flex:1 1 0}
+.player:fullscreen,.player.fs{background:var(--bg);border-radius:0;border:0;padding:14px max(14px,env(safe-area-inset-right)) 14px max(14px,env(safe-area-inset-left));overflow:auto;align-content:start}
+.player.fs{position:fixed;inset:0;z-index:60}
+.player:fullscreen .visual,.player.fs .visual{padding:12px}
+.player:fullscreen .pl-sel,.player.fs .pl-sel{display:none}
+#scCardBtn[aria-expanded=true]{background:var(--acc);color:#fff}
