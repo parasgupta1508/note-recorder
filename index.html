@@ -33,6 +33,7 @@
 <div class="wrap">
 <div class="tabs-wrap"><nav class="tabs" id="mainTabs" role="tablist" aria-label="Main">
   <button type="button" role="tab" id="nav-home" data-tab="home" aria-controls="tab-home" aria-selected="true" tabindex="0" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Practice</button>
+  <button type="button" role="tab" id="nav-piece" data-tab="piece" aria-controls="tab-piece" aria-selected="false" tabindex="-1" class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>Piece practice</button>
   <button type="button" role="tab" id="nav-pieces" data-tab="pieces" aria-controls="tab-pieces" aria-selected="false" tabindex="-1" class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg>Pieces</button>
   <button type="button" role="tab" id="nav-tuner" data-tab="tuner" aria-controls="tab-tuner" aria-selected="false" tabindex="-1" class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/></svg>Tuner</button>
   <button type="button" role="tab" id="nav-analysis" data-tab="analysis" aria-controls="tab-analysis" aria-selected="false" tabindex="-1" class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Progress</button>
@@ -109,6 +110,87 @@
   <p id="pcMsg" class="hint2" role="status"></p>
 </section>
 
+<!-- ============ PIECE PRACTICE ============ -->
+<section id="tab-piece" class="panel hide" role="tabpanel" aria-labelledby="nav-piece">
+  <h2 class="pg-h">Piece practice</h2>
+  <div class="sc-grid">
+    <div class="stack">
+      <div class="player" id="pzPlayer">
+        <div class="pl-head">
+          <div class="pl-id"><b>PIECE NOTATION</b><span id="pzVisTitle" class="pl-chip"></span></div>
+          <div class="pl-tools">
+            <label class="pl-pick" title="Instrument"><select id="pzInst" aria-label="Instrument"></select></label>
+            <label class="pl-loop" title="Keep going: start the piece again after each pass and keep scoring"><input type="checkbox" id="pzRepeat" checked><span>🔁 Loop</span></label>
+            <div class="pl-bpm" title="Tempo"><button id="pzBpmDn" class="sec" type="button" aria-label="Slower">−</button><input id="pzBpm" type="number" value="80" min="30" max="240" inputmode="numeric" aria-label="Tempo in BPM"><span>BPM</span><button id="pzBpmUp" class="sec" type="button" aria-label="Faster">+</button></div>
+            <button id="pzClick" class="sec" type="button" aria-pressed="false" title="Click track">♩ Click</button>
+          </div>
+        </div>
+
+        <!-- where the music comes from, which part, which bars (js/app/piece-practice.js) -->
+        <div class="pp-panel" id="ppPanel">
+          <div id="ppSource" class="pp-source">
+            <div class="pp-drop" id="ppDrop" tabindex="0" role="button" aria-label="Choose a MusicXML file, or drop one here">
+              <b>Drop a MusicXML file here</b><span>.musicxml, .xml or .mxl (compressed)</span>
+              <div class="pp-btns"><button type="button" id="ppPick" class="sec">Choose file…</button><button type="button" id="ppBrowse" class="sec">Browse GitHub library</button></div>
+              <input type="file" id="ppFile" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml" hidden>
+            </div>
+            <form class="pp-url" id="ppUrlForm"><input id="ppUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="GitHub link (repo, folder or file)" title="Paste a link to a public GitHub repository, a folder in one, or a .mxl / .musicxml file" aria-label="GitHub link"><button class="sec" type="submit">Open</button></form>
+            <div class="hint2">The file is read into this page only. It is not uploaded and not saved.</div>
+          </div>
+          <div id="ppLoaded" hidden>
+            <div class="pp-head"><b id="ppTitle"></b><span id="ppBadge" class="pl-chip"></span><button type="button" id="ppChange" class="sec mini">Change piece</button></div>
+            <div id="ppParts" class="pp-parts" role="radiogroup" aria-label="Available parts" hidden></div>
+            <div class="pp-opts">
+              <label class="field"><span>Bars</span><div class="pp-bars"><input id="ppFrom" type="number" min="1" inputmode="numeric" aria-label="First bar"> <i>to</i> <input id="ppTo" type="number" min="1" inputmode="numeric" aria-label="Last bar"> <small id="ppOf"></small></div></label>
+              <label class="field" id="ppLineW"><span>Chords</span><select id="ppLine"><option value="top">Play the top notes</option><option value="bottom">Play the bottom notes</option></select></label>
+              <label class="field"><span>Octave</span><select id="ppOct"><option value="auto">Fit the instrument</option><option value="0">As written</option><option value="-12">Down an octave</option><option value="12">Up an octave</option></select></label>
+            </div>
+            <details id="ppBackW" class="pp-back" hidden><summary>Accompaniment (the other parts)</summary>
+              <label class="check"><input type="checkbox" id="ppBack"> Play the other parts while I play</label><div id="ppBackList"></div><div class="hint2" id="ppBackNote"></div></details>
+            <div class="hint2" id="ppInfo"></div>
+          </div>
+          <div class="hint2" id="ppMsg" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="pl-sel">
+          <label class="field" id="pzBowWrap"><span>Bowing</span><select id="pzBow"></select></label>
+          <label class="field" id="pzPosWrap"><span>Position</span><select id="pzPos"></select></label>
+          <label class="field"><span>Beats</span><select id="pzSig"><option value="2">2/2</option><option value="3">3/4</option><option value="4" selected>4/4</option></select></label>
+        </div>
+        <div class="visual" id="pzVis">
+          <div class="vis-bar"><div class="seg" id="pzView" role="group" aria-label="Display">
+            <button type="button" data-v="staff" class="on" aria-pressed="true" title="Standard sheet music with a moving cursor">Staff</button>
+            <button type="button" data-v="tab" aria-pressed="false" title="One line per string with the fret or finger number">Tab</button>
+            <button type="button" data-v="board" aria-pressed="false" title="The neck or keys with the finger to place next">Fingerboard</button>
+            <button type="button" data-v="roll" aria-pressed="false" title="Bars on a pitch grid scrolling to a playhead">Piano roll</button></div>
+            <label class="field" id="pzShowW" hidden><span>Show</span><select id="pzShow"><option value="scale">Piece notes</option><option value="all">All notes</option></select></label>
+            <button id="pzNeckBtn" class="sec" type="button" aria-pressed="false" aria-label="Show the instrument under the notation" title="Show or hide the instrument under the notation"></button>
+            <button id="pzFs" class="sec" type="button" aria-label="Full screen" title="Full screen (Esc to leave)">⛶</button></div>
+          <div id="pzStaff" class="staffbox"></div><div id="pzTab" class="tabbox" hidden></div><div id="pzNeck" class="neckbox"></div><div id="pzRoll" class="rollbox" hidden></div>
+        </div>
+        <div class="pl-bar"><i id="pzProgFill"></i></div>
+        <div class="pl-foot">
+          <div class="pl-btns">
+            <button id="pzStart" type="button" disabled>Start practice</button>
+            <button id="pzDemo" class="sec" type="button" disabled>▶ Hear piece</button>
+            <button id="pzStop" class="sec" type="button" disabled>Stop</button>
+            <button id="pzResBtn" class="sec" type="button" aria-expanded="false" aria-controls="pzResult" title="Show or hide the result of the last run" disabled>Result</button>
+          </div>
+          <div class="seg sm" id="pzGrade" role="group" aria-label="Grading"><button type="button" data-g="practical" class="on" aria-pressed="true" title="Practical: marks like a teacher. Human tolerance, just intonation on bowed strings, an overall offset forgiven. Details in Settings">Practical</button><button type="button" data-g="strict" aria-pressed="false" title="Strict: exact equal-temperament marking, full marks only within 6 cents">Strict</button></div>
+          <div class="seg sm" id="pzMode" role="group" aria-label="Practice mode">
+            <button type="button" data-mode="tempo" class="on" title="The music follows the BPM: a count-in bar, then each note is due on its time">⏱ Tempo</button>
+            <button type="button" data-mode="wait" title="The music waits for you and moves on when the note is held in tune">⏸ Wait</button>
+          </div>
+          <span id="pzTime" class="pl-time">0:00 / 0:00</span>
+        </div>
+        <!-- the result of the run, the first thing seen when a pass ends -->
+        <div id="pzResult" class="result" hidden aria-live="polite"></div>
+        <div id="pzMsg" class="sc-msg" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ============ TUNER ============ -->
 <section id="tab-tuner" class="panel tuner hide" role="tabpanel" aria-labelledby="nav-tuner">
   <div class="t-side stack">
@@ -135,7 +217,6 @@
     <div class="stack">
       <!-- one player card: what is played, the display, the controls, the live meter -->
       <div class="player" id="scPlayer">
-        <div class="seg sm pp-mode" id="ppMode" role="group" aria-label="What to practise"><button type="button" data-m="scale" class="on" aria-pressed="true">Scales</button><button type="button" data-m="piece" aria-pressed="false" title="Practise a piece from a MusicXML file, with the same displays and marking as a scale">Pieces</button></div>
         <div class="pl-head">
           <div class="pl-id"><b>SCALE NOTATION</b><span id="scVisTitle" class="pl-chip"></span></div>
           <div class="pl-tools">
@@ -149,39 +230,13 @@
         </div>
         <!-- what to play: root, scale, span, bowing or position, beats (the instrument is in the header) -->
         <div class="pl-sel">
-          <label class="field sc-only"><span>Root</span><select id="scRoot"></select></label>
-          <label class="field sc-only"><span>Scale</span><select id="scType"></select></label>
-          <label class="field sc-only"><span>Span</span><select id="scSpan"><option value="1">1 octave</option><option value="2">2 octaves</option><option value="3">3 octaves</option></select></label>
+          <label class="field"><span>Root</span><select id="scRoot"></select></label>
+          <label class="field"><span>Scale</span><select id="scType"></select></label>
+          <label class="field"><span>Span</span><select id="scSpan"><option value="1">1 octave</option><option value="2">2 octaves</option><option value="3">3 octaves</option></select></label>
           <label class="field" id="scBowWrap"><span>Bowing</span><select id="scBow"></select></label>
           <label class="field" id="scPosWrap"><span>Position</span><select id="scPos"></select></label>
           <label class="field"><span>Beats</span><select id="scSig"><option value="2">2/2</option><option value="3">3/4</option><option value="4" selected>4/4</option></select></label>
         </div>
-        <!-- Piece practice: where the music comes from, which part, which bars (js/app/piece-practice.js) -->
-        <div class="pp-panel" id="ppPanel" hidden>
-          <div id="ppSource" class="pp-source">
-            <div class="pp-drop" id="ppDrop" tabindex="0" role="button" aria-label="Choose a MusicXML file, or drop one here">
-              <b>Drop a MusicXML file here</b><span>.musicxml, .xml or .mxl (compressed)</span>
-              <div class="pp-btns"><button type="button" id="ppPick" class="sec">Choose file…</button><button type="button" id="ppBrowse" class="sec">Browse GitHub library</button></div>
-              <input type="file" id="ppFile" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml" hidden>
-            </div>
-            <form class="pp-url" id="ppUrlForm"><input id="ppUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="GitHub link (repo, folder or file)" title="Paste a link to a public GitHub repository, a folder in one, or a .mxl / .musicxml file" aria-label="GitHub link"><button class="sec" type="submit">Open</button></form>
-            <div class="hint2">The file is read into this page only. It is not uploaded and not saved.</div>
-          </div>
-          <div id="ppLoaded" hidden>
-            <div class="pp-head"><b id="ppTitle"></b><span id="ppBadge" class="pl-chip"></span><button type="button" id="ppChange" class="sec mini">Change piece</button></div>
-            <div id="ppParts" class="pp-parts" role="radiogroup" aria-label="Available parts" hidden></div>
-            <div class="pp-opts">
-              <label class="field"><span>Bars</span><div class="pp-bars"><input id="ppFrom" type="number" min="1" inputmode="numeric" aria-label="First bar"> <i>to</i> <input id="ppTo" type="number" min="1" inputmode="numeric" aria-label="Last bar"> <small id="ppOf"></small></div></label>
-              <label class="field" id="ppLineW"><span>Chords</span><select id="ppLine"><option value="top">Play the top notes</option><option value="bottom">Play the bottom notes</option></select></label>
-              <label class="field"><span>Octave</span><select id="ppOct"><option value="auto">Fit the instrument</option><option value="0">As written</option><option value="-12">Down an octave</option><option value="12">Up an octave</option></select></label>
-            </div>
-            <details id="ppBackW" class="pp-back" hidden><summary>Accompaniment (the other parts)</summary>
-              <label class="check"><input type="checkbox" id="ppBack"> Play the other parts while I play</label><div id="ppBackList"></div><div class="hint2" id="ppBackNote"></div></details>
-            <div class="hint2" id="ppInfo"></div>
-          </div>
-          <div class="hint2" id="ppMsg" role="status" aria-live="polite"></div>
-        </div>
-
         <!-- the four displays, drawn by js/app/scale-visual.js; the note chips below stay for screen readers -->
         <div class="visual" id="scVis">
           <div class="vis-bar"><div class="seg" id="scView" role="group" aria-label="Display">
@@ -516,6 +571,7 @@
 <script src="js/core/piece.js"></script>
 <script src="js/core/piece-practice.js"></script>
 <script src="js/core/github-library.js"></script>
+<script src="js/core/piece-visual.js"></script>
 <script src="js/core/library.js"></script>
 <script src="js/core/compare.js"></script>
 <script src="js/core/schema.js"></script>
@@ -544,6 +600,8 @@
 <script src="js/app/scale-grade.js"></script>
 <script src="js/app/scale-visual.js"></script>
 <script src="js/app/scale-history.js"></script>
+<script src="js/app/piece-visual.js"></script>
+<script src="js/app/piece-engine.js"></script>
 <script src="js/app/piece-practice.js"></script>
 <script src="js/app/recorder.js"></script>
 <script src="js/app/chart.js"></script>

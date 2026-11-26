@@ -1,9 +1,25 @@
-/* Piece practice (js/app/piece-practice.js): the source picker, the part list, the bar range and the GitHub library box. The displays themselves are scale.css. */
-.pp-mode{margin:0 0 8px;align-self:flex-start}
-#scPlayer.piece .sc-only{display:none}
-#scPlayer.pp-pick #scVisTitle,#scPlayer.pp-pick .visual,#scPlayer.pp-pick .pl-bar,#scPlayer.pp-pick .pl-foot,#scPlayer.pp-pick .pl-sel,#scPlayer.pp-pick #scMsg,#scPlayer.pp-pick #scResult{display:none}
-.pp-panel[hidden],.pp-source[hidden],#ppLoaded[hidden],.pp-parts[hidden],.pp-back[hidden],#ppLineW[hidden],.pp-gh-bar[hidden],.pp-head .pl-chip:empty{display:none}
-.pp-panel{display:grid;gap:10px;margin:2px 0 10px}
+/* Piece practice screen (index.html #tab-piece; js/app/piece-practice.js, piece-engine.js, piece-visual.js).
+   It looks like the Scale drills because it uses the same classes (scale.css: .player, .pl-*, .visual, .vis-bar, .staffbox, .tabbox, .neckbox, .rollbox, .result ...).
+   scale.css is not changed. What it only styles by element id (sc..., sv...) is repeated here for this screen's own ids (pz..., pw...). */
+
+/* ---------- the same id-based rules as the Scale drills, for this screen's ids ---------- */
+.vis-bar #pzFs{min-height:36px;min-width:42px;padding:2px 10px;font-size:18px;line-height:1;flex:0 0 auto}
+.vis-bar #pzNeckBtn{min-height:36px;min-width:42px;padding:2px 10px;font-size:19px;line-height:1;flex:0 0 auto} .vis-bar #pzNeckBtn.on{background:var(--acc)} .vis-bar #pzNeckBtn[hidden]{display:none}
+.pl-foot #pzMode,.pl-foot #pzGrade{display:inline-flex;width:auto;flex:0 0 auto;padding:2px;gap:2px;background:var(--raise);border-radius:10px}
+.pl-foot #pzMode button,.pl-foot #pzGrade button{flex:0 0 auto;font-size:12.5px;padding:5px 10px;min-height:30px;background:transparent;color:var(--sv-dim)} .pl-foot #pzMode button.on,.pl-foot #pzGrade button.on{background:var(--acc);color:#fff}
+#pzResBtn[aria-expanded=true]{background:var(--acc);color:#fff} #pzResBtn:disabled{opacity:.45;cursor:default}
+#pzMsg:empty{display:none} #pzClick.on{background:var(--acc);color:#fff}
+#pzBowWrap[hidden],#pzPosWrap[hidden]{display:none}
+#tab-piece .sc-grid{grid-template-columns:minmax(0,1fr)}
+/* (scoped to this screen: these classes are shared with the Scale drills, whose gradients have other ids) */
+#tab-piece .neckbox .board{fill:url(#pwWood)} #tab-piece .neckbox .str{stroke:url(#pwStr)}
+#tab-piece .neckbox #pwDot{filter:drop-shadow(0 0 7px var(--sv-cy))} #tab-piece .neckbox #pwDot .on{fill:var(--sv-cy);stroke:#fff;stroke-width:2.5} #tab-piece .neckbox #pwDot .ring{fill:none;stroke:var(--sv-cy);stroke-width:2;opacity:.55} #tab-piece .neckbox #pwDot text{fill:#06202a;font-weight:800}
+#tab-piece .rollbox .hn rect{fill:url(#pwBlue)} #tab-piece .rollbox .hn.ok rect{fill:url(#pwOk)} #tab-piece .rollbox .hn.close rect{fill:url(#pwClose)} #tab-piece .rollbox .hn.bad rect{fill:url(#pwBad)} #tab-piece .rollbox .hn.cur.pend rect{fill:url(#pwCurG)}
+
+/* ---------- nothing chosen yet: only the source picker (and the part list) ---------- */
+#pzPlayer.pp-pick #pzVisTitle,#pzPlayer.pp-pick .pl-sel,#pzPlayer.pp-pick .visual,#pzPlayer.pp-pick .pl-bar,#pzPlayer.pp-pick .pl-foot,#pzPlayer.pp-pick #pzResult,#pzPlayer.pp-pick #pzMsg{display:none}
+.pp-source[hidden],#ppLoaded[hidden],.pp-parts[hidden],.pp-back[hidden],#ppLineW[hidden],.pp-gh-bar[hidden],.pp-head .pl-chip:empty{display:none}
+.pp-panel{display:grid;gap:10px;margin:2px 0 6px}
 
 .pp-drop{display:grid;gap:6px;justify-items:center;text-align:center;padding:16px 12px;border:1.5px dashed var(--line);border-radius:14px;background:rgba(255,255,255,.02);cursor:pointer}
 .pp-drop>span{font-size:13px;color:var(--mut)}
@@ -28,6 +44,7 @@
 .pp-opts select{min-height:36px;padding:4px 24px 4px 10px;font-size:14px}
 .pp-back{border:1px solid var(--line);border-radius:12px;padding:6px 12px;margin-top:6px} .pp-back summary{cursor:pointer;font-size:14px}
 
+/* ---------- the GitHub library box ---------- */
 .pp-gh{width:min(640px,calc(100vw - 20px));max-height:calc(100vh - 24px);padding:0;border:1px solid var(--line);border-radius:16px;background:var(--bg,#0c0f15);color:var(--fg)}
 .pp-gh::backdrop{background:rgba(0,0,0,.6)}
 .pp-gh-in{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:14px;max-height:calc(100vh - 26px);overflow:auto}
@@ -43,9 +60,14 @@
 .pp-file b{font-weight:550;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .pp-file span{font-size:12px;color:var(--mut);white-space:nowrap}
 .pp-file:hover,.pp-file:focus-visible{border-color:var(--acc);outline:none} .pp-file.dir{background:transparent;border-color:var(--line)}
 
-/* note lengths on the staff (a piece's half and whole notes are open heads; eighths and sixteenths have flags) */
+/* ---------- note lengths on the staff (open heads for half and whole notes, flags for eighths and sixteenths) ---------- */
 .staffbox .nh .hole{fill:var(--sv-bg)} .staffbox .nh .dotn{fill:var(--sv-note)} .staffbox .nh .flag{fill:none;stroke:var(--sv-note);stroke-width:1.7;stroke-linecap:round}
-.staffbox .nh.ok .flag,.staffbox .nh.ok .dotn{stroke:var(--ok)} .staffbox .nh.ok .dotn{fill:var(--ok)}
+.staffbox .nh.ok .flag{stroke:var(--ok)} .staffbox .nh.ok .dotn{fill:var(--ok)}
 .staffbox .nh.close .flag{stroke:var(--warn)} .staffbox .nh.close .dotn{fill:var(--warn)}
 .staffbox .nh.bad .flag{stroke:var(--bad)} .staffbox .nh.bad .dotn{fill:var(--bad)}
 .staffbox .nh.cur.pend .flag{stroke:#fff} .staffbox .nh.cur.pend .dotn{fill:#fff}
+
+/* ---------- the main menu has six items now (app.css counted five columns) ---------- */
+.tabs{grid-template-columns:repeat(6,1fr)}
+@media (max-width:719px){.tabs button{font-size:12px}} @media (max-width:380px){.tabs button{font-size:10.5px;padding:6px 0}}
+@media (min-width:720px){.tabs{grid-template-columns:repeat(6,auto)}}

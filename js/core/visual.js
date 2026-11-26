@@ -60,7 +60,7 @@ function visLayout(tl, opts) {
     const row = { from, to: to - 1, shift: sh, label: { 1: '8va', 2: '15ma', 3: '22ma', '-1': '8vb', '-2': '15mb' }[sh] || '', bars: [], notes: [] };
     for (let i = from; i < to; i++) {
       const p = parsed[i - from], x = left + (i - from + 0.5) * sp;
-      if (i > 0 && (tl[i].bar != null ? tl[i].bar !== tl[i - 1].bar : i % bpb === 0)) { shown = {}; if (i > from) row.bars.push(x - sp / 2); }   // a piece's notes know their bar; a scale has one note per beat
+      if (i > 0 && i % bpb === 0) { shown = {}; if (i > from) row.bars.push(x - sp / 2); }
       if (!p) continue;
       const cur = shown[p.step] != null ? shown[p.step] : (sig.alter[p.letter] || 0);
       let acc = ''; if (p.alter !== cur) { acc = p.alter > 0 ? '#' : p.alter < 0 ? 'b' : 'n'; shown[p.step] = p.alter; }
@@ -70,25 +70,6 @@ function visLayout(tl, opts) {
     rows.push(row);
   }
   return rows;
-}
-// Time in the displays. A scale has one note per beat, so "the position" (note 3.5 = half way from the 4th to the 5th note) and the beat number are the same thing.
-// A piece has rests and long notes: each note carries its beat (tl[i].beat, quarter notes from the start of the first bar) and the two are different.
-const visBeatAt = (tl, i) => tl[i].beat != null ? tl[i].beat : i;
-// beat -> position. Before the start (the count-in) the position is the beat itself; a rest before the first note holds the position at 0.
-function visPosOf(tl, b) {
-  const n = tl.length; if (!n) return b;
-  if (b < 0) return b; if (b <= visBeatAt(tl, 0)) return 0;
-  let lo = 0, hi = n - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (visBeatAt(tl, m) <= b) lo = m; else hi = m; }
-  if (n === 1) return b - visBeatAt(tl, 0);
-  const a = visBeatAt(tl, lo), z = visBeatAt(tl, hi);
-  return b >= z ? hi + (b - z) : lo + (z > a ? (b - a) / (z - a) : 0);
-}
-// position -> beat (the inverse of visPosOf)
-function visBeatOf(tl, f) {
-  const n = tl.length; if (!n) return f;
-  if (f <= 0) return f < 0 ? f : visBeatAt(tl, 0);
-  const i = Math.floor(f); if (i >= n - 1) return visBeatAt(tl, n - 1) + (f - (n - 1));
-  return visBeatAt(tl, i) + (visBeatAt(tl, i + 1) - visBeatAt(tl, i)) * (f - i);
 }
 // Highest and lowest step drawn in a row, with the staff included: how tall the row has to be.
 const visRowExtent = row => ({ hi: Math.max(VIS_TOP, ...row.notes.map(n => n.step)), lo: Math.min(VIS_BOTTOM, ...row.notes.map(n => n.step)) });

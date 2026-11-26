@@ -105,6 +105,7 @@ function loop() {
     if (sc.running && !recording && tab !== 'tuner' && sc.seq.length) {   // Practice knows its scale: search only around it (plus room for wrong notes)
       lo = Math.max(25, noteToFreq(Math.min(...sc.seq) - 5, a4())); hi = noteToFreq(Math.max(...sc.seq) + 5, a4());
     }
+    if (tab === 'piece' && typeof peFreqRange === 'function') { const R = peFreqRange(); if (R) { lo = R[0]; hi = R[1]; } }   // Piece practice knows its notes: search only around them
     const hp = lo < 50 ? Math.max(20, lo * 0.7) : 70;   // only low instruments (bass) need a lower cut-off
     if (Math.abs(hp - hpCut) > 3) { hpCut = hp; hpNode.frequency.value = hp; }
     const cut = Math.min(6000, Math.max(1000, hi * 3));
@@ -127,6 +128,7 @@ function loop() {
   if (tab === 'tuner') tunerFrame(t, f);
   if (demoIdx < 0) collectHold(f);                   // keep scoring the note that is still sounding
   if (sc.running && demoIdx < 0) { det.frame(t, f, a4()); liveScaleFrame(f, t); }
+  if (tab === 'piece' && typeof pieceFrame === 'function') pieceFrame(f, t);   // Piece practice has its own engine
   if (tab === 'rec' && recording) { drawRoll(); recUi(); }
 }
 

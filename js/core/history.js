@@ -5,12 +5,12 @@ const HIST_VERSION = 1, HIST_MAX = 400;   // records kept per device; the oldest
 
 const histR = (x, d = 1) => x == null || !isFinite(x) ? null : Math.round(x * Math.pow(10, d)) / Math.pow(10, d);
 
-// ev: result of evaluateRun. info: { t, player, inst, type, root, span, pos, bow, bpm, mode, label, pass, sid (pieces only) }
+// ev: result of evaluateRun. info: { t, player, inst, type, root, span, pos, bow, bpm, mode, label, pass }
 function histRecord(ev, info) {
   const dir = o => ({ n: o.n, played: o.played, bias: histR(o.bias), abs: histR(o.abs), pitch: histR(o.pitch, 0) });
   return {
     v: HIST_VERSION, t: info.t, p: info.player || '', inst: info.inst, type: info.type, root: info.root, span: info.span, pos: info.pos || '', bow: info.bow || '',
-    bpm: info.bpm, mode: info.mode, label: info.label || '', pass: info.pass || 1, ...(info.sid ? { sid: String(info.sid).slice(0, 24) } : {}),
+    bpm: info.bpm, mode: info.mode, label: info.label || '', pass: info.pass || 1,
     total: ev.total, band: ev.band, pitch: histR(ev.pitch, 0), fluency: histR(ev.fluency, 0), tone: histR(ev.tone, 0), pulse: histR(ev.pulse, 0), continuity: histR(ev.continuity, 0),
     eng: ev.engine || '', off: ev.offset == null ? null : histR(ev.offset),
     lag: histR(ev.lagMs, 0), wrong: ev.wrongNotes, skipped: ev.skipped, retries: ev.retries, stalls: ev.stalls, slots: ev.slots, played: ev.played,
@@ -28,7 +28,7 @@ function histFilter(runs, f = {}) {
     && (!f.scale || f.scale === 'all' || histScaleKey(r) === f.scale)).sort((a, b) => a.t - b.t);
 }
 // One scale as the person thinks of it: root, type and span ("G major · 1 oct"), the same for every instrument.
-const histScaleKey = r => r.sid ? `piece:${r.sid}` : `${r.root}:${r.type}:${r.span}`;   // a piece is told apart by sid (its title, part and bars), a scale by root, type and span
+const histScaleKey = r => `${r.root}:${r.type}:${r.span}`;
 const histTrend = runs => runs.map(r => ({ t: r.t, y: r.total, band: r.band }));
 
 // The best run (the earliest one when two tie).

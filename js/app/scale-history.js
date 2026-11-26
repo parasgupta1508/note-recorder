@@ -48,7 +48,7 @@ function runsDeleteFor(player) {
 function runsClean(a, player) {
   const num = (x, d = 0) => Number.isFinite(+x) ? +x : d, str = (x, n = 60) => String(x == null ? '' : x).slice(0, n), dir = o => ({ n: num(o && o.n), played: num(o && o.played), bias: o && o.bias == null ? null : num(o && o.bias), abs: o && o.abs == null ? null : num(o && o.abs), pitch: o && o.pitch == null ? null : num(o && o.pitch) });
   return (Array.isArray(a) ? a : []).slice(-HIST_MAX).filter(r => r && typeof r === 'object' && Number.isFinite(+r.t) && Number.isFinite(+r.total) && Array.isArray(r.notes) && SCALE_DEFS[r.type]).map(r => ({
-    v: HIST_VERSION, t: num(r.t), p: player, inst: str(r.inst, 20), type: str(r.type, 20), root: num(r.root), span: num(r.span, 1), pos: str(r.pos, 12), bow: str(r.bow, 12), ...(r.sid ? { sid: str(r.sid, 24) } : {}), bpm: num(r.bpm, 80), mode: r.mode === 'wait' ? 'wait' : 'tempo', label: str(r.label), pass: num(r.pass, 1),
+    v: HIST_VERSION, t: num(r.t), p: player, inst: str(r.inst, 20), type: str(r.type, 20), root: num(r.root), span: num(r.span, 1), pos: str(r.pos, 12), bow: str(r.bow, 12), bpm: num(r.bpm, 80), mode: r.mode === 'wait' ? 'wait' : 'tempo', label: str(r.label), pass: num(r.pass, 1),
     total: num(r.total), band: evalBand(num(r.total)), pitch: num(r.pitch), fluency: num(r.fluency), tone: num(r.tone), pulse: r.pulse == null ? null : num(r.pulse), continuity: num(r.continuity), lag: r.lag == null ? null : num(r.lag),
     wrong: num(r.wrong), skipped: num(r.skipped), retries: num(r.retries), stalls: num(r.stalls), slots: num(r.slots), played: num(r.played), up: dir(r.up), down: dir(r.down),
     notes: r.notes.slice(0, 200).map(x => ({ n: str(x && x.n, 6), m: num(x && x.m), d: x && x.d === 'u' ? 'u' : 'd', k: x && x.k ? 1 : 0, c: x && x.c == null ? null : num(x && x.c), s: x && x.s == null ? null : num(x && x.s), e: x && x.e == null ? null : num(x && x.e) })),
@@ -66,7 +66,7 @@ function flushRun() {
   clearTimeout(sc.runTimer); const pass = sc.runPass; sc.runPass = 0; if (!pass || !sc.plan) return;
   const slots = sc.slots.filter(s => s.pass === pass); if (!slots.length) return;
   const p = sc.plan, ev = scoreRun(slots, { beatMs: 60000 / sc.bpm, mode: sc.mode, wobbleCap: ruleFor(p.inst).wobble });
-  const rec = histRecord(ev, { t: Date.now(), player: profile, inst: p.inst, type: p.type, root: p.pc, span: p.span, pos: p.pos, bow: p.bow, bpm: sc.bpm, mode: sc.mode, label: scaleLabel(), pass, sid: p.sid });
+  const rec = histRecord(ev, { t: Date.now(), player: profile, inst: p.inst, type: p.type, root: p.pc, span: p.span, pos: p.pos, bow: p.bow, bpm: sc.bpm, mode: sc.mode, label: scaleLabel(), pass });
   const prior = runsOf(profile), sameScale = prior.filter(r => r.inst === rec.inst && histScaleKey(r) === histScaleKey(rec)), best = histIsBest(sameScale, rec);
   const coach = coachReview(rec, prior, { best });
   runsAdd(rec);

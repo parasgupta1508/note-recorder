@@ -8,12 +8,6 @@
 // A timeline note is the scale drills' note: { index, noteName, midi, direction, startMs, durationMs, slurStart }
 // plus what only a piece has: beat (position in quarter notes from the start of the first bar), bar, dq (length in quarter notes).
 
-// The views and the history know a "scale type" by its entry in SCALE_DEFS. A piece is one more type, but it must not appear in the Scale list
-// (the list is built with for...in), so it is registered as a property that for...in skips.
-if (typeof SCALE_DEFS !== 'undefined' && !Object.prototype.hasOwnProperty.call(SCALE_DEFS, 'piece')) {
-  Object.defineProperty(SCALE_DEFS, 'piece', { value: { label: 'Piece', group: 'Pieces', up: [0], rel: 0 }, enumerable: false });
-}
-
 const PP_MAX_NOTES = 400;          // the most notes one practice run holds (a longer part is cut at a bar line; the player picks the bars)
 const PP_MAX_BACKING = 6000;       // the most accompaniment notes scheduled for one run
 
@@ -83,7 +77,7 @@ function fitOctaveShift(midis, range) {
 function keyInfo(key) {
   const f = key && Number.isFinite(+key.fifths) ? Math.max(-7, Math.min(7, Math.round(+key.fifths))) : 0, minor = !!(key && key.minor);
   const pc = (((7 * f) % 12) + 12) % 12, tonic = minor ? (pc + 9) % 12 : pc;
-  return { fifths: f, minor, pc, flats: f < 0, label: `${(f < 0 ? PC_FLAT : PC_SHARP)[tonic]} ${minor ? 'minor' : 'major'}` };
+  return { fifths: f, minor, pc, tonic, flats: f < 0, label: `${(f < 0 ? PC_FLAT : PC_SHARP)[tonic]} ${minor ? 'minor' : 'major'}` };
 }
 const ppBeatsPerBar = ts => (ts && ts[0] > 0 && ts[1] > 0) ? ts[0] * 4 / ts[1] : 4;              // quarter notes in a bar
 const ppSigBeats = ts => Math.max(2, Math.min(4, Math.round(ppBeatsPerBar(ts))));               // the count-in length the practice screen offers: 2, 3 or 4 beats

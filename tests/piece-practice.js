@@ -67,19 +67,17 @@ const dr = lib.ppDefaultRange(long, 'top', 400);
 ok(dr.last === 250 && dr.from === 1 && dr.to === 100, 'range: a long part starts with the first bars that hold up to 400 notes');
 ok(lib.timelineFromPart(long, { bpm: 100, timeSig: [4, 4] }).tl.length === 400 && lib.timelineFromPart(long, { bpm: 100 }).warnings.some(w => /first 400/.test(w)), 'timeline: at most 400 notes, with a warning');
 
-// ---- the scale code accepts a piece
-ok(lib.SCALE_DEFS.piece && lib.SCALE_DEFS.piece.label === 'Piece' && !Object.keys(lib.SCALE_DEFS).includes('piece') && (() => { const l = []; for (const x in lib.SCALE_DEFS) l.push(x); return !l.includes('piece'); })(), 'scale list: the piece type exists but is not listed with the scales');
-const sig = lib.visKeySig(k.pc, 'piece', k.flats);
+// ---- notation geometry for a piece (the Scale drills' own geometry is reused, not changed)
+const sig = lib.visKeySig(k.pc, 'major', k.flats);
 ok(sig.kind === 'sharp' && sig.n === 2, 'notation: a piece in D major gets two sharps');
-const lay = lib.visLayout(t.tl, { perRow: t.tl.length, beatsPerBar: 4, sig, left: 50, spacing: 54, noShift: true });
+const lay = lib.pwLayout(t.tl, { sig, left: 50, spacing: 54 });
 ok(lay[0].bars.length === 3, 'notation: bar lines come from each note\'s bar (4 bars -> 3 lines), not from counting notes');
-ok(lib.visLayout(lib.buildTimeline({ start: 60, type: 'major', span: 1, bpm: 80 }), { perRow: 16, beatsPerBar: 4, noShift: true })[0].bars.length === 3, 'notation: a scale still gets a bar line every 4 notes');
 
 // ---- time: beats and positions
 const sc8 = lib.buildTimeline({ start: 60, type: 'major', span: 1, bpm: 80 });
-ok([-1, 0, 2.5, 7, 9.25].every(b => near(lib.visPosOf(sc8, b), b)) && [-1, 0, 2.5, 7].every(f => near(lib.visBeatOf(sc8, f), f)), 'time: for a scale the position and the beat are the same number');
-ok(near(lib.visPosOf(t.tl, -2), -2) && near(lib.visPosOf(t.tl, 0.5), 0.5) && near(lib.visPosOf(t.tl, 4), 3.5) && near(lib.visPosOf(t.tl, 4.5), 3.75) && near(lib.visPosOf(t.tl, 100), 7 + (100 - 12)), 'time: the position moves between two notes in proportion to the beats between them (beat 4 is half way from the 4th note, on beat 3, to the 5th, on beat 5)');
-ok([0.2, 1.7, 3.25, 4.9, 6].every(f => near(lib.visPosOf(t.tl, lib.visBeatOf(t.tl, f)), f, 1e-9)), 'time: position -> beat -> position gives the same place');
+ok([-1, 0, 2.5, 7, 9.25].every(b => near(lib.pwPosOf(sc8, b), b)) && [-1, 0, 2.5, 7].every(f => near(lib.pwBeatOf(sc8, f), f)), 'time: for a scale the position and the beat are the same number');
+ok(near(lib.pwPosOf(t.tl, -2), -2) && near(lib.pwPosOf(t.tl, 0.5), 0.5) && near(lib.pwPosOf(t.tl, 4), 3.5) && near(lib.pwPosOf(t.tl, 4.5), 3.75) && near(lib.pwPosOf(t.tl, 100), 7 + (100 - 12)), 'time: the position moves between two notes in proportion to the beats between them (beat 4 is half way from the 4th note, on beat 3, to the 5th, on beat 5)');
+ok([0.2, 1.7, 3.25, 4.9, 6].every(f => near(lib.pwPosOf(t.tl, lib.pwBeatOf(t.tl, f)), f, 1e-9)), 'time: position -> beat -> position gives the same place');
 
 // ---- backing
 const back = lib.backingEvents(px.parts, 0, { bpm: 100, shift: 0, startQ: t.startQ, endQ: t.endQ });
@@ -89,8 +87,6 @@ ok(lib.backingEvents(px.parts, 0, { bpm: 100, startQ: 0, endQ: 16, only: [1] }).
 
 // ---- identity
 ok(lib.ppSourceId('Etude', 'Violin', 1, 4) === lib.ppSourceId('Etude', 'Violin', 1, 4) && lib.ppSourceId('Etude', 'Violin', 1, 4) !== lib.ppSourceId('Etude', 'Violin', 1, 8) && /^pc[0-9a-z]+$/.test(lib.ppSourceId('a', 'b', 1, 2)), 'id: stable per piece, part and bars');
-const rec = lib.histRecord({ total: 80, band: 'Merit', notes: [], up: {}, down: {} }, { t: 1, inst: 'violin', type: 'piece', root: 2, span: 1, label: 'Etude · Violin', sid: 'pcabc' });
-ok(rec.sid === 'pcabc' && lib.histScaleKey(rec) === 'piece:pcabc' && lib.histScaleKey({ root: 2, type: 'major', span: 1 }) === '2:major:1', 'history: runs of one piece compare with that piece only; scales are unchanged');
 
 // ---- GitHub
 const P = lib.ghParseUrl;

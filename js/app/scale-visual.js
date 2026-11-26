@@ -32,7 +32,7 @@ function svFingerLabel(inst, hint, midi, strings) {
 // Everything per note that more than one view needs: the fingering hint and where it falls on the neck. Cached by scale.
 function svPlan() {
   const p = sc.plan, strings = stringsOf(p.inst), fing = ruleFor(p.inst).fingering;
-  SV.hints = p.tl.map((n, i) => fing ? fingerHint(p.inst, n.midi, strings, p.posList ? p.posList[i] : p.pos) : null);   // a piece moves the hand: one position per note (piece-practice.js)
+  SV.hints = p.tl.map(n => fing ? fingerHint(p.inst, n.midi, strings, p.pos) : null);
   SV.places = p.tl.map((n, i) => visPlace(SV.hints[i], strings, n.midi));
   return strings;
 }
@@ -56,7 +56,7 @@ function svBuildStaff(W) {
     pre += `<line class="sl" x1="4" x2="4" y1="${top}" y2="${bottom}"/>`;
     pre += glyph ? `<text class="clef" x="8" y="${yS(32) + 9}" font-family='${svFont}' font-size="${SV_LG * 5.4}">\u{1D11E}</text>` : `<text class="clef" x="10" y="${yS(32) + 11}" font-family="serif" font-size="38" font-style="italic" font-weight="700">G</text>`;
     sig.marks.forEach((m, k) => { pre += `<text class="ks" x="${46 + k * 13}" y="${yS(m.step) + 8}" font-size="26" font-family='${svFont}'>${sig.kind === 'flat' ? '♭' : '♯'}</text>`; });
-    if (r === 0) { const bt = sigBeats(), ts = p.timeSig || [bt, bt === 2 ? 2 : 4], tx = 50 + 13 * sig.n + 8; pre += `<text class="ts" x="${tx}" y="${yS(36) + 6}" text-anchor="middle" font-size="${SV_LG * 2.2}" font-weight="700">${ts[0] || 4}</text><text class="ts" x="${tx}" y="${yS(36) + 6 + SV_LG * 2}" text-anchor="middle" font-size="${SV_LG * 2.2}" font-weight="700">${ts[1] || 4}</text>`; }
+    if (r === 0) { const bt = sigBeats(), ts = [bt, bt === 2 ? 2 : 4], tx = 50 + 13 * sig.n + 8; pre += `<text class="ts" x="${tx}" y="${yS(36) + 6}" text-anchor="middle" font-size="${SV_LG * 2.2}" font-weight="700">${ts[0] || 4}</text><text class="ts" x="${tx}" y="${yS(36) + 6 + SV_LG * 2}" text-anchor="middle" font-size="${SV_LG * 2.2}" font-weight="700">${ts[1] || 4}</text>`; }
     if (row.label) out += `<text class="oct" x="${left}" y="${y + 20}" font-size="12" font-style="italic">${row.label}</text>`;
     row.bars.forEach(x => { out += `<line class="bar" x1="${x}" x2="${x}" y1="${top}" y2="${bottom}"/>`; });
     for (const g of slurs) {   // the part of a slur that falls in this row
@@ -71,10 +71,7 @@ function svBuildStaff(W) {
       out += `<g class="nh${n.d === 'down' ? ' dn' : ''}" data-i="${n.i}"><circle class="halo" cx="${n.x}" cy="${cy}" r="14"/>`;
       for (const l of n.ledgers) out += `<line class="led" x1="${n.x - 12}" x2="${n.x + 12}" y1="${yS(l)}" y2="${yS(l)}"/>`;
       if (n.acc) out += `<text class="acc" x="${n.x - 19}" y="${cy + 7}" font-size="22" font-family='${svFont}'>${{ '#': '♯', b: '♭', n: '♮' }[n.acc]}</text>`;
-      // how long the note lasts (pieces only; a scale note has no dq): an open head for a half or whole note, no stem for a whole note, flags for eighths and sixteenths, a dot for a dotted value
-      const dq = tl[n.i].dq, whole = dq >= 3.5, hollow = dq >= 1.75, nf = dq == null ? 0 : dq <= 0.375 ? 2 : dq <= 0.75 ? 1 : 0, dotted = dq != null && [0.75, 1.5, 3, 6].some(v => Math.abs(dq - v) < 0.06);
-      let flags = ''; for (let f = 0; f < nf; f++) flags += `<path class="flag" d="M${sx} ${up ? sy + f * 7 : sy - f * 7} c0 ${up ? 8 : -8} 10 ${up ? 10 : -10} 8 ${up ? 20 : -20}"/>`;
-      out += (whole ? '' : `<line class="stem" x1="${sx}" y1="${cy}" x2="${sx}" y2="${sy}"/>`) + `<ellipse class="head" cx="${n.x}" cy="${cy}" rx="7.4" ry="5.4" transform="rotate(-20 ${n.x} ${cy})"/>` + (hollow ? `<ellipse class="hole" cx="${n.x}" cy="${cy}" rx="4.4" ry="2.4" transform="rotate(-20 ${n.x} ${cy})"/>` : '') + flags + (dotted ? `<circle class="dotn" cx="${n.x + 13}" cy="${cy - (n.step % 2 === 0 ? SV_ST : 0)}" r="2"/>` : '') + `</g>`;
+      out += `<line class="stem" x1="${sx}" y1="${cy}" x2="${sx}" y2="${sy}"/><ellipse class="head" cx="${n.x}" cy="${cy}" rx="7.4" ry="5.4" transform="rotate(-20 ${n.x} ${cy})"/></g>`;
       const f = hints[n.i] ? svFingerLabel(inst, hints[n.i], tl[n.i].midi, strings) : '';
       out += `<text class="nm" x="${n.x}" y="${base + 28}" text-anchor="middle" font-size="12">${svNoteName(n.i)}</text>`;
       if (f !== '') out += `<text class="fing" x="${n.x}" y="${y + 20}" text-anchor="middle" font-size="16">${f}</text>`;
@@ -143,9 +140,9 @@ function svBuildTab(W) {
   const p = sc.plan, tl = p.tl, inst = p.inst, strings = stringsOf(inst), rowsN = strings.length, rh = 38, H = 32 + rowsN * rh + 16, yRow = r => 30 + r * rh + rh / 2, bowed = svIsBowed(inst);
   let stat = '', dyn = '';
   for (let r = 0; r < rowsN; r++) { stat += `<line class="tl" x1="34" x2="${W}" y1="${yRow(r)}" y2="${yRow(r)}"/>`; }
-  for (let b = 0; b < svBeats(); b++) dyn += `<line class="bt" x1="${b * SV_PPB}" x2="${b * SV_PPB}" y1="22" y2="${H - 16}"/>`;
+  for (let i = 0; i < tl.length; i++) dyn += `<line class="bt" x1="${i * SV_PPB}" x2="${i * SV_PPB}" y1="22" y2="${H - 16}"/>`;
   tl.forEach((n, i) => {
-    const q = SV.places[i], x = visBeatAt(tl, i) * SV_PPB; if (!q) return;
+    const q = SV.places[i], x = i * SV_PPB; if (!q) return;
     const lab = bowed ? q.finger : String(q.offset);
     dyn += `<g class="hn" data-i="${i}"><rect x="${x - 15}" y="${yRow(q.row) - 13}" width="30" height="26" rx="8"/><text x="${x}" y="${yRow(q.row) + 5.5}" text-anchor="middle" font-size="15" font-weight="700">${lab}</text>` +
       `<text class="cap" x="${x}" y="${H - 3}" text-anchor="middle" font-size="11">${svNoteName(i)}</text></g>`;
@@ -166,10 +163,10 @@ function svBuildRoll(W) {
   }
   stat += keys + bk;
   const ppm = SV_PPB / (60000 / sc.bpm);
-  for (let b = 0; b < svBeats(); b++) dyn += `<line class="bt" x1="${b * SV_PPB}" x2="${b * SV_PPB}" y1="${top}" y2="${H - 6}"/>`;
+  for (let i = 0; i < tl.length; i++) dyn += `<line class="bt" x1="${i * SV_PPB}" x2="${i * SV_PPB}" y1="${top}" y2="${H - 6}"/>`;
   tl.forEach((nt, i) => {
     const w = Math.max(10, nt.durationMs * ppm - 3);
-    dyn += `<g class="hn" data-i="${i}"><rect x="${visBeatAt(tl, i) * SV_PPB}" y="${yOf(nt.midi) + 1}" width="${w}" height="${rh - 2}" rx="${Math.min(6, (rh - 2) / 2)}"/>` + (rh >= 12 && w > 34 ? `<text x="${visBeatAt(tl, i) * SV_PPB + 7}" y="${yOf(nt.midi) + rh / 2 + 4}" font-size="${Math.min(11, rh - 4)}">${svNoteName(i)}</text>` : '') + `</g>`;
+    dyn += `<g class="hn" data-i="${i}"><rect x="${i * SV_PPB}" y="${yOf(nt.midi) + 1}" width="${w}" height="${rh - 2}" rx="${Math.min(6, (rh - 2) / 2)}"/>` + (rh >= 12 && w > 34 ? `<text x="${i * SV_PPB + 7}" y="${yOf(nt.midi) + rh / 2 + 4}" font-size="${Math.min(11, rh - 4)}">${svNoteName(i)}</text>` : '') + `</g>`;
   });
   const fr = svHighwayFrame(W, H, dyn, stat, `Piano roll: ${tl.length} notes`, gut); SV.playX = fr.playX;
   $('scRoll').innerHTML = fr.svg; SV.hw = $('scRoll').querySelector('#svHw');
@@ -218,24 +215,20 @@ function svPaint() {
 //   Hear scale    the audio clock from the moment the demo was scheduled
 //   Wait          eases toward the target note with a short time constant (about 90 ms), whatever the frame rate
 // null = nothing is running.
-// The same, in beats (quarter notes from the first bar line). A scale has one note per beat, so for a scale a beat and a note are the same number; a piece has rests and long notes
-// (visPosOf / visBeatOf in core/visual.js turn one into the other). The Tab and the Piano roll scroll by beats, the staff cursor moves by notes.
-const svBeats = () => (sc.plan && sc.plan.beats) || sc.tl.length;   // how many beats the run lasts (the loop length)
-function svBeatF() {
-  const n = sc.tl.length, beat = 60000 / sc.bpm, haveClock = typeof ctx !== 'undefined' && ctx, last = n ? visBeatAt(sc.tl, n - 1) : 0;
-  if (demoIdx >= 0) return haveClock && SV.demoT0 != null ? Math.max(0, Math.min(last, ((ctx.currentTime - svLat() - SV.demoT0) * 1000) / beat)) : visBeatAt(sc.tl, Math.max(0, Math.min(n - 1, demoIdx)));
+function svPosF() {
+  const n = sc.tl.length, beat = 60000 / sc.bpm, haveClock = typeof ctx !== 'undefined' && ctx;
+  if (demoIdx >= 0) return haveClock && SV.demoT0 != null ? Math.max(0, Math.min(n - 1, ((ctx.currentTime - svLat() - SV.demoT0) * 1000) / beat)) : demoIdx;
   if (!sc.running || sc.pos >= n) { SV.glide = null; return null; }
-  if (sc.mode === 'tempo' && sc.clock != null && haveClock) { SV.glide = null; return Math.min(last, ((ctx.currentTime - svLat() - t0 - sc.clock) * 1000) / beat); }
+  if (sc.mode === 'tempo' && sc.clock != null && haveClock) { SV.glide = null; return Math.min(n - 1, ((ctx.currentTime - svLat() - t0 - sc.clock) * 1000) / beat); }
   const now = performance.now(), dt = SV.glideT ? Math.min(100, now - SV.glideT) : 16; SV.glideT = now;
   if (SV.glide == null) SV.glide = sc.pos;
   SV.glide += (sc.pos - SV.glide) * (1 - Math.exp(-dt / 90)); if (Math.abs(sc.pos - SV.glide) < 0.003) SV.glide = sc.pos;
-  return visBeatOf(sc.tl, SV.glide);
+  return SV.glide;
 }
-function svPosF() { const b = svBeatF(); return b == null ? null : visPosOf(sc.tl, b); }
 // Where time is, in ms from the first note, for the Tab and the Piano roll (eases back to the start when nothing runs).
 function svNowMs() {
-  const beat = 60000 / sc.bpm, bf = svBeatF();
-  if (bf != null) { SV.hwCur = bf * beat; return Math.max(-2 * beat, SV.hwCur); }
+  const beat = 60000 / sc.bpm, f = svPosF();
+  if (f != null) { SV.hwCur = f * beat; return Math.max(-2 * beat, SV.hwCur); }
   SV.hwCur += (0 - SV.hwCur) * 0.25; if (Math.abs(SV.hwCur) < 2) SV.hwCur = 0;
   return SV.hwCur;
 }
@@ -245,7 +238,7 @@ function svCursorAt() { const f = svPosF(); return f == null ? null : Math.max(0
 const svLat = () => { const l = typeof ctx !== 'undefined' && ctx ? ctx.outputLatency : 0; return l > 0 && l < 0.5 ? l : 0; };
 const svClock = ms => { const s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 function svProgress(now) {   // the bar under the display: time through the scale in Tempo-locked mode and in Hear scale, notes played in Wait mode
-  const n = sc.tl.length, beat = 60000 / sc.bpm, total = svBeats() * beat, wait = demoIdx < 0 && sc.mode === 'wait';
+  const n = sc.tl.length, beat = 60000 / sc.bpm, total = n * beat, wait = demoIdx < 0 && sc.mode === 'wait';
   let frac = 0, txt;
   if (wait) { frac = n ? Math.min(1, (sc.running ? sc.pos : 0) / n) : 0; txt = `${sc.running ? Math.min(sc.pos, n) : 0} / ${n} notes`; }
   else { const t = Math.max(0, Math.min(total, now == null ? 0 : now + (demoIdx >= 0 ? 0 : 0))); frac = total ? t / total : 0; txt = `${svClock(t)} / ${svClock(total)}`; }
@@ -254,7 +247,7 @@ function svProgress(now) {   // the bar under the display: time through the scal
 function svFrame() {
   SV.raf = 0; if (!sc.plan) return;
   if ((sc.running || demoIdx >= 0) && svCurIdx() !== SV.paintIdx) svPaint();   // the glow moves to the next note on the very frame the cursor reaches it
-  if (sc.running || demoIdx >= 0) { const b = 60000 / sc.bpm; svProgress(demoIdx >= 0 ? (svBeatF() || 0) * b : sc.mode === 'tempo' && sc.clock != null && typeof ctx !== 'undefined' && ctx ? (ctx.currentTime - svLat() - t0 - sc.clock) * 1000 : null); }
+  if (sc.running || demoIdx >= 0) { const b = 60000 / sc.bpm; svProgress(demoIdx >= 0 ? (svPosF() || 0) * b : sc.mode === 'tempo' && sc.clock != null && typeof ctx !== 'undefined' && ctx ? (ctx.currentTime - svLat() - t0 - sc.clock) * 1000 : null); }
   const v = svEffective(sc.plan.inst), busy = sc.running || demoIdx >= 0;
   if (v === 'tab' || v === 'roll') {
     if (!SV.hw) return;
@@ -280,11 +273,11 @@ function svRender() {
   const W = Math.max(260, Math.floor(box.clientWidth && !box.hidden ? box.clientWidth : vis.clientWidth ? vis.clientWidth - 22 : 340));
   // the buttons: Tab is offered only where there are strings; the keyboard is the Fingerboard of a piano
   document.querySelectorAll('#scView button').forEach(b => { const ok = b.dataset.v !== 'tab' || svTabOk(inst), on = b.dataset.v === v; b.hidden = !ok; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); const narrow = vis.clientWidth < 440; if (b.dataset.v === 'board') b.textContent = inst === 'chromatic' ? 'Keys' : narrow ? 'Neck' : svIsBowed(inst) ? 'Fingerboard' : 'Fretboard'; if (b.dataset.v === 'roll') b.textContent = narrow ? 'Roll' : 'Piano roll'; });
-  $('scVisTitle').textContent = p.type === 'piece' ? p.title : `${svSharp(p.tl[0].noteName.replace(/-?\d+$/, ''))} ${SCALE_DEFS[p.type].label} — ${p.span} ${p.span > 1 ? 'Octaves' : 'Octave'}`;
+  $('scVisTitle').textContent = `${svSharp(p.tl[0].noteName.replace(/-?\d+$/, ''))} ${SCALE_DEFS[p.type].label} — ${p.span} ${p.span > 1 ? 'Octaves' : 'Octave'}`;
   $('scShowW').hidden = v !== 'board' || inst === 'chromatic';
   $('scStaff').hidden = v !== 'staff'; $('scTab').hidden = v !== 'tab'; $('scNeck').hidden = !(v === 'board' || (v === 'staff' && SV.showNeck));
   { const nb = $('scNeckBtn'); nb.hidden = v !== 'staff'; nb.textContent = inst === 'chromatic' ? '🎹' : inst === 'guitar' ? '🎸' : inst === 'ukulele' ? '🪕' : '🎻'; nb.classList.toggle('on', !!SV.showNeck); nb.setAttribute('aria-pressed', SV.showNeck ? 'true' : 'false'); } $('scRoll').hidden = v !== 'roll';
-  const base = [p.tl.map(n => n.midi).join(), inst, p.pc, p.type, p.pos, p.bow, sigBeats(), W, useFlats, p.key || ''].join('|');   // p.key: everything a piece's picture depends on besides its pitches
+  const base = [p.tl.map(n => n.midi).join(), inst, p.pc, p.type, p.pos, p.bow, sigBeats(), W, useFlats].join('|');
   if (base !== SV.key) { SV.key = base; svPlan(); SV.staffKey = SV.neckKey = SV.hwKey = ''; }
   if (v === 'staff' && SV.staffKey !== base) { SV.staffKey = base; svBuildStaff(W); }
   const nk = base + '|' + v + '|' + $('scShow').value; if ((v === 'board' || (v === 'staff' && SV.showNeck)) && SV.neckKey !== nk) { SV.neckKey = nk; svBuildNeck(W, v === 'board'); }

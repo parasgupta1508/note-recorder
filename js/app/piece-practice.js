@@ -1,23 +1,33 @@
-// Piece practice: the Scale drills screen with a piece from a MusicXML file instead of a scale.
-// The file (a local one, or one read straight from GitHub into memory) is parsed by js/core/musicxml.js, the part the player chooses becomes the same
-// reference timeline a scale has (js/core/piece-practice.js), and from there everything is shared: the four displays (scale-visual.js), Tempo-locked and
-// Wait modes, the graders, the Trinity-style result and the run history. This file is only the source picker, the part picker, the plan, and the accompaniment.
+// Piece practice screen: where the music comes from (a local MusicXML file, or GitHub read straight into memory), which instrument and part, which bars, and the accompaniment.
+// The file is parsed by js/core/musicxml.js, the chosen part becomes a timeline (js/core/piece-practice.js), and the engine (piece-engine.js) and the displays (piece-visual.js)
+// play and draw it. This screen is separate from the Scale drills and does not change them.
 // Part of the app. Scripts in js/app load in the order listed in index.html and share one scope.
 //
 // Nothing is stored: not the file, not the GitHub list. They live in memory until the page is closed or another piece is opened.
 
-const PP = { on: false, parsed: null, sum: [], idx: -1, title: '', from: 1, to: 1, last: 1, line: 'top', oct: 'auto', backing: false, backOff: new Set(), bpm0: 80, src: '', id: 0 };
+const PP = { parsed: null, sum: [], idx: -1, title: '', from: 1, to: 1, last: 1, line: 'top', oct: 'auto', backing: false, backOff: new Set(), bpm0: 80, src: '', id: 0 };
 const PP_MAX_FILE = 25 * 1024 * 1024, PP_MAX_XML = 80 * 1024 * 1024;   // bytes in a file / bytes of MusicXML text after un-zipping (a zip bomb stops here)
-const ppActive = () => PP.on && !!PP.parsed && PP.idx >= 0;
+const ppActive = () => !!PP.parsed && PP.idx >= 0;
 const ppEsc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ppKb = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+PRACTICE_INSTRUMENTS.forEach(([k, label]) => $('pzInst').add(new Option(label, k)));
+
+// ================= the instrument's own controls (bowing and position where the instrument has them) =================
+function ppFillControls() {
+  const inst = $('pzInst').value;
+  for (const [k, id] of [['bowing', 'pzBow'], ['position', 'pzPos']]) {
+    const o = controls(inst)[k], cur = $(id).value, sel = $(id); $(id + 'Wrap').hidden = !o; sel.innerHTML = '';
+    if (o) o.options.forEach(x => sel.add(new Option(x.label, x.value)));
+    sel.value = o && o.options.some(x => x.value === cur) ? cur : o ? o.def : '';
+  }
+}
 
 // ================= the plan =================
-// planNow() (practice.js) returns this while a piece is open. It has the shape of a scale plan, plus what a piece adds.
-// For a violin the hand moves: the position of each note is the lowest one that can reach it, staying where it is while it can (posList, used by the finger hints).
+// What the engine and the displays play: the chosen part as a timeline, with the instrument's rules. For a violin the hand moves: the position of each note is the lowest that
+// can reach it, staying where it is while it can (posList, used by the finger hints).
 function ppPositions(tl, inst) {
   if (ruleFor(inst).fingering !== 'bowed') return null;
-  const strings = stringsOf(inst); let cur = 1;
+  const strings = pwStrings(inst); let cur = 1;
   const reach = (n, p) => { const h = fingerHint(inst, n.midi, strings, String(p)); return !!h && h.finger !== ''; };
   return tl.map(n => {
     if (reach(n, cur)) return String(cur);
@@ -27,21 +37,22 @@ function ppPositions(tl, inst) {
 }
 let ppMemo = { k: '', plan: null };
 function ppPlan() {
-  const x = PP.parsed, part = x.parts[PP.idx], inst = $('scInst').value, rule = ruleFor(inst), bpm = Math.max(30, Math.min(240, +$('scBpm').value || PP.bpm0));
-  const bow = $('scBow').value, pos = $('scPos').value, notes = part.notes.filter(n => n.bar >= PP.from && n.bar <= PP.to);
+  const x = PP.parsed, part = x.parts[PP.idx], inst = $('pzInst').value, rule = ruleFor(inst), bpm = Math.max(30, Math.min(240, +$('pzBpm').value || PP.bpm0));
+  const bow = $('pzBow').value, pos = $('pzPos').value, sig = +$('pzSig').value || ppSigBeats(x.timeSig), notes = part.notes.filter(n => n.bar >= PP.from && n.bar <= PP.to);
   const shift = PP.oct === 'auto' ? fitOctaveShift(monoLine(notes, PP.line).map(n => n.midi), rule.range) : +PP.oct || 0;
-  const k = [PP.id, PP.idx, PP.from, PP.to, PP.line, shift, bpm, inst, bow, pos, sigBeats(), useFlats].join('|');
+  const k = [PP.id, PP.idx, PP.from, PP.to, PP.line, shift, bpm, inst, bow, pos, sig].join('|');
   if (ppMemo.k === k) return ppMemo.plan;
-  const key = keyInfo(x.key), ask = { bpm, line: PP.line, shift, flats: useFlats ? true : key.flats, timeSig: x.timeSig, range: rule.range };
+  const key = keyInfo(x.key), ask = { bpm, line: PP.line, shift, flats: key.flats, timeSig: x.timeSig, range: rule.range };
   let T = timelineFromPart(part, { ...ask, fromBar: PP.from, toBar: PP.to });
   if (!T.tl.length) T = timelineFromPart(part, ask);   // a range with no notes: the whole part instead
-  const mids = T.tl.map(n => n.midi), tonicPc = key.minor ? (key.pc + 9) % 12 : key.pc, posList = ppPositions(T.tl, inst);
+  const mids = T.tl.map(n => n.midi), posList = ppPositions(T.tl, inst);
   const partial = T.fromBar > 1 || T.toBar < ppLastBar(part), sid = ppSourceId(PP.title, part.name, T.fromBar, T.toBar);
-  const plan = { start: lowestAtOrAbove(tonicPc, Math.min(...mids)), span: 1, requestedSpan: 1, top: Math.max(...mids), clamped: false, fits: !T.outside, warnings: T.warnings.slice(),
-    tl: T.tl, inst, pc: key.pc, type: 'piece', bow, pos: posList ? '1' : pos, posList, bpm, beats: T.beats, timeSig: x.timeSig, title: PP.title, part: part.name, from: T.fromBar, to: T.toBar,
-    startQ: T.startQ, endQ: T.endQ, shift, sid, label: `${PP.title} · ${part.name}` + (partial ? ` · bars ${T.fromBar}–${T.toBar}` : ''), key: k + '|' + sid };
+  const plan = { start: lowestAtOrAbove(key.tonic, Math.min(...mids)), top: Math.max(...mids), fits: !T.outside, warnings: T.warnings.slice(), tl: T.tl, inst, pc: key.pc, tonic: key.tonic, flats: key.flats, bow, pos: posList ? '1' : pos, posList, bpm, beats: T.beats,
+    timeSig: x.timeSig, sig, title: PP.title, part: part.name, from: T.fromBar, to: T.toBar, startQ: T.startQ, endQ: T.endQ, shift, sid, label: `${PP.title} · ${part.name}` + (partial ? ` · bars ${T.fromBar}–${T.toBar}` : ''), key: k + '|' + sid };
   ppMemo = { k, plan }; return plan;
 }
+// Something that changes the notes or how they are played: start again from a fresh plan.
+function ppChanged() { ppMemo = { k: '', plan: null }; if (PE.running || PE.demo >= 0) peStop(); if (ppActive()) peReset(); ppRender(); peUi(); }
 
 // ================= opening a score =================
 function ppBusy(text, bad) { const m = $('ppMsg'); m.textContent = text; m.className = 'hint2' + (bad ? ' bad-t' : ''); }
@@ -58,7 +69,7 @@ async function ppInflate(u8) {
   }
   const out = new Uint8Array(total); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; } return out;
 }
-// bytes of a .musicxml / .xml / .mxl -> opened. name: the file name (for its type and as a title when the score has none).
+// bytes of a .musicxml / .xml / .mxl -> opened. name: the file name (for its type, and as the title when the score has none).
 async function ppOpenBytes(bytes, name, src) {
   ppBusy(`Reading ${name}…`);
   try {
@@ -82,42 +93,38 @@ async function ppFetch(url) {
 
 // ================= a score is open: which instrument, which part =================
 function ppLoadParsed(x, name, src) {
+  if (PE.running || PE.demo >= 0) peStop();
   PP.parsed = x; PP.id++; PP.src = src; PP.title = cleanTitle(x.title || name, 'MusicXML piece'); PP.sum = summariseParts(x); PP.line = 'top'; PP.oct = 'auto'; PP.backing = false; PP.backOff = new Set();
-  PP.bpm0 = Math.max(30, Math.min(240, Math.round(x.bpm) || 80)); $('scBpm').value = PP.bpm0; $('scSig').value = String(ppSigBeats(x.timeSig));
-  PP.idx = -1; ppMemo = { k: '', plan: null };
-  if (sc.running || demoIdx >= 0) stopScale();
+  PP.bpm0 = Math.max(30, Math.min(240, Math.round(x.bpm) || 80)); $('pzBpm').value = PP.bpm0; $('pzSig').value = String(ppSigBeats(x.timeSig));
+  PP.idx = -1; ppMemo = { k: '', plan: null }; PE.plan = null; PE.tl = []; PE.seq = [];
   $('ppSource').hidden = true;
-  if (PP.sum.length === 1) ppChoosePart(0); else { $('scInst').disabled = false; settingsChanged(); ppRender(); }
+  if (PP.sum.length === 1) ppChoosePart(0); else { $('pzInst').disabled = false; ppRender(); }
 }
 function ppChoosePart(i) {
   PP.idx = i; const s = PP.sum[i], part = PP.parsed.parts[i], r = ppDefaultRange(part, PP.line);
   PP.from = r.from; PP.to = r.to; PP.last = r.last; ppMemo = { k: '', plan: null };
   // the instrument configures the scoring (vibrato allowance, hold time) and the fingering hints; a lone, recognised instrument is locked
-  $('scInst').value = s.key; $('scInst').disabled = PP.sum.length === 1 && s.exact;
-  applyLimits(); if (ruleFor(s.key).positions === 'fretted' && [...$('scPos').options].some(o => o.value === 'auto')) $('scPos').value = 'auto';
-  SV.view = 'staff'; SV.showNeck = true;   // Staff and the instrument under it (not saved: the player's own choice of display comes back with the scales)
-  settingsChanged(); ppRender();
+  $('pzInst').value = s.key; $('pzInst').disabled = PP.sum.length === 1 && s.exact;
+  ppFillControls(); if (ruleFor(s.key).positions === 'fretted' && [...$('pzPos').options].some(o => o.value === 'auto')) $('pzPos').value = 'auto';
+  PW.view = 'staff'; PW.showNeck = true;   // Staff with the instrument under it (not saved: the player's own choice of display is kept for next time)
+  peReset(); ppRender(); peUi();
 }
-$('ppParts').onclick = e => { const b = e.target.closest('button[data-i]'); if (b) ppChoosePart(+b.dataset.i); };
+$('ppParts').onclick = e => { const b = e.target.closest('button[data-i]'); if (b && PP.idx !== +b.dataset.i) { if (PE.running || PE.demo >= 0) peStop(); ppChoosePart(+b.dataset.i); } };
 
 // ================= the panel =================
 function ppRender() {
-  const on = PP.on, loaded = !!PP.parsed, chosen = ppActive(), P = $('scPlayer');
-  P.classList.toggle('piece', on); P.classList.toggle('pp-pick', on && !chosen);
-  $('ppPanel').hidden = !on; document.querySelectorAll('#ppMode button').forEach(b => { const a = (b.dataset.m === 'piece') === on; b.classList.toggle('on', a); b.setAttribute('aria-pressed', a); });
-  const lab = document.querySelector('#scPlayer .pl-id b'); if (lab) lab.textContent = on ? 'PIECE NOTATION' : 'SCALE NOTATION';
-  if (demoIdx < 0) $('scDemo').textContent = '▶ Hear ' + (chosen ? 'piece' : 'scale');
-  $('scRandom').hidden = on;
+  const loaded = !!PP.parsed, chosen = ppActive();
+  $('pzPlayer').classList.toggle('pp-pick', !chosen);
+  $('pzDemo').disabled = $('pzStart').disabled = !chosen;
   $('ppLoaded').hidden = !loaded;
-  if (!on || !loaded) return;
+  if (!loaded) return;
   const x = PP.parsed, solo = PP.sum.length === 1;
   $('ppTitle').textContent = PP.title;
   if (chosen) {
-    const s = PP.sum[PP.idx], ts = x.timeSig.join('/'), kn = keyInfo(x.key).label;
-    $('ppBadge').textContent = solo ? `${solo && s.exact ? 'Detected instrument: ' : 'Detected: '}${s.label}${solo ? ' Solo' : ''}${s.exact ? '' : ' (scored like a piano)'}` : `Playing: ${s.label}`;
+    const s = PP.sum[PP.idx], ts = x.timeSig.join('/'), kn = keyInfo(x.key).label, p = ppPlan();
+    $('ppBadge').textContent = solo ? `${s.exact ? 'Detected instrument: ' : 'Detected: '}${s.label} Solo${s.exact ? '' : ' (scored like a piano)'}` : `Playing: ${s.label}`;
     $('ppBadge').className = 'pl-chip' + (solo && s.exact ? ' lock' : '');
     $('ppBadge').title = solo && s.exact ? 'The score has one instrument, so the app set the scoring for it' : s.exact ? 'Chosen from the score\'s part list' : 'This instrument is not one the drills know, so the piano scoring (no vibrato allowance) is used. You can change the instrument above.';
-    const p = ppPlan();
     $('ppFrom').value = p.from; $('ppTo').value = p.to; $('ppFrom').max = $('ppTo').max = PP.last; $('ppOf').textContent = `of ${PP.last}`;
     $('ppLine').value = PP.line; $('ppOct').value = PP.oct; $('ppLineW').hidden = !s.polyphonic;
     $('ppInfo').innerHTML = `${ppEsc(kn)} · ${ts} · ♩ = ${Math.round(x.bpm)} in the score · ${p.tl.length} notes in bars ${p.from}–${p.to}` + (p.warnings.length ? '<br>' + p.warnings.map(w => `<span class="warn-t">${ppEsc(w)}</span>`).join(' ') : '');
@@ -131,37 +138,24 @@ function ppRender() {
   if (chosen && others.length) {
     $('ppBack').checked = PP.backing;
     $('ppBackList').innerHTML = others.map(s => `<label class="check"><input type="checkbox" data-b="${s.i}" ${PP.backOff.has(s.i) ? '' : 'checked'}> <span>P${s.i + 1}: ${ppEsc(s.name)}</span></label>`).join('');
-    $('ppBackNote').textContent = sc.mode === 'wait' ? 'The accompaniment plays in Tempo mode and in "Hear piece"; in Wait mode the music waits for you.' : 'Use headphones: the microphone would hear the speakers.';
+    $('ppBackNote').textContent = PE.mode === 'wait' ? 'The accompaniment plays in Tempo mode and in "Hear piece"; in Wait mode the music waits for you.' : 'Use headphones: the microphone would hear the speakers.';
   }
 }
-function ppChanged() { ppMemo = { k: '', plan: null }; settingsChanged(); ppRender(); }
 function ppRange() {
   const f = Math.max(1, Math.min(PP.last, +$('ppFrom').value | 0 || 1)), t = Math.max(f, Math.min(PP.last, +$('ppTo').value | 0 || PP.last));
-  const part = PP.parsed.parts[PP.idx];
-  if (!part.notes.some(n => n.bar >= f && n.bar <= t)) { ppBusy('There are no notes in those bars.', true); ppRender(); return; }
+  if (!PP.parsed.parts[PP.idx].notes.some(n => n.bar >= f && n.bar <= t)) { ppBusy('There are no notes in those bars.', true); ppRender(); return; }
   ppBusy(''); PP.from = f; PP.to = t; ppChanged();
 }
 $('ppFrom').onchange = $('ppTo').onchange = ppRange;
 $('ppLine').onchange = () => { PP.line = $('ppLine').value; const r = ppDefaultRange(PP.parsed.parts[PP.idx], PP.line); if (PP.to > r.to && PP.from === 1) PP.to = r.to; ppChanged(); };
 $('ppOct').onchange = () => { PP.oct = $('ppOct').value; ppChanged(); };
-['scBpm', 'scBow', 'scPos', 'scInst', 'scSig'].forEach(id => $(id).addEventListener('change', () => { if (ppActive()) { ppMemo = { k: '', plan: null }; ppRender(); } }));
-$('ppBack').onchange = () => { PP.backing = $('ppBack').checked; if (!PP.backing) ppBackingStop(); else setMsg('Accompaniment is on: use headphones so the microphone does not hear it'); };
+$('pzInst').onchange = () => { ppFillControls(); ppChanged(); };
+['pzBow', 'pzPos', 'pzSig'].forEach(id => $(id).onchange = ppChanged);
+$('pzBpm').onchange = () => { $('pzBpm').value = Math.max(30, Math.min(240, +$('pzBpm').value || PP.bpm0)); ppChanged(); };
+$('pzBpmDn').onclick = () => { $('pzBpm').value = Math.max(30, (+$('pzBpm').value || PP.bpm0) - 5); ppChanged(); };
+$('pzBpmUp').onclick = () => { $('pzBpm').value = Math.min(240, (+$('pzBpm').value || PP.bpm0) + 5); ppChanged(); };
+$('ppBack').onchange = () => { PP.backing = $('ppBack').checked; if (!PP.backing) ppBackingStop(); else peMsg('Accompaniment is on: use headphones so the microphone does not hear it'); };
 $('ppBackList').onchange = e => { const b = e.target.closest('input[data-b]'); if (!b) return; if (b.checked) PP.backOff.delete(+b.dataset.b); else PP.backOff.add(+b.dataset.b); };
-$('scMode').addEventListener('click', () => { if (ppActive()) setTimeout(ppRender, 0); });
-
-// the switch between scales and pieces
-function ppSetMode(piece) {
-  if (piece === PP.on) return;
-  if (sc.running || demoIdx >= 0) stopScale();
-  PP.on = piece; ppMemo = { k: '', plan: null };
-  if (!piece) {
-    $('scInst').disabled = false; $('ppSource').hidden = true;
-    try { const v = localStorage.getItem('tuner-scview'); if (SV_VIEWS.includes(v)) SV.view = v; SV.showNeck = localStorage.getItem('tuner-scneck') === '1'; } catch {}   // back to the player's own display
-  } else $('ppSource').hidden = !!PP.parsed;
-  if (piece && PP.parsed && PP.idx >= 0) { $('scInst').value = PP.sum[PP.idx].key; $('scInst').disabled = PP.sum.length === 1 && PP.sum[PP.idx].exact; SV.view = 'staff'; SV.showNeck = true; }
-  applyLimits(); settingsChanged(); ppRender();
-}
-document.querySelectorAll('#ppMode button').forEach(b => b.onclick = () => ppSetMode(b.dataset.m === 'piece'));
 $('ppChange').onclick = () => { $('ppSource').hidden = !$('ppSource').hidden; };
 
 // ================= sources: a local file =================
@@ -173,7 +167,7 @@ $('ppFile').onchange = async () => { const f = $('ppFile').files[0]; $('ppFile')
   d.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === d) { e.preventDefault(); $('ppFile').click(); } }); }
 
 // ================= sources: GitHub (read straight into memory; nothing is saved) =================
-const GHB = { spec: null, tree: null, all: [], dir: '', query: '', prefix: '', includeXml: false, seq: 0, preset: null };
+const GHB = { spec: null, tree: null, all: [], dir: '', query: '', prefix: '', includeXml: false, seq: 0 };
 const ghbMsg = (t, bad) => { $('ppGhMsg').textContent = t; $('ppGhMsg').className = 'hint2' + (bad ? ' bad-t' : ''); };
 function ghbPresets() {
   $('ppGhPresets').innerHTML = GH_PRESETS.map(p => `<button type="button" class="pp-preset" data-id="${p.id}"><b>${ppEsc(p.title)}</b><span>${ppEsc(p.owner)}/${ppEsc(p.repo)}</span><small>${ppEsc(p.note)}</small></button>`).join('');
@@ -212,18 +206,17 @@ async function ghbPick(path) {
   ghbMsg(`Reading ${f.name} (${ppKb(f.size)})…`);
   try {
     const bytes = await ppFetch(ghRawUrl(GHB.spec, f.path));
-    $('ppGhMsg').textContent = '';
-    if (await ppOpenBytes(bytes, f.name, `github:${GHB.spec.owner}/${GHB.spec.repo}`)) $('ppGh').close(); else ghbMsg($('ppMsg').textContent, true);
+    if (await ppOpenBytes(bytes, f.name, `github:${GHB.spec.owner}/${GHB.spec.repo}`)) { ghbMsg(''); $('ppGh').close(); } else ghbMsg($('ppMsg').textContent, true);
   } catch (e) { ghbMsg(e.message, true); }
 }
 // what was pasted: a file opens at once; a repository or a folder opens the browser on it
 async function ppLink(text, fromDialog) {
-  const s = ghParseUrl(text);
-  if (!s) { (fromDialog ? ghbMsg : ppBusy)('Paste a link to a GitHub repository, a folder in one, or a .mxl / .musicxml file (for example github.com/owner/repo).', true); return; }
+  const s = ghParseUrl(text), say = fromDialog ? ghbMsg : ppBusy;
+  if (!s) { say('Paste a link to a GitHub repository, a folder in one, or a .mxl / .musicxml file (for example github.com/owner/repo).', true); return; }
   if (s.kind === 'file') {
-    if (!GH_MUSIC_EXT.concat('xml').includes(ghExt(s.path))) { (fromDialog ? ghbMsg : ppBusy)('That link is not a MusicXML file (.mxl, .musicxml or .xml).', true); return; }
-    const name = s.path.split('/').pop(); (fromDialog ? ghbMsg : ppBusy)(`Reading ${name}…`);
-    try { const ok = await ppOpenBytes(await ppFetch(ghRawUrl(s, s.path)), name, `github:${s.owner}/${s.repo}`); if (ok && $('ppGh').open) $('ppGh').close(); } catch (e) { (fromDialog ? ghbMsg : ppBusy)(e.message, true); }
+    if (!GH_MUSIC_EXT.concat('xml').includes(ghExt(s.path))) { say('That link is not a MusicXML file (.mxl, .musicxml or .xml).', true); return; }
+    const name = s.path.split('/').pop(); say(`Reading ${name}…`);
+    try { const ok = await ppOpenBytes(await ppFetch(ghRawUrl(s, s.path)), name, `github:${s.owner}/${s.repo}`); if (ok && $('ppGh').open) $('ppGh').close(); } catch (e) { say(e.message, true); }
     return;
   }
   if (!$('ppGh').open) $('ppGh').showModal();
@@ -246,12 +239,12 @@ $('ppGhList').onclick = e => { const b = e.target.closest('button'); if (!b) ret
 // startAt: the audio time of the first note. Called again for every loop, which restarts the accompaniment on the new first note.
 const PPB = { events: [], key: '', i: 0, t0: 0, timer: 0, nodes: [] };
 function ppBackingEvents() {
-  const p = sc.plan && sc.plan.type === 'piece' ? sc.plan : ppPlan(), only = PP.sum.map(s => s.i).filter(i => i !== PP.idx && !PP.backOff.has(i));
+  const p = PE.plan || ppPlan(), only = PP.sum.map(s => s.i).filter(i => i !== PP.idx && !PP.backOff.has(i));
   const k = [p.key, only.join()].join('/'); if (PPB.key !== k) { PPB.key = k; PPB.events = backingEvents(PP.parsed.parts, PP.idx, { bpm: p.bpm, shift: p.shift, startQ: p.startQ, endQ: p.endQ, only }); }
   return PPB.events;
 }
 function ppBackingBegin(startAt, anyMode) {
-  if (!ppActive() || !PP.backing || !(anyMode || sc.mode === 'tempo') || !ppBackingEvents().length) return;
+  if (!ppActive() || !PP.backing || !(anyMode || PE.mode === 'tempo') || !ppBackingEvents().length) return;
   PPB.t0 = startAt; PPB.i = 0; if (!PPB.timer) PPB.timer = setInterval(ppBackingPump, 100); ppBackingPump();
 }
 function ppBackingPump() {
@@ -268,4 +261,4 @@ function ppBackingPump() {
 }
 function ppBackingStop() { clearInterval(PPB.timer); PPB.timer = 0; PPB.i = PPB.events.length; PPB.nodes.forEach(o => { try { o.stop(); } catch {} }); PPB.nodes = []; }
 
-ppRender();
+ppFillControls(); ppRender(); peUi();
