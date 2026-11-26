@@ -120,3 +120,5 @@
 
 /* the card is a grid: its children must be allowed to shrink, or a long title widens the whole card on a phone */
 #pzPlayer>*{min-width:0} .pz-id{flex:1 1 220px;max-width:100
+/* the card is a grid: its children must be allowed to shrink, or a long title widens the whole card on a phone */
+#pzPlayer>*{min-width:0} .pz-id{flex:1 1 220px;max-width:100%}
