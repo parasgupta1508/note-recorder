@@ -27,7 +27,7 @@ function pvRender() {
   $('pvRange').className = 'hint2' + (rc.outside ? ' bad-t' : ' ok-t');
   $('pvFrom').max = $('pvTo').max = g.bars; $('pvFrom').value = PV.from; $('pvTo').value = PV.to; $('pvLoop').checked = PV.loop; $('pvSpeed').value = String(PV.speed);
   $('pvGrid').textContent = `${g.bars} bar${g.bars === 1 ? '' : 's'}, ${g.timeSig.join('/')} at ${Math.round(g.bpm)} BPM. The bars come from a constant-tempo grid${p.source === 'musicxml' ? '' : ' made from the file\'s tempo and time signature'}.`;
-  $('pvListen').textContent = PV.playing ? '■ Stop' : '▶ Listen'; $('pvFav').textContent = PV.src.favourite ? '♥ Favourite' : '♡ Favourite'; $('pvFav').classList.toggle('hide', !!PV.src.generator); $('pvDel').classList.toggle('hide', !!PV.src.generator);
+  $('pvListen').textContent = PV.playing ? '■ Stop' : '▶ Listen'; $('pvFav').textContent = pcFav(PV.src) ? '♥ Favourite' : '♡ Favourite'; $('pvDel').classList.toggle('hide', !!PV.src.generator);
 }
 
 // ----- listening: the app's own synth, scheduled ahead on the audio clock; a loop schedules the next pass just before the last one ends -----
@@ -64,7 +64,7 @@ const pvBars = () => { const mx = pvGrid().bars; PV.from = Math.max(1, Math.min(
 $('pvFrom').onchange = $('pvTo').onchange = pvBars;
 $('pvLoop').onchange = () => { PV.loop = $('pvLoop').checked; };
 $('pvSpeed').onchange = () => { PV.speed = +$('pvSpeed').value; pvRestart(); };
-$('pvFav').onclick = async () => { const s = PV.src; if (s.generator) return; s.favourite = !s.favourite; await LIBDB.put([s]); pvRender(); };
+$('pvFav').onclick = () => { pcToggleFav(PV.src); pvRender(); };   // kept by piece id (pieces.js), so built-in and generated pieces can be favourites too
 $('pvDel').onclick = async () => { const s = PV.src; if (s.generator || !confirm(`Delete “${s.title}” from this device?`)) return; pvStop(); await LIBDB.del(s.id); PC.lib = await LIBDB.all(); pcView('home'); };
 
 // Free record already draws notes as Sheet or Falling and replays them (with speed and the synth), so a piece can be put there to look at and replay.

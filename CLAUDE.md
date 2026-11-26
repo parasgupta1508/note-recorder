@@ -96,6 +96,12 @@ If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. W
 - In Wait mode a repeated note needs a pause before it counts again (`PE.needGap`); in Tempo mode a sound nearer in time to the note after next than to the one just played is that later note, not a retry (A B A).
 - Not done: repeats and grace notes are not expanded, slurs and ties are not drawn, no beams. See `TODO.md`.
 
+## Pieces screen: filters, favourites, tags
+
+- Filters (`PC.f`, `pcRenderFilters` in `pieces.js`; the logic is `searchPieces` in `js/core/library.js`): **Built-in**, **Scales** (anything filed under the `Scales and arpeggios` folder, `libIsScale`), **Pieces** (everything else; Scales and Pieces exclude each other), **Favourites**, and one chip per **tag**. There is no "Mine" filter. Scales alone opens that folder as the top of the tree, Pieces alone shows the tree without it; any combination, a search or a tag is a flat list.
+- Each row has a heart (favourite), a 🏷 button (a menu of tags to tick) and Practise. Favourites and tags are kept by piece id in `localStorage` (`tuner-piece-meta-v1`), not in the piece record, so the built-in and generated pieces (which have no record) can have them too; an old `favourite` on a record counts until changed (`pcFav`). The piece view's Favourite button uses the same store.
+- The tag names are a list kept in `localStorage` (`tuner-piece-tags-v1`) and managed in **Settings > Piece tags** (add, remove; removing a tag takes it off every piece). Neither list is in the backup file yet.
+
 ## Lab page (reference MIDI and comparison)
 
 - `js/app/lab.js` + `css/lab.css` (the Lab tab) talk to the local helper `tools/lab/server.js` (zero-dependency Node, 127.0.0.1 only, runs programs with argument lists, never a shell). It fetches YouTube audio with yt-dlp (`python -m yt_dlp` from `tools/lab/.venv`; the `yt-dlp.exe` launcher is blocked by this PC's Application Control policy) and ffmpeg, and makes reference MIDI with the engines in `tools/lab/engines/`. Setup: `node tools/lab/setup.js`.

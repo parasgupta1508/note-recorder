@@ -100,3 +100,12 @@
 
 /* Pieces screen: the instrument tabs and "Open file" share one row */
 .pc-top{display:flex;gap:8px;flex-wrap:wrap;align-items:center} #pcPractiseFile{min-height:40px;padding:6px 14px;font-size:14px;white-space:nowrap}
+
+/* ---------- Pieces screen: heart and tag buttons, the tag menu, tag chips ---------- */
+.pc-acts{align-items:center} .pc-ic{min-width:40px;min-height:40px;padding:0;font-size:18px;line-height:1;background:transparent;border:1px solid var(--line);border-radius:10px;color:var(--mut)}
+.pc-ic.on{color:#f472b6;border-color:#f472b6} .pc-ic[data-tag].on{color:var(--acc);border-color:var(--acc)}
+.pc-tagmenu{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:8px 2px 2px;margin-top:6px;border-top:1px solid var(--line)} .pc-tagmenu .check{padding:2px 0}
+.pc-tagmenu .lnk{background:none;border:0;padding:0;min-height:0;color:var(--acc);font-size:13px;text-decoration:underline;cursor:pointer}
+.pc-filters .chip.tag{color:var(--acc)} .pt-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)} .pt-row .sec{min-height:34px;padding:2px 12px}
+
+.pc-item{flex-wrap:wrap} .pc-item>.pc-tagmenu{flex:1 1 100%}

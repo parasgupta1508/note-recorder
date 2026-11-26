@@ -42,10 +42,12 @@ const natural = (a, b) => String(a).localeCompare(String(b), undefined, { numeri
 // What to show at one level: folders (with counts) and the pieces directly in it, both in natural order ("Volume 2" before "Volume 10").
 function listNode(node) { return { folders: [...node.folders.values()].sort((a, b) => natural(a.name, b.name)), pieces: node.pieces.slice().sort((a, b) => natural(a.title, b.title)) }; }
 
+// A scale or arpeggio is anything filed under the "Scales and arpeggios" folder (the generated ones); every other piece is a piece.
+const libIsScale = p => (p.categoryPath || [])[0] === LIB_SCALES_CAT;
 // ---- search and filters. Every word typed must start a word in the title, the category path or the instrument (so "c maj" finds "C major", and "c" does not match "Scales").
 function searchPieces(list, q, f = {}) {
   const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
-  return list.filter(p => (!f.builtin || p.builtin) && (!f.mine || !p.builtin) && (!f.favourite || p.favourite) && (!f.verified || p.verified) &&
+  return list.filter(p => (!f.builtin || p.builtin) && (!f.scales || libIsScale(p)) && (!f.pieces || !libIsScale(p)) && (!f.favourite || p.favourite) && (!f.tag || (p.tags || []).includes(f.tag)) && (!f.verified || p.verified) &&
     (hay => words.every(w => hay.some(h => h.startsWith(w))))((p.title + ' ' + (p.categoryPath || []).join(' ') + ' ' + p.instrument).toLowerCase().split(/[\s/,.›-]+/)));
 }
 

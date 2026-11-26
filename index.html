@@ -51,7 +51,7 @@
       <button type="button" id="pcPractiseFile" class="sec" title="Practise a .musicxml, .xml or .mxl file from this device now, without adding it to the library" aria-label="Practise a file from this device">📁 Open file</button><input type="file" id="ppFile" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml" hidden>
     </div>
     <input id="pcSearch" type="search" placeholder="Search pieces" aria-label="Search pieces" autocomplete="off">
-    <div class="pc-filters" id="pcFilters" role="group" aria-label="Filters"><button type="button" class="chip" data-f="builtin">Built-in</button><button type="button" class="chip" data-f="mine">Mine</button><button type="button" class="chip" data-f="favourite">Favourites</button></div>
+    <div class="pc-filters" id="pcFilters" role="group" aria-label="Filters"></div>
     <div id="pcCrumb" class="pc-crumb"></div>
     <div id="pcList"></div>
     <div class="row"><button type="button" id="pcAdd">+ Add a piece</button></div>
@@ -475,6 +475,10 @@
     </div>
     <p class="hint2" id="sgNote" style="margin:8px 0 0"></p>
     <div class="row" style="margin-top:8px"><button type="button" class="sec" id="sgReset">Reset this instrument</button></div></div>
+  <div class="set-group" data-g="piecetags"><h3>Piece tags</h3><p>Names you can put on any piece with the 🏷 button in Pieces, to find them again with a filter. They are kept on this device.</p>
+    <div id="ptList"></div>
+    <form id="ptForm" class="pl-add"><input id="ptName" maxlength="24" autocomplete="off" placeholder="New tag, for example Exam" aria-label="New tag"><button type="submit" class="sec">Add tag</button></form>
+    <p class="hint2" id="ptMsg" role="status" aria-live="polite"></p></div>
   <div class="set-group" data-g="mic"><h3>Microphone</h3><p>Watch the Input bar at the top while you play: it turns green when your sound is loud enough to be analysed.</p>
     <label class="field"><span>Input device</span><select id="micDev"><option value="">Default microphone</option></select></label>
     <div class="row" style="margin-top:12px"><button id="calib" class="sec">Calibrate microphone</button><span class="hint2" id="calibMsg">Takes 7 seconds. Sets the noise gate and input level for your room.</span></div>

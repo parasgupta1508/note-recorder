@@ -46,4 +46,4 @@
 - [ ] Per-piece progress in the Progress tab and in the backup file: piece runs are in `localStorage` (`tuner-piece-runs-v1`) only. Needs a decision with the owner, because the Progress tab and the backup belong to the Scale drills history.
 - [ ] The local checkout of `main` was 18 commits behind GitHub and holds an unfinished experiment (Recorder views Staff/Tab/Fingerboard/Roll: `js/core/fingerboard.js`, `instrument-views.js` missing). The Scale drills now have these displays, so decide whether that experiment is still wanted before it is merged or deleted.
 - [ ] Grand staff: beams between the two staves, notes that cross between staves keep the split at middle C.
-
+- [ ] Add the piece favourites, tags and tag names (`tuner-piece-meta-v1`, `tuner-piece-tags-v1`) to the backup / restore file.

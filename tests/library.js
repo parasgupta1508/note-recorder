@@ -26,7 +26,12 @@ ok(lib.treeAt(tree, ['Nope']) === null, 'tree: an unknown path is null');
 
 // ---- search and filters
 ok(lib.searchPieces(pieces, 'mozart minuet').length === 1 && lib.searchPieces(pieces, 'rondo volume 2').length === 1 && lib.searchPieces(pieces, 'zzz').length === 0 && lib.searchPieces(lib.generatorPieces('violin'), 'c maj').every(p => /^C(#)? major/.test(p.title) || /^C/.test(p.title)) && lib.searchPieces(pieces, 'moz min').length === 1 && lib.searchPieces(pieces, 'ozart').length === 0, 'search: every word typed must start a word of the title or category path (("c" does not match "Scales"))');
-ok(lib.searchPieces(pieces, '', { favourite: true }).length === 1 && lib.searchPieces(pieces, '', { builtin: true }).length === 0 && lib.searchPieces(pieces, '', { mine: true }).length === 6, 'search: Favourites / Built-in / Mine filters');
+ok(lib.searchPieces(pieces, '', { favourite: true }).length === 1 && lib.searchPieces(pieces, '', { builtin: true }).length === 0, 'search: Favourites and Built-in filters');
+{ const sc = { id: 's1', title: 'C major, 1 octave', instrument: 'violin', categoryPath: ['Scales and arpeggios', 'Major'], builtin: true, verified: true }, tagged = { ...pieces[0], tags: ['Exam'] }, all = pieces.concat([sc, tagged]);
+  ok(lib.libIsScale(sc) && !lib.libIsScale(pieces[0]), 'filters: a scale is anything filed under "Scales and arpeggios"');
+  ok(lib.searchPieces(all, '', { scales: true }).map(p => p.id).join() === 's1' && lib.searchPieces(all, '', { pieces: true }).length === all.length - 1 && !lib.searchPieces(all, '', { pieces: true }).some(p => p.id === 's1'), 'filters: Scales shows only the scales, Pieces everything else');
+  ok(lib.searchPieces(all, '', { builtin: true, scales: true }).length === 1 && lib.searchPieces(all, '', { builtin: true, pieces: true }).length === 0, 'filters: they combine (built-in scales; no built-in piece here)');
+  ok(lib.searchPieces(all, '', { tag: 'Exam' }).length === 1 && lib.searchPieces(all, '', { tag: 'Nope' }).length === 0, 'filters: a tag shows the pieces that have it'); }
 
 // ---- generated scales
 for (const inst of ['violin', 'guitar', 'piano', 'ukulele']) {

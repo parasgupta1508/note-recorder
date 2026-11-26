@@ -3,7 +3,7 @@
 // recognised and explained, and wait for the importers of the next phase. Pieces live only on this device (IndexedDB, see library-db.js), never in the code.
 // The pure logic is in js/core/piece.js, musicxml.js and library.js. The piece view (listen, loop, transpose) is in piece-view.js. Part of the app: shared scope.
 
-const PC = { lib: [], packs: [], inst: 'violin', path: [], q: '', f: {}, adding: [] };
+const PC = { lib: [], packs: [], inst: 'violin', path: [], q: '', f: {}, adding: [], tagOpen: null };
 const pcEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const pcMin = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 const pcInfo = p => { const n = pieceNotes(p); return `${n.length} notes · ${pcMin(pieceSeconds(p))}${p.bpm ? ' · ' + Math.round(p.bpm) + ' BPM' : ''}${p.timeSig ? ' · ' + p.timeSig.join('/') : ''}`; };
@@ -20,7 +20,17 @@ function pcView(v) {
 function pcSteps(n) { [1, 2, 3].forEach(i => { const li = $('pcS' + i); li.classList.toggle('on', i <= n); if (i === n) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current'); }); }
 
 // ----- the library -----
-const pcAllFor = inst => PC.lib.filter(p => p.instrument === inst).concat(generatorPieces(inst));
+// Favourites and tags of every piece (the built-in and generated ones have no stored record, so this is kept apart, by piece id): { id: { f: 1 | 0, t: ['tag', ...] } }.
+// The tag names themselves are a list the player keeps in Settings > Piece tags. Only this small list is saved; a piece that was favourited before (p.favourite) stays a favourite until it is changed here.
+const PCM_KEY = 'tuner-piece-meta-v1', PCT_KEY = 'tuner-piece-tags-v1', pcLs = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; } };
+let PCMETA = pcLs(PCM_KEY, {}), PCTAGS = pcLs(PCT_KEY, []).filter(t => typeof t === 'string');
+const pcSaveMeta = () => { try { localStorage.setItem(PCM_KEY, JSON.stringify(PCMETA)); localStorage.setItem(PCT_KEY, JSON.stringify(PCTAGS)); } catch {} };
+const pcFav = p => PCMETA[p.id] && PCMETA[p.id].f != null ? !!PCMETA[p.id].f : !!p.favourite;
+const pcTagsOf = p => ((PCMETA[p.id] && PCMETA[p.id].t) || []).filter(t => PCTAGS.includes(t));
+const pcDeco = p => Object.assign({}, p, { favourite: pcFav(p), tags: pcTagsOf(p) });
+function pcToggleFav(p) { const m = PCMETA[p.id] = PCMETA[p.id] || {}; m.f = pcFav(p) ? 0 : 1; pcSaveMeta(); }
+function pcToggleTag(id, tag) { const m = PCMETA[id] = PCMETA[id] || {}, t = new Set(m.t || []); t.has(tag) ? t.delete(tag) : t.add(tag); m.t = [...t]; pcSaveMeta(); }
+const pcAllFor = inst => PC.lib.filter(p => p.instrument === inst).concat(generatorPieces(inst)).map(pcDeco);
 const pcFind = id => PC.lib.find(p => p.id === id) || [].concat(...LIB_INSTRUMENTS.map(generatorPieces)).find(p => p.id === id) || null;
 async function pcLoad() {
   try {
@@ -36,33 +46,59 @@ function pcSetInst(k, fromUi) {
   pcRenderHome(); pcSyncInst();
 }
 function pcSyncInst() { for (const x of $('pcInst').children) { const on = x.dataset.i === PC.inst; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+// Filters: Built-in, Scales (the "Scales and arpeggios" folder), Pieces (everything else), Favourites, and one chip per tag the player made in Settings.
+const PC_FILTERS = [['builtin', 'Built-in'], ['scales', 'Scales'], ['pieces', 'Pieces'], ['favourite', 'Favourites']];
+function pcRenderFilters() {
+  $('pcFilters').innerHTML = PC_FILTERS.map(([k, n]) => `<button type="button" class="chip${PC.f[k] ? ' on' : ''}" data-f="${k}" aria-pressed="${!!PC.f[k]}">${n}</button>`).join('')
+    + PCTAGS.map(t => `<button type="button" class="chip tag${PC.f.tag === t ? ' on' : ''}" data-t="${pcEsc(t)}" aria-pressed="${PC.f.tag === t}">#${pcEsc(t)}</button>`).join('');
+}
 function pcRenderHome() {
   for (const x of $('pcLibInst').children) { const on = x.dataset.i === PC.inst; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); }
-  for (const x of $('pcFilters').children) { const on = !!PC.f[x.dataset.f]; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); }
-  const all = pcAllFor(PC.inst), searching = PC.q.trim() || Object.values(PC.f).some(Boolean), tree = buildTree(all, PC.inst);
-  let node = treeAt(tree, PC.path); if (!node) { PC.path = []; node = tree; }
-  const crumbs = [`<button type="button" data-crumb="-1">${LIB_INSTRUMENT_NAMES[PC.inst]}</button>`].concat(PC.path.map((c, i) => `<button type="button" data-crumb="${i}">${pcEsc(c)}</button>`));
+  if (PC.f.tag && !PCTAGS.includes(PC.f.tag)) PC.f.tag = '';
+  pcRenderFilters();
+  const all = pcAllFor(PC.inst), q = PC.q.trim(), active = Object.keys(PC.f).filter(k => PC.f[k]);
+  // Scales alone shows the "Scales and arpeggios" folder as the top of the tree, Pieces alone shows the tree without it; anything more (a search, favourites, a tag ...) is a flat list.
+  const onlyScales = !q && active.length === 1 && PC.f.scales, onlyPieces = !q && active.length === 1 && PC.f.pieces, searching = !!q || (active.length > 0 && !onlyScales && !onlyPieces), base = onlyScales ? [LIB_SCALES_CAT] : [], tree = buildTree(all, PC.inst);
+  let node = treeAt(tree, base.concat(PC.path)); if (!node) { PC.path = []; node = treeAt(tree, base) || tree; }
+  const crumbs = [`<button type="button" data-crumb="-1">${onlyScales ? pcEsc(LIB_SCALES_CAT) : LIB_INSTRUMENT_NAMES[PC.inst]}</button>`].concat(PC.path.map((c, i) => `<button type="button" data-crumb="${i}">${pcEsc(c)}</button>`));
   $('pcCrumb').innerHTML = searching ? '' : (PC.path.length ? crumbs.join('<span aria-hidden="true">›</span>') : '');
   let html = '';
   if (searching) {
     const found = searchPieces(all, PC.q, PC.f); html = found.length ? found.slice(0, 80).map(pcRow).join('') + (found.length > 80 ? `<p class="mut">${found.length - 80} more. Type more of the name to narrow it down.</p>` : '') : '<p class="mut">Nothing matches.</p>';
   } else {
-    const l = listNode(node);
+    const l = listNode(node); if (onlyPieces && !PC.path.length) l.folders = l.folders.filter(f => f.name !== LIB_SCALES_CAT);
     html = l.folders.map(f => `<button type="button" class="pc-folder" data-folder="${pcEsc(f.name)}"><span><b>${pcEsc(f.name)}</b><small>${f.count} piece${f.count === 1 ? '' : 's'}</small></span><i aria-hidden="true">›</i></button>`).join('') + l.pieces.map(pcRow).join('');
     if (!html) html = '<div class="home-card"><b>Nothing here yet</b><p class="mut">Add a piece, or import a folder of MIDI or MusicXML files, and it will be kept on this device.</p></div>';
   }
   $('pcList').innerHTML = html;
   $('pcPacks').innerHTML = PC.packs.length ? PC.packs.map(p => `<div class="pc-item"><div><b>${pcEsc(p.name)}</b><small>${p.itemCount} pieces</small></div><button type="button" class="sec" data-rmpack="${pcEsc(p.id)}">Remove pack</button></div>`).join('') : '';
 }
-const pcRow = p => `<div class="pc-item"><div><b>${pcEsc(p.title)}</b><small>${pcEsc((p.categoryPath || []).join(' › '))}${p.generator ? '' : ' · ' + pcEsc(p.verified || p.exact ? 'Verified' : 'Draft')}${p.favourite ? ' · ♥' : ''}</small></div><div class="pc-acts">${p.builtin || (typeof plUsable === 'function' && plUsable(p)) ? '' : `<button type="button" data-listen="${pcEsc(p.id)}">Listen</button>`}<button type="button" class="sec" data-practise="${pcEsc(p.id)}">Practise</button></div></div>`;   // no Listen on built-in pieces and MusicXML pieces: Piece practice has Hear piece (and Scale drills Hear scale)
+// A row: title and where it is filed; the favourite heart, the tag button and Practise. (No Listen on built-in and MusicXML pieces: Piece practice has Hear piece, the Scale drills Hear scale.)
+const pcRow = p => {
+  const listen = p.builtin || (typeof plUsable === 'function' && plUsable(p)) ? '' : `<button type="button" data-listen="${pcEsc(p.id)}">Listen</button>`, tags = (p.tags || []).map(t => ` · #${pcEsc(t)}`).join('');
+  const menu = PC.tagOpen === p.id ? `<div class="pc-tagmenu">${PCTAGS.length ? PCTAGS.map(t => `<label class="check"><input type="checkbox" data-tg="${pcEsc(p.id)}" data-tag="${pcEsc(t)}"${(p.tags || []).includes(t) ? ' checked' : ''}> <span>#${pcEsc(t)}</span></label>`).join('') : '<span class="mut">No tags yet.</span>'} <button type="button" class="lnk" data-settags>${PCTAGS.length ? 'Manage tags' : 'Add tags in Settings'}</button></div>` : '';
+  return `<div class="pc-item"><div><b>${pcEsc(p.title)}</b><small>${pcEsc((p.categoryPath || []).join(' › '))}${p.generator ? '' : ' · ' + pcEsc(p.verified || p.exact ? 'Verified' : 'Draft')}${tags}</small></div><div class="pc-acts">${listen}`
+    + `<button type="button" class="pc-ic${p.favourite ? ' on' : ''}" data-fav="${pcEsc(p.id)}" aria-pressed="${!!p.favourite}" aria-label="${p.favourite ? 'Remove from favourites' : 'Add to favourites'}" title="Favourite">${p.favourite ? '♥' : '♡'}</button>`
+    + `<button type="button" class="pc-ic${(p.tags || []).length || PC.tagOpen === p.id ? ' on' : ''}" data-tag="${pcEsc(p.id)}" aria-expanded="${PC.tagOpen === p.id}" aria-label="Tags" title="Tags">🏷</button>`
+    + `<button type="button" class="sec" data-practise="${pcEsc(p.id)}">Practise</button></div>${menu}</div>`;
+};
 $('pcList').addEventListener('click', e => {
+  const fv = e.target.closest('[data-fav]'); if (fv) { const p = pcFind(fv.dataset.fav); if (p) { pcToggleFav(p); pcRenderHome(); } return; }
+  const tg = e.target.closest('button[data-tag]'); if (tg) { PC.tagOpen = PC.tagOpen === tg.dataset.tag ? null : tg.dataset.tag; pcRenderHome(); return; }
+  if (e.target.closest('[data-settags]')) { showTab('settings'); if (typeof setLay !== 'undefined' && setLay !== 'classic') { setCur = 'piecetags'; renderSet(); } scrollTo(0, 0); return; }
   const f = e.target.closest('[data-folder]'); if (f) { PC.path.push(f.dataset.folder); pcRenderHome(); return; }
   const l = e.target.closest('[data-listen]'), pr = e.target.closest('[data-practise]');
   if (l) pvOpen(l.dataset.listen, true); else if (pr) { if (typeof ppOpenLibPiece === 'function' && ppOpenLibPiece(pr.dataset.practise)) return; pvOpen(pr.dataset.practise, false); }   // a MusicXML piece is practised with scoring in Piece practice
 });
+$('pcList').addEventListener('change', e => { const c = e.target.closest('input[data-tg]'); if (c) { pcToggleTag(c.dataset.tg, c.dataset.tag); pcRenderHome(); } });
 $('pcCrumb').addEventListener('click', e => { const b = e.target.closest('[data-crumb]'); if (b) { PC.path = PC.path.slice(0, +b.dataset.crumb + 1); pcRenderHome(); } });
 $('pcLibInst').addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if (b) pcSetInst(b.dataset.i, true); });
-$('pcFilters').addEventListener('click', e => { const b = e.target.closest('button[data-f]'); if (!b) return; PC.f[b.dataset.f] = !PC.f[b.dataset.f]; if (b.dataset.f === 'builtin' && PC.f.builtin) PC.f.mine = false; if (b.dataset.f === 'mine' && PC.f.mine) PC.f.builtin = false; pcRenderHome(); });
+$('pcFilters').addEventListener('click', e => {
+  const t = e.target.closest('button[data-t]'); if (t) { PC.f.tag = PC.f.tag === t.dataset.t ? '' : t.dataset.t; pcRenderHome(); return; }
+  const b = e.target.closest('button[data-f]'); if (!b) return; const k = b.dataset.f; PC.f[k] = !PC.f[k];
+  if (k === 'scales' && PC.f.scales) PC.f.pieces = false; if (k === 'pieces' && PC.f.pieces) PC.f.scales = false;   // a piece is a scale or it is not
+  if (k === 'scales' || k === 'pieces') PC.path = []; pcRenderHome();
+});
 $('pcSearch').addEventListener('input', () => { PC.q = $('pcSearch').value; pcRenderHome(); });
 $('pcAdd').onclick = () => { pcView('add'); pcMsg(''); };
 $('pcBack').onclick = () => pcView('home');
@@ -167,3 +203,22 @@ function pcPlayerChanged() { let k = null; try { k = localStorage.getItem(pcInst
 // ----- start-up: the instrument the player used last (or the one in Settings), then the stored library -----
 (() => { let k = null; try { k = localStorage.getItem(pcInstKey()); } catch {} PC.inst = LIB_INSTRUMENTS.includes(k) ? k : (LIB_INSTRUMENTS.includes(prof.k) ? prof.k : 'violin'); })();
 pcSyncInst(); pcLoad();
+
+// ----- Settings > Piece tags: the names a piece can be tagged with -----
+function pcRenderTagSettings() {
+  $('ptList').innerHTML = PCTAGS.length ? PCTAGS.map(t => `<div class="pt-row"><span>#${pcEsc(t)}</span><button type="button" class="sec" data-rmtag="${pcEsc(t)}">Remove</button></div>`).join('') : '<p class="hint2">No tags yet. Add one below: for example "Exam", "Slow practice" or "Teacher".</p>';
+  if (typeof renderSet === 'function') renderSet();
+}
+$('ptForm').addEventListener('submit', e => {
+  e.preventDefault(); const name = $('ptName').value.trim().replace(/\s+/g, ' ').replace(/^#+/, '').slice(0, 24), m = $('ptMsg');
+  if (!name || !/^[\p{L}\p{N} ._&+-]+$/u.test(name)) { m.textContent = 'Use letters, numbers and spaces, up to 24 characters.'; m.className = 'hint2 bad-t'; return; }
+  if (PCTAGS.some(t => t.toLowerCase() === name.toLowerCase())) { m.textContent = 'That tag already exists.'; m.className = 'hint2 bad-t'; return; }
+  if (PCTAGS.length >= 30) { m.textContent = 'You can keep up to 30 tags.'; m.className = 'hint2 bad-t'; return; }
+  PCTAGS.push(name); pcSaveMeta(); $('ptName').value = ''; m.textContent = `Added #${name}. Tag a piece with the 🏷 button in Pieces.`; m.className = 'hint2 ok-t'; pcRenderTagSettings(); pcRenderHome();
+});
+$('ptList').addEventListener('click', e => {
+  const b = e.target.closest('[data-rmtag]'); if (!b) return; const t = b.dataset.rmtag;
+  PCTAGS = PCTAGS.filter(x => x !== t); for (const id in PCMETA) if (PCMETA[id].t) PCMETA[id].t = PCMETA[id].t.filter(x => x !== t); if (PC.f.tag === t) PC.f.tag = '';
+  pcSaveMeta(); pcRenderTagSettings(); pcRenderHome();
+});
+pcRenderTagSettings();
