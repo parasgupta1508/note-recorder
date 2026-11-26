@@ -172,9 +172,10 @@
             <button id="scStart">Start practice</button>
             <button id="scDemo" class="sec">▶ Hear scale</button>
             <button id="scStop" class="sec">Stop</button>
-            <button id="scResBtn" class="sec" type="button" aria-expanded="false" aria-controls="scResult" title="Show or hide the result of the last run" hidden>Result</button>
+            <button id="scResBtn" class="sec" type="button" aria-expanded="false" aria-controls="scResult" title="Show or hide the result of the last run" disabled>Result</button>
             <button id="scCardBtn" class="sec" aria-expanded="false" aria-controls="scCardPanel" title="Show the note scorecard and the weak spots">Scorecard</button>
           </div>
+          <label class="pl-loop" title="Strict: a wrong note is flagged and does not move you on"><input type="checkbox" id="scStrict" checked><span>✓ Strict</span></label>
           <div class="seg sm" id="scMode" role="group" aria-label="Practice mode">
           <button type="button" data-mode="tempo" class="on" title="The target follows the BPM: a count-in bar, then each note is due on its beat">⏱ Tempo</button>
           <button type="button" data-mode="wait" title="The target waits for you and moves on when the note is held in tune">⏸ Wait</button>
@@ -209,13 +210,7 @@
         </div>
       </div>
 
-      <details id="scOpts"><summary>More options · strict marking, instrument notes</summary>
-        <div class="hint2" style="margin-top:8px"><span id="instRange"></span> The scale always goes up and then down from the lowest comfortable start. The instrument also adjusts the steadiness part of the score: violin allows vibrato, guitar and ukulele are held steadier.</div>
-        <div class="opt-h">Practice</div>
-        <div style="margin-top:-4px">
-          <label class="check"><input type="checkbox" id="scStrict" checked> Strict — flag wrong notes</label>
-        </div>
-      </details>
+      <div id="instRange" class="hint2 center" aria-live="polite"></div>
     </div>
 
     <div class="stack" id="scCardPanel" hidden>

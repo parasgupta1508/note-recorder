@@ -32,5 +32,5 @@ function applyTol() {
 $('tol').oninput = () => { applyTol(); };
 $('a4').onchange = () => { resetTuner(); renderScale(); applyTol(); };
 
-loadPrefs(); applyLimits(); buildInstChips(); resetTuner(); resetPractice(); renderCard(); renderScale(); renderAnalysis(); renderLegend(); recUi(); applyTol(); drawTMeter(); $('scOpts').open = innerWidth >= 720;
+loadPrefs(); applyLimits(); buildInstChips(); resetTuner(); resetPractice(); renderCard(); renderScale(); renderAnalysis(); renderLegend(); recUi(); applyTol(); drawTMeter();
 try { const o = JSON.parse(localStorage.getItem(SET_KEY)); if (o) applySettings(o); } catch {}

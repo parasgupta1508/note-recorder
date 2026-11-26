@@ -80,7 +80,7 @@ const resBar = (label, w, v) => `<div class="rb"><span>${label}<small> ${w}%</sm
 const resDir = (name, d) => d.n ? `${name} ${d.bias == null ? 'not played' : `${d.bias >= 0 ? '+' : '−'}${Math.abs(d.bias).toFixed(0)}¢ ${Math.abs(d.bias) < 5 ? '(centred)' : d.bias > 0 ? '(sharp)' : '(flat)'}`}` : '';
 // The result stays until the next session starts, so it has a Result button like the Scorecard: shown when a run ends, hidden or shown again on demand.
 let resOpen = true;
-function syncResBtn() { const b = $('scResBtn'), el = $('scResult'); if (!b || !el) return; const has = !!sc.lastRun; b.hidden = !has; el.hidden = !has || !resOpen; b.setAttribute('aria-expanded', String(has && resOpen)); }
+function syncResBtn() { const b = $('scResBtn'), el = $('scResult'); if (!b || !el) return; const has = !!sc.lastRun; b.disabled = !has; el.hidden = !has || !resOpen; b.setAttribute('aria-expanded', String(has && resOpen)); }
 function clearResult() { sc.lastRun = null; const el = $('scResult'); if (el) el.innerHTML = ''; resOpen = true; syncResBtn(); }
 function renderResult() {
   const el = $('scResult'), L = sc.lastRun; if (!el) return;

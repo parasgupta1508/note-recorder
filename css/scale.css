@@ -155,4 +155,6 @@
 .pl-tools>#scRandom{min-height:36px;padding:4px 12px;font-size:13.5px}
 .pl-loop{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:4px 12px;border-radius:10px;background:var(--raise);border:1px solid var(--line);color:var(--sv-dim);font-size:13.5px;cursor:pointer;white-space:nowrap}
 .pl-loop input{position:absolute;opacity:0;width:1px;height:1px} .pl-loop:has(input:checked){background:var(--sv-cy-d);border-color:var(--sv-cy);color:#fff} .pl-loop:has(input:focus-visible){outline:2px solid var(--acc);outline-offset:2px}
-#scResBtn[aria-expanded=true]{background:var(--acc);color:#fff} #scResBtn[hidden]{display:none}
+#scResBtn[aria-expanded=true]{background:var(--acc);color:#fff} #scResBtn:disabled{opacity:.45;cursor:default}
+.pl-foot .pl-loop{min-height:30px;padding:2px 10px;font-size:12.5px}
+#instRange:empty{display:none}

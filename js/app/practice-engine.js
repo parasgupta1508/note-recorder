@@ -10,7 +10,7 @@ function applyLimits() {
     fillSel($(id), o ? o.options.map(x => [x.value, x.label]) : [], o && o.options.some(x => x.value === cur) ? cur : o ? o.def : '');
   }
   const p = planNow(), nm = n => spellNote(n, false);
-  $('instRange').innerHTML = `${rule.label}: ${nm(rule.range[0])}–${nm(rule.range[1])}. Starts on ${p.tl[0].noteName}.` + p.warnings.map(w => ` <span class="warn-t">${w}</span>`).join('');
+  $('instRange').innerHTML = p.warnings.map(w => `<span class="warn-t">${w}</span>`).join(' ');
 }
 function droneRetune() { if (typeof DRONE !== 'undefined' && DRONE.on) droneSet(droneMidiFor(planNow().start)); }
 
@@ -37,7 +37,7 @@ function startScale() {
     if (sc.mode === 'tempo') startCountIn(); else setMsg('Play the first note and hold it in tune; the target waits for you');
   };
   setMsg(listening ? '' : 'Starting microphone…');
-  $('scStart').textContent = 'Restart'; $('scOpts').open = false; renderScale();   // fold the options so the live rows fit on a phone
+  $('scStart').textContent = 'Restart'; renderScale();   // fold the options so the live rows fit on a phone
   if (listening) begin();
   else startListening().then(begin)
     .catch(e => { sc.running = false; $('scStart').textContent = 'Start practice'; $('status').textContent = 'Mic error: ' + e.message; setMsg('Mic error: ' + e.message, 'bad'); renderScale(); });
