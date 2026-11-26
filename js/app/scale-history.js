@@ -78,12 +78,14 @@ function flushRun() {
 const BAND_CLS = { Distinction: 'dist', Merit: 'merit', Pass: 'pass', 'Below Pass': 'below' };
 const resBar = (label, w, v) => `<div class="rb"><span>${label}<small> ${w}%</small></span><div class="rb-t"><i style="width:${Math.max(2, Math.min(100, v)).toFixed(0)}%"></i></div><b>${v.toFixed(0)}</b></div>`;
 const resDir = (name, d) => d.n ? `${name} ${d.bias == null ? 'not played' : `${d.bias >= 0 ? '+' : '−'}${Math.abs(d.bias).toFixed(0)}¢ ${Math.abs(d.bias) < 5 ? '(centred)' : d.bias > 0 ? '(sharp)' : '(flat)'}`}` : '';
-function clearResult() { sc.lastRun = null; const el = $('scResult'); if (el) { el.innerHTML = ''; el.hidden = true; } }
+// The result stays until the next session starts, so it has a Result button like the Scorecard: shown when a run ends, hidden or shown again on demand.
+let resOpen = true;
+function syncResBtn() { const b = $('scResBtn'), el = $('scResult'); if (!b || !el) return; const has = !!sc.lastRun; b.hidden = !has; el.hidden = !has || !resOpen; b.setAttribute('aria-expanded', String(has && resOpen)); }
+function clearResult() { sc.lastRun = null; const el = $('scResult'); if (el) el.innerHTML = ''; resOpen = true; syncResBtn(); }
 function renderResult() {
   const el = $('scResult'), L = sc.lastRun; if (!el) return;
-  if (!L) { el.innerHTML = ''; el.hidden = true; return; }
+  if (!L) { el.innerHTML = ''; syncResBtn(); return; }
   const r = L.rec, list = a => `<ul>${a.map(t => `<li>${esc(t)}</li>`).join('')}</ul>`;
-  el.hidden = false;
   el.innerHTML = `<div class="res-head"><div class="res-score"><b>${r.total}</b><small>/100</small></div>
     <div><span class="band ${BAND_CLS[r.band]}">${r.band}</span>${L.best ? ' <span class="pbadge">★ Personal best</span>' : ''}
     <div class="mut res-sub">${esc(r.label.split(' · ').slice(0, 2).join(' · '))} · ${r.bpm} BPM · ${r.mode === 'wait' ? 'Wait for note' : 'Tempo-locked'} · pass ${r.pass}</div>
@@ -91,7 +93,9 @@ function renderResult() {
     <div class="res-bars">${resBar('Pitch &amp; intonation', 50, r.pitch)}${resBar('Fluency &amp; pulse', 30, r.fluency)}${resBar('Tone &amp; steadiness', 20, r.tone)}</div>
     <div class="mut res-dir">${[resDir('Going up', r.up), resDir('Coming down', r.down)].filter(Boolean).join(' · ')}</div>
     <h4>What you're doing well</h4>${list(L.coach.strengths)}<h4>What to improve</h4>${list(L.coach.focus)}`;
+  resOpen = true; syncResBtn();   // a fresh result opens by itself
 }
+if ($('scResBtn')) $('scResBtn').onclick = () => { resOpen = !resOpen; syncResBtn(); if (resOpen) $('scResult').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); };
 
 // ---- the "Scale scores" view of the Progress tab
 const RH = { inst: 'all', scale: 'all' };

@@ -7,9 +7,6 @@ const stamp = () => new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 $('csv').onclick = () => download(`notes-${stamp()}.csv`, ['index,note,midi,avg_hz,avg_cents,start_s,duration_ms,level_db',
   ...events.map((e, i) => [i + 1, e.note, e.midi, e.hz.toFixed(3), e.cents.toFixed(2), e.start.toFixed(3), e.dur.toFixed(0), e.lvl].join(','))].join('\n'), 'text/csv');
 $('json').onclick = () => download(`notes-${stamp()}.json`, JSON.stringify(events.map(({ pts, ...r }) => r), null, 2), 'application/json');
-$('scCsv').onclick = () => download(`scale-${stamp()}.csv`, ['pass,index,direction,expected,played,grade,hz,cents,time_s,timing_ms',
-  ...sc.attempts.map(a => [a.pass, a.index, a.direction || '', a.expected, a.played, a.grade, a.hz == null ? '' : a.hz.toFixed(2), a.cents == null ? '' : a.cents.toFixed(1), a.time_s.toFixed(3), a.timing_ms == null ? '' : a.timing_ms].join(','))].join('\n'), 'text/csv');
-$('scJson').onclick = () => download(`scale-${stamp()}.json`, scaleJson(), 'application/json');
 $('clear').onclick = clearRec;
 $('rec').onclick = async () => { if (!recording && !listening) { await ensureMic(); if (!listening) return; } setRecording(!recording); };   // Record starts the microphone itself
 $('micChip').onclick = async () => { if (listening) stopListening(); else await ensureMic(); };

@@ -87,6 +87,8 @@ ck('tempo run is scored out of 100 with a band and 15 notes',!!sc.lastRun&&sc.la
 ck('skipped and late notes cost fluency, the sharp note costs pitch',sc.lastRun.rec.skipped===1&&sc.lastRun.rec.fluency<100&&sc.lastRun.rec.pitch<100&&sc.lastRun.rec.pitch>50&&sc.lastRun.rec.up.n===8&&sc.lastRun.rec.down.n===7);
 ck('the run is in the history and the result card is shown with both coach lists',RUNS.some(function(x){return x.t===sc.lastRun.rec.t})&&!$('scResult').hidden&&/doing well/.test($('scResult').textContent)&&/What to improve/.test($('scResult').textContent)&&/Pitch/.test($('scResult').textContent));
 ck('a first run says it is the baseline',/baseline/.test($('scResult').textContent)||RUNS.length>1);
+ck('Result button appears and the result opens by itself',!$('scResBtn').hidden&&$('scResBtn').getAttribute('aria-expanded')==='true'&&!$('scResult').hidden); $('scResBtn').click(); ck('Result button hides the result',$('scResult').hidden&&$('scResBtn').getAttribute('aria-expanded')==='false'&&!!sc.lastRun); $('scResBtn').click(); ck('and shows it again',!$('scResult').hidden);
+ck('Random and Loop sit in the header with the instrument, export buttons are gone',!!document.querySelector('.pl-tools #scRandom')&&!!document.querySelector('.pl-tools #scRepeat')&&!$('scCsv')&&!$('scJson'));
 var csvRows=cardExportRows(cardSess); ck('CSV rows carry direction and status',csvRows.length>0&&csvRows.every(function(x){return x.direction==='up'||x.direction==='down'})&&csvRows.some(function(x){return x.status==='sharp'}));
 
 // ---- Wait for note: nothing moves until the note is held in tune; a wrong note is flagged; the target then advances
