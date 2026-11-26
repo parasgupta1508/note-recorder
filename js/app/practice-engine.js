@@ -30,16 +30,31 @@ function startCountIn() {
   setMsg('Count-in: start on the downbeat after the clicks');
 }
 $('metro').addEventListener('click', () => { sc.clickAfter = metroOn; });
+// Before a run the app listens to the room for 1.5 s and sets the noise gate just above it (the same quiet step the Tuner runs when it opens), so a fan or a hum is not heard as a
+// note and a quiet room does not need a high gate. It runs when the microphone has just been turned on, or when the last check was more than 10 minutes ago. Only the quiet
+// step runs here; the Tuner's second step (play a note to set the boost) is left to the Tuner, so the input level never changes in the middle of a run.
+function quietCalib(fresh) {
+  const stale = performance.now() - (sc.calibAt || -1e9) > 600000;
+  if ((!fresh && !stale) || calib || recording || !listening || typeof startAutoCalib !== 'function') return null;   // null: nothing to wait for
+  sc.calibAt = performance.now(); startAutoCalib(); setMsg('Checking the room noise… stay quiet for a moment');
+  return new Promise(res => {
+    const t = performance.now(), iv = setInterval(() => {
+      if (!sc.running || !calib || calib.phase !== 1 || performance.now() - t > 4000) { clearInterval(iv); if (calib && calib.phase === 2 && calib.auto) { calib = null; $('status').textContent = ''; } setMsg(''); res(); }
+    }, 40);
+  });
+}
 function startScale() {
   stopDemo(); resetPractice(); sc.running = true;
   const begin = () => {
     if (!sc.running) return;
     if (sc.mode === 'tempo') startCountIn(); else setMsg('Play the first note and hold it in tune; the target waits for you');
   };
+  const fresh = !listening;
   setMsg(listening ? '' : 'Starting microphone…');
-  $('scStart').textContent = 'Restart'; renderScale();   // fold the options so the live rows fit on a phone
-  if (listening) begin();
-  else startListening().then(begin)
+  $('scStart').textContent = 'Restart'; renderScale();
+  const go = w => w ? w.then(begin) : begin();   // begin at once when no room check is needed
+  if (listening) go(quietCalib(false));
+  else startListening().then(() => go(quietCalib(fresh)))
     .catch(e => { sc.running = false; $('scStart').textContent = 'Start practice'; $('status').textContent = 'Mic error: ' + e.message; setMsg('Mic error: ' + e.message, 'bad'); renderScale(); });
 }
 function stopScale() {                       // stops the demo and/or the practice run and returns to "Start practice"
@@ -160,14 +175,14 @@ function renderSummary() {
 // ----- Hear scale: plays the same timeline the scoring uses (honours tempo and slurs) -----
 function stopDemo() {
   refStop();
-  const was = demoIdx >= 0; demoIdx = -1;
+  const was = demoIdx >= 0; demoIdx = -1; SV.demoT0 = null;
   $('scDemo').textContent = '▶ Hear scale';
   if (was) { det.cur = null; det.lastMidi = null; liveBuf = []; renderScale(); }
 }
 function startDemo() {
   finalizeHold(); const p = planNow(); sc.plan = p; sc.tl = p.tl; sc.seq = p.tl.map(n => n.midi); sc.bpm = p.bpm; sc.label = null;
   if (metroOn) startMetro();                 // the click restarts 0.08 s from now, so beat 1 lines up with the first note
-  demoIdx = 0; $('scDemo').textContent = '■ Stop demo';
+  demoIdx = 0; SV.demoT0 = getCtx().currentTime + 0.08; $('scDemo').textContent = '■ Stop demo';   // the audio clock time of the first note: the cursor glides on it
   refPlay(p.tl, { delay: 0.08, onNote: i => { demoIdx = i; renderScale(); }, onEnd: stopDemo });
   renderScale();
 }

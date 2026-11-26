@@ -24,19 +24,19 @@ const POSITION_SETS = { violin: { table: VIOLIN_POSITIONS, def: '1' }, fretted: 
 // The instruments the app offers (Scale drills lists these four; Piano uses the chromatic rule). Other entries are kept so old saved scores still read.
 const PRACTICE_INSTRUMENTS = [['violin', 'Violin'], ['guitar', 'Guitar'], ['chromatic', 'Piano'], ['ukulele', 'Ukulele']];
 const INSTRUMENT_RULES = {
-  chromatic: { label: 'Piano', range: [21, 108], startLow: 60, bowing: false, positions: null, wobble: 25, smooth: 5, holdFrames: 10, fingering: null },
-  violin:    { label: 'Violin', range: [55, 103], startLow: 55, bowing: true, positions: 'violin', wobble: 40, smooth: 7, holdFrames: 12, fingering: 'bowed' },
-  viola:     { label: 'Viola', range: [48, 96], startLow: 48, bowing: true, positions: null, wobble: 40, smooth: 7, holdFrames: 12, fingering: 'bowed' },
-  cello:     { label: 'Cello', range: [36, 88], startLow: 36, bowing: true, positions: null, wobble: 40, smooth: 7, holdFrames: 12, fingering: null },
-  mandolin:  { label: 'Mandolin', range: [55, 100], startLow: 55, bowing: false, positions: 'fretted', wobble: 25, smooth: 5, holdFrames: 10, fingering: 'fretted', maxFret: 17 },
-  guitar:    { label: 'Guitar', range: [40, 88], startLow: 40, bowing: false, positions: 'fretted', wobble: 20, smooth: 3, holdFrames: 10, fingering: 'fretted', maxFret: 22,
+  chromatic: { label: 'Piano', range: [21, 108], startLow: 60, bowing: false, positions: null, wobble: 25, smooth: 5, holdFrames: 6, fingering: null },
+  violin:    { label: 'Violin', range: [55, 103], startLow: 55, bowing: true, positions: 'violin', wobble: 40, smooth: 7, holdFrames: 8, fingering: 'bowed' },
+  viola:     { label: 'Viola', range: [48, 96], startLow: 48, bowing: true, positions: null, wobble: 40, smooth: 7, holdFrames: 8, fingering: 'bowed' },
+  cello:     { label: 'Cello', range: [36, 88], startLow: 36, bowing: true, positions: null, wobble: 40, smooth: 7, holdFrames: 8, fingering: null },
+  mandolin:  { label: 'Mandolin', range: [55, 100], startLow: 55, bowing: false, positions: 'fretted', wobble: 25, smooth: 5, holdFrames: 6, fingering: 'fretted', maxFret: 17 },
+  guitar:    { label: 'Guitar', range: [40, 88], startLow: 40, bowing: false, positions: 'fretted', wobble: 20, smooth: 3, holdFrames: 6, fingering: 'fretted', maxFret: 22,
                positionLow: { open: 40, mid: 45, auto: 40 } },
-  bass:      { label: 'Bass', range: [28, 67], startLow: 28, bowing: false, positions: 'fretted', wobble: 20, smooth: 3, holdFrames: 10, fingering: 'fretted', maxFret: 20 },
-  ukulele:   { label: 'Ukulele', range: [60, 84], startLow: 60, bowing: false, positions: 'fretted', wobble: 20, smooth: 3, holdFrames: 10, fingering: 'fretted', maxFret: 15,
+  bass:      { label: 'Bass', range: [28, 67], startLow: 28, bowing: false, positions: 'fretted', wobble: 20, smooth: 3, holdFrames: 6, fingering: 'fretted', maxFret: 20 },
+  ukulele:   { label: 'Ukulele', range: [60, 84], startLow: 60, bowing: false, positions: 'fretted', wobble: 20, smooth: 3, holdFrames: 6, fingering: 'fretted', maxFret: 15,
                positionLow: { open: 60, mid: 65, auto: 60 } },
-  ukuleleLow:{ label: 'Ukulele (low G)', range: [55, 84], startLow: 55, bowing: false, positions: 'fretted', wobble: 20, smooth: 3, holdFrames: 10, fingering: 'fretted', maxFret: 15,
+  ukuleleLow:{ label: 'Ukulele (low G)', range: [55, 84], startLow: 55, bowing: false, positions: 'fretted', wobble: 20, smooth: 3, holdFrames: 6, fingering: 'fretted', maxFret: 15,
                positionLow: { open: 55, mid: 65, auto: 55 } },
-  ukuleleBar:{ label: 'Ukulele (baritone)', range: [50, 79], startLow: 50, bowing: false, positions: 'fretted', wobble: 20, smooth: 3, holdFrames: 10, fingering: 'fretted', maxFret: 15,
+  ukuleleBar:{ label: 'Ukulele (baritone)', range: [50, 79], startLow: 50, bowing: false, positions: 'fretted', wobble: 20, smooth: 3, holdFrames: 6, fingering: 'fretted', maxFret: 15,
                positionLow: { open: 50, mid: 60, auto: 50 } },
 };
 const MAX_SPAN = 3;

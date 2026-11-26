@@ -26,7 +26,7 @@ function refPlay(tl, opts = {}) {
   const pump = () => {
     while (REF.gi < REF.groups.length && t0 + REF.groups[REF.gi][0].startMs / 1000 < c.currentTime + 0.35) {
       const g = REF.groups[REF.gi++]; refSchedule(c, g, t0, A, 0.22);
-      g.forEach(n => REF.ui.push(setTimeout(() => { if (REF.playing && opts.onNote) opts.onNote(n.index); }, Math.max(0, (t0 + n.startMs / 1000 - c.currentTime) * 1000))));
+      g.forEach(n => REF.ui.push(setTimeout(() => { if (REF.playing && opts.onNote) opts.onNote(n.index); }, Math.max(0, (t0 + n.startMs / 1000 - c.currentTime + (c.outputLatency > 0 && c.outputLatency < 0.5 ? c.outputLatency : 0)) * 1000))));
     }
   };
   pump(); REF.timer = setInterval(pump, 50);

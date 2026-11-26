@@ -197,20 +197,32 @@ function svPaint() {
   }
 }
 // Where time is, in ms from the first note: from the click in Tempo-locked mode (negative during the count-in), else eased toward the target note.
+// One continuous position for every mode, in notes (1.0 = one note further), so the cursor, the band, the Tab and the Piano roll all glide and never jump:
+//   Tempo-locked  the audio clock (negative during the count-in)
+//   Hear scale    the audio clock from the moment the demo was scheduled
+//   Wait          eases toward the target note with a short time constant (about 90 ms), whatever the frame rate
+// null = nothing is running.
+function svPosF() {
+  const n = sc.tl.length, beat = 60000 / sc.bpm, haveClock = typeof ctx !== 'undefined' && ctx;
+  if (demoIdx >= 0) return haveClock && SV.demoT0 != null ? Math.max(0, Math.min(n - 1, ((ctx.currentTime - svLat() - SV.demoT0) * 1000) / beat)) : demoIdx;
+  if (!sc.running || sc.pos >= n) { SV.glide = null; return null; }
+  if (sc.mode === 'tempo' && sc.clock != null && haveClock) { SV.glide = null; return Math.min(n - 1, ((ctx.currentTime - svLat() - t0 - sc.clock) * 1000) / beat); }
+  const now = performance.now(), dt = SV.glideT ? Math.min(100, now - SV.glideT) : 16; SV.glideT = now;
+  if (SV.glide == null) SV.glide = sc.pos;
+  SV.glide += (sc.pos - SV.glide) * (1 - Math.exp(-dt / 90)); if (Math.abs(sc.pos - SV.glide) < 0.003) SV.glide = sc.pos;
+  return SV.glide;
+}
+// Where time is, in ms from the first note, for the Tab and the Piano roll (eases back to the start when nothing runs).
 function svNowMs() {
-  const beat = 60000 / sc.bpm, last = (sc.tl.length - 1) * beat;
-  if (demoIdx < 0 && sc.running && sc.mode === 'tempo' && sc.clock != null && typeof ctx !== 'undefined' && ctx) { SV.hwCur = (ctx.currentTime - t0 - sc.clock) * 1000; return Math.max(-2 * beat, Math.min(last, SV.hwCur)); }
-  const target = demoIdx >= 0 ? demoIdx * beat : sc.running ? Math.min(sc.pos, sc.tl.length - 1) * beat : 0;
-  SV.hwCur += (target - SV.hwCur) * 0.25; if (Math.abs(target - SV.hwCur) < 2) SV.hwCur = target;
+  const beat = 60000 / sc.bpm, f = svPosF();
+  if (f != null) { SV.hwCur = f * beat; return Math.max(-2 * beat, SV.hwCur); }
+  SV.hwCur += (0 - SV.hwCur) * 0.25; if (Math.abs(SV.hwCur) < 2) SV.hwCur = 0;
   return SV.hwCur;
 }
-// Staff cursor position: a smooth place between notes while the click runs, the target note otherwise. null = hidden.
-function svCursorAt() {
-  if (demoIdx >= 0) return demoIdx;
-  if (!sc.running || sc.pos >= sc.tl.length) return null;
-  if (sc.mode === 'tempo' && sc.clock != null && typeof ctx !== 'undefined' && ctx) return Math.max(0, Math.min(sc.tl.length - 1, ((ctx.currentTime - t0 - sc.clock) * 1000) / (60000 / sc.bpm)));
-  return sc.pos;
-}
+// Staff cursor position: a smooth place between notes in every mode. null = hidden.
+function svCursorAt() { const f = svPosF(); return f == null ? null : Math.max(0, f); }
+// What the player hears is later than what the audio clock says by the output latency (a few tens of ms on speakers, a few hundred on Bluetooth), so the cursor and the progress bar use the audio clock minus that.
+const svLat = () => { const l = typeof ctx !== 'undefined' && ctx ? ctx.outputLatency : 0; return l > 0 && l < 0.5 ? l : 0; };
 const svClock = ms => { const s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 function svProgress(now) {   // the bar under the display: time through the scale in Tempo-locked mode and in Hear scale, notes played in Wait mode
   const n = sc.tl.length, beat = 60000 / sc.bpm, total = n * beat, wait = demoIdx < 0 && sc.mode === 'wait';
@@ -221,7 +233,7 @@ function svProgress(now) {   // the bar under the display: time through the scal
 }
 function svFrame() {
   SV.raf = 0; if (!sc.plan) return;
-  if (sc.running || demoIdx >= 0) { const b = 60000 / sc.bpm; svProgress(demoIdx >= 0 ? demoIdx * b : sc.mode === 'tempo' && sc.clock != null && typeof ctx !== 'undefined' && ctx ? (ctx.currentTime - t0 - sc.clock) * 1000 : null); }
+  if (sc.running || demoIdx >= 0) { const b = 60000 / sc.bpm; svProgress(demoIdx >= 0 ? (svPosF() || 0) * b : sc.mode === 'tempo' && sc.clock != null && typeof ctx !== 'undefined' && ctx ? (ctx.currentTime - svLat() - t0 - sc.clock) * 1000 : null); }
   const v = svEffective(sc.plan.inst), busy = sc.running || demoIdx >= 0;
   if (v === 'tab' || v === 'roll') {
     if (!SV.hw) return;

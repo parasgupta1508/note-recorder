@@ -40,7 +40,8 @@ const SCENARIO = `async (cfg) => {
     const start = Date.now();
     while (sc.running && sc.pos < n && Date.now() - start < 90000) {
       const idx = sc.pos, t1 = Date.now(), tn = tone(sc.tl[idx].midi, 3.2);
-      while (sc.running && sc.pos === idx && Date.now() - t1 < 3200) await sleep(60);
+      while (sc.running && sc.pos === idx && Date.now() - t1 < 3200) await sleep(10);
+      (info.waitLag = info.waitLag || []).push(Date.now() - t1);   // ms from the note starting to the target moving on
       tn.stop(); await sleep(260);
     }
   } else {
@@ -54,6 +55,7 @@ const SCENARIO = `async (cfg) => {
   await sleep(600);
   if (sc.running) $('scStop').click();
   const L = sc.lastRun, r = L && L.rec;
+  info.waitLag && (info.waitLagMedian = info.waitLag.slice().sort((a, b) => a - b)[info.waitLag.length >> 1]);
   info.att = (sc.attempts || []).slice(0, 15).map(a => [a.index, a.grade, a.time_s, a.timing_ms]); info.baseLat = ctx && ctx.baseLatency; info.outLat = ctx && ctx.outputLatency;
   return Object.assign(info, { mode: cfg.mode, bpm: cfg.bpm, played: sc.pos, result: r ? { total: r.total, band: r.band, pitch: Math.round(r.pitch), fluency: Math.round(r.fluency), tone: Math.round(r.tone), skipped: r.skipped, wrong: r.wrong, up: r.up && r.up.bias == null ? null : r.up && +r.up.bias.toFixed(1), down: r.down && r.down.bias == null ? null : r.down && +r.down.bias.toFixed(1) } : null, resultShown: !$('scResult').hidden });
 }`;
@@ -81,7 +83,7 @@ srv.listen(0, async () => {
     const b = (await send('Runtime.evaluate', { expression: `(function(){var b=document.getElementById('scPlayer').getBoundingClientRect();return {x:b.x,y:b.y+scrollY,w:b.width,h:b.height}})()`, returnByValue: true })).result.value;
     const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: b.x, y: b.y, width: b.w, height: b.h, scale: 1 } });
     const f = path.join(out, `scale-mic-${k + 1}-${cfg.inst}.png`); fs.writeFileSync(f, Buffer.from(shot.data, 'base64'));
-    const r = v.result; rows.push({ dbg: { clock0: v.clock0, t0: v.t0, ctxAtClock: v.ctxAtClock, att: v.att, baseLat: v.baseLat, outLat: v.outLat }, k: k + 1, inst: cfg.inst, scale: v.scale, mode: v.mode, notes: v.notes, played: v.played, ...(r || {}), shown: v.resultShown, file: f });
+    const r = v.result; rows.push({ dbg: { waitLag: v.waitLag, clock0: v.clock0, t0: v.t0, ctxAtClock: v.ctxAtClock, att: v.att, baseLat: v.baseLat, outLat: v.outLat }, k: k + 1, inst: cfg.inst, scale: v.scale, mode: v.mode, notes: v.notes, played: v.played, ...(r || {}), shown: v.resultShown, file: f });
     console.log(`#${k + 1} ${cfg.inst.padEnd(9)} ${String(v.scale).padEnd(32)} ${v.mode.padEnd(5)} reached note ${v.played}/${v.notes}  ` + (r ? `score ${r.total} (${r.band})  pitch ${r.pitch}  fluency ${r.fluency}  tone ${r.tone}  skipped ${r.skipped}  wrong ${r.wrong}  bias up ${r.up}c down ${r.down}c  result card ${v.resultShown ? 'shown' : 'NOT shown'}` : 'NO RESULT'));
     await send('Runtime.evaluate', { expression: 'resetPractice && resetPractice()' }); await new Promise(r => setTimeout(r, 1500));
   }
