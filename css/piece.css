@@ -97,3 +97,6 @@
 #ppSave[hidden]{display:none} .pp-head #ppSave{margin-left:auto} .pp-head #ppSave+.mini{margin-left:0}
 
 .pz-open{display:flex;gap:10px;flex-wrap:wrap} .pz-open button{min-height:48px;padding:10px 18px;font-size:15px}
+
+/* Pieces screen: the instrument tabs and "Open file" share one row */
+.pc-top{display:flex;gap:8px;flex-wrap:wrap;align-items:center} #pcPractiseFile{min-height:40px;padding:6px 14px;font-size:14px;white-space:nowrap}

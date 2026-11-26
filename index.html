@@ -47,12 +47,15 @@
 <section id="tab-pieces" class="panel stack hide" role="tabpanel" aria-labelledby="nav-pieces">
   <div id="pcHome" class="stack">
     <h2 class="pg-h">Pieces</h2>
-    <div class="seg pc-inst" id="pcLibInst" role="group" aria-label="Instrument"><button type="button" data-i="violin">Violin</button><button type="button" data-i="guitar">Guitar</button><button type="button" data-i="piano">Piano</button><button type="button" data-i="ukulele">Ukulele</button></div>
+    <div class="pc-top">
+      <div class="seg pc-inst" id="pcLibInst" role="group" aria-label="Instrument"><button type="button" data-i="violin">Violin</button><button type="button" data-i="guitar">Guitar</button><button type="button" data-i="piano">Piano</button><button type="button" data-i="ukulele">Ukulele</button></div>
+      <button type="button" id="pcPractiseFile" class="sec" title="Practise a .musicxml, .xml or .mxl file from this device now, without adding it to the library" aria-label="Practise a file from this device">📁 Open file</button><input type="file" id="ppFile" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml" hidden>
+    </div>
     <input id="pcSearch" type="search" placeholder="Search pieces" aria-label="Search pieces" autocomplete="off">
     <div class="pc-filters" id="pcFilters" role="group" aria-label="Filters"><button type="button" class="chip" data-f="builtin">Built-in</button><button type="button" class="chip" data-f="mine">Mine</button><button type="button" class="chip" data-f="favourite">Favourites</button></div>
     <div id="pcCrumb" class="pc-crumb"></div>
     <div id="pcList"></div>
-    <div class="row"><button type="button" id="pcAdd">+ Add a piece</button><button type="button" id="pcPractiseFile" class="sec" title="Open a .musicxml, .xml or .mxl file from this device and practise it now, without adding it to the library">📁 Practise a file from this device</button><input type="file" id="ppFile" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml" hidden></div>
+    <div class="row"><button type="button" id="pcAdd">+ Add a piece</button></div>
     <details class="more"><summary>Import a pack (folder or .zip)</summary>
       <div class="stack"><p class="mut">A folder such as Violin / Mozart / Volume 1 with MIDI or MusicXML files becomes categories automatically. It is kept only on this device.</p>
         <div class="row"><button type="button" id="pcDirBtn" class="sec">Import a folder</button><button type="button" id="pcZipBtn" class="sec">Import a .zip</button></div>
@@ -114,7 +117,7 @@
         <div class="pz-open">
           <button id="pzLibPieces" type="button">🎼 Choose a piece in Pieces</button>
         </div>
-        <div class="hint2">Pieces is where you choose: pick the instrument, search, and tap Practise. To practise a .mxl or .musicxml file from your device, use "Practise a file from this device" there, or add it with + Add a piece.</div>
+        <div class="hint2">Pieces is where you choose: pick the instrument, search, and tap Practise. To practise a .mxl or .musicxml file from your device, use "Open file" (next to the instruments) there, or add it with + Add a piece.</div>
         <div class="hint2" id="ppMsg" role="status" aria-live="polite"></div>
       </div>
       <div class="player" id="pzPlayer">
