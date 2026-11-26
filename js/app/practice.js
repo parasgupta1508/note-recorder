@@ -8,8 +8,8 @@
 // ----- the scale-drill grader (Settings > Engines > "Scale drills: grading"): Practical (default) or Strict -----
 // Frames are stored as the grader's deviation (scaleDev: for bowed strings the distance to the nearest acceptable pitch, see js/core/engines/scorer-practical.js).
 // While playing, the player's overall offset so far is also taken out (scaleShift) so a steady 10 cents flat is not shown as every note being wrong.
-const scaleScorer = () => (typeof engineFor === 'function' && engineFor('scorer', 'live')) || findEngine('scorer', 'strict');
-const scorerParams = e => { const o = {}; Object.keys(e.params || {}).forEach(k => { o[k] = typeof engineParam === 'function' ? engineParam(e, k) : e.params[k].default; }); return o; };
+const scaleScorer = () => findEngine('scorer', typeof gradeMode === 'function' ? gradeMode() : 'practical');   // Practical or Strict: the buttons on the Scale drills screen
+const scorerParams = e => (e.id === 'practical' && typeof gradeSettings === 'function') ? gradeSettings(sc.plan ? sc.plan.inst : $('scInst').value) : {};   // per instrument, from Settings > Scale drill grading
 function scaleCtx(midi) { const e = scaleScorer(), inst = sc.plan ? sc.plan.inst : $('scInst').value; return { e, ctx: { midi, root: sc.plan ? sc.plan.pc : 0, fretless: !!ruleFor(inst).bowing, inst, params: scorerParams(e) } }; }
 function scaleDev(cents, midi) { const { e, ctx } = scaleCtx(midi); return e.dev ? e.dev(cents, ctx) : cents; }
 function scaleShift() { const { e, ctx } = scaleCtx(0); return e.shift ? e.shift(sc.devHist || [], ctx) : 0; }

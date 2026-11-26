@@ -3,7 +3,7 @@
 // (the same contract check the test suite runs) and Reset. An engine that fails its check is greyed out and can no longer be picked.
 // Part of the app: shared scope, loaded after settings-ui.js.
 
-const ENG_ROWS = [['f0', 'live', 'Tuner algorithm'], ['f0', 'scale', 'Scale drills: pitch algorithm'], ['scorer', 'live', 'Scale drills: grading'], ['segmenter', 'live', 'Recorder algorithm (live)'], ['segmenter', 'offline', 'Recorded file algorithm'], ['transcriber', 'offline', 'Detailed analysis algorithm (slower)']];
+const ENG_ROWS = [['f0', 'live', 'Tuner algorithm'], ['f0', 'scale', 'Scale drills: pitch algorithm'], ['segmenter', 'live', 'Recorder algorithm (live)'], ['segmenter', 'offline', 'Recorded file algorithm'], ['transcriber', 'offline', 'Detailed analysis algorithm (slower)']];
 const engKey = (role, mode) => role === 'transcriber' ? role : role + ':' + mode;
 const engEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const engWhyNot = e => e.contractFail ? 'failed its check' : e.caps.needsHelper && !(typeof LAB !== 'undefined' && LAB.ok) ? 'helper not running' : '';

@@ -38,8 +38,14 @@ srv.listen(0, async () => {
   await ev(`document.getElementById('firstRun').classList.add('hide'); showTab('settings'); window.scrollTo(0, 99999)`); await wait(1500);
   console.log('version line:', (await ev(`document.getElementById('appVer').textContent`)).value);
   fs.writeFileSync(path.join(out, 'settings-version.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
-  // ENGSHOT: Settings > Engines with the scale drill rows
-  await ev(`showTab('settings'); document.querySelector('#setMenu button, #setMenu [data-g=engines]'); (typeof setGroup==='function'?setGroup('engines'):0); document.querySelectorAll('.set-group').forEach(g=>g.classList.toggle('cur', g.dataset.g==='engines')); document.getElementById('tab-settings').classList.remove('home'); 1`); await wait(600);
-  fs.writeFileSync(path.join(out, 'settings-engines.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true })).data, 'base64'));
+  // Settings screens: grading (violin and guitar), engines
+  const settingsShot = async (name, js, w, h) => { await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 2, mobile: w < 600 }); await send('Page.navigate', { url: `http://localhost:${port}/index.html` }); await wait(1500);
+    await ev(`document.getElementById('firstRun').classList.add('hide'); showTab('settings'); ${js}; 1`); await wait(500);
+    fs.writeFileSync(path.join(out, name + '.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64')); };
+  await settingsShot('settings-grading-violin-phone', `$('scInst').value='violin'; $('scInst').dispatchEvent(new Event('change')); setCur='grading'; renderSet()`, 400, 800);
+  await settingsShot('settings-grading-guitar-phone', `$('scInst').value='guitar'; $('scInst').dispatchEvent(new Event('change')); setCur='grading'; renderSet()`, 400, 800);
+  await settingsShot('settings-grading-violin-laptop', `$('scInst').value='violin'; $('scInst').dispatchEvent(new Event('change')); setCur='grading'; renderSet()`, 1100, 700);
+  await settingsShot('settings-engines-phone', `setCur='engines'; renderSet()`, 400, 800);
+  await settingsShot('settings-engines-laptop', `setCur='engines'; renderSet()`, 1100, 700);
   done(0);
 });

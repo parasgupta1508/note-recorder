@@ -383,3 +383,11 @@
   @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
 
 .app-ver{margin:18px 2px 4px;text-align:center;font-size:12px;color:var(--mut);opacity:.75}
+
+/* Settings > Engines, compact: one line per job (name, choice, Test), two columns when there is room */
+#engBody{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:8px} #engBody .eng-row{margin:0;padding:8px 10px;flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 8px}
+#engBody .eng-head{flex:1 1 230px;min-width:0} #engBody .eng-head b{font-size:14px;white-space:nowrap} #engBody .eng-head select{max-width:none;flex:1 1 0}
+#engBody .eng-act{flex:0 0 auto} #engBody .eng-act .hint2{flex:1 1 100%} #engBody .eng-act .hint2:empty{display:none} #engBody .eng-p{flex:1 1 100%}
+/* Settings > Scale drill grading */
+.sg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px 14px} .sg-grid .sg-check{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+.sg-grid input:disabled,.sg-grid select:disabled{opacity:.45}

@@ -135,8 +135,8 @@
 .player .vis-bar{margin-bottom:2px}
 
 /* mode pill and the optional instrument icon */
-.pl-foot #scMode{display:inline-flex;width:auto;flex:0 0 auto;padding:2px;gap:2px;background:var(--raise);border-radius:10px}
-.pl-foot #scMode button{flex:0 0 auto;font-size:12.5px;padding:5px 10px;min-height:30px;background:transparent;color:var(--sv-dim)} .pl-foot #scMode button.on{background:var(--acc);color:#fff}
+.pl-foot #scMode,.pl-foot #scGrade{display:inline-flex;width:auto;flex:0 0 auto;padding:2px;gap:2px;background:var(--raise);border-radius:10px}
+.pl-foot #scMode button,.pl-foot #scGrade button{flex:0 0 auto;font-size:12.5px;padding:5px 10px;min-height:30px;background:transparent;color:var(--sv-dim)} .pl-foot #scMode button.on,.pl-foot #scGrade button.on{background:var(--acc);color:#fff}
 .vis-bar #scNeckBtn{min-height:36px;min-width:42px;padding:2px 10px;font-size:19px;line-height:1;flex:0 0 auto} .vis-bar #scNeckBtn.on{background:var(--acc)} .vis-bar #scNeckBtn[hidden]{display:none}
 .pl-foot{gap:8px 12px}
 

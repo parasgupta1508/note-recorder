@@ -26,7 +26,9 @@ function startCountIn() {
   const c = getCtx(), spb = 60 / sc.bpm, n = sigBeats(), base = c.currentTime + 0.08, wasOn = metroOn;
   sc.clickAfter = wasOn; startMetro(base);
   sc.clock = base + n * spb - t0;
-  if (!wasOn) sc.countTimer = setTimeout(() => { if (!sc.clickAfter && metroOn) stopMetro(); }, (0.08 + n * spb) * 1000 + 30);
+  // The count-in click stops on the AUDIO clock (just after the click on the first note's beat), not by a timer: the audio clock can start late (first use, Bluetooth), and a wall-clock
+  // timer then cut the last count-in click off.
+  sc.countEnd = wasOn ? null : base + n * spb;
   setMsg('Count-in: start on the downbeat after the clicks');
 }
 $('metro').addEventListener('click', () => { sc.clickAfter = metroOn; });

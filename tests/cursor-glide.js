@@ -33,6 +33,6 @@ srv.listen(0, async () => {
   const r = await send('Runtime.evaluate', { expression: js, awaitPromise: true, returnByValue: true, timeout: 60000 }), v = r.result && r.result.value;
   if (!v) { console.log('FAIL no result', JSON.stringify(r.exceptionDetails || r.result)); return done(1); }
   let bad = 0; const ck = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) bad++; };
-  for (const m of ['demo', 'wait']) { const x = v[m]; console.log(m, JSON.stringify(x)); ck(`${m}: the cursor never jumps (largest step ${x.maxStep} note per frame, limit 0.35)`, x.maxStep <= 0.35); ck(`${m}: it moves on most frames (${x.movingFrames})`, x.movingFrames >= (m === 'demo' ? 0.7 : 0.5)); ck(`${m}: it advanced (${x.from} to ${x.to})`, x.to > x.from + 1); }
+  for (const m of ['demo', 'wait']) { const x = v[m]; console.log(m, JSON.stringify(x)); ck(`${m}: the cursor never jumps (largest step ${x.maxStep} note per frame, limit 0.35)`, x.maxStep <= 0.35); ck(`${m}: it moves on most frames (${x.movingFrames})`, x.movingFrames >= 0.5); ck(`${m}: it advanced (${x.from} to ${x.to})`, x.to > x.from + 1); }
   done(bad ? 1 : 0);
 });

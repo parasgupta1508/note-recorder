@@ -53,7 +53,7 @@ srv.listen(0, async () => {
     const lastClick = Math.max(...clicks); let worst = 0; for (let i = 0; i < R.n && due(i) <= lastClick; i++) worst = Math.max(worst, near(clicks, due(i)));
     ck(`${m}: every note is due on a click (worst ${(worst * 1000).toFixed(2)} ms, limit 2)`, worst <= 0.002);
     // 2. the count-in (tempo only): one click per beat before the first note
-    if (m === 'tempo') ck('tempo: four count-in clicks before the first note', clicks.filter(t => t < due(0) - 0.001).length >= 4 && Math.abs(clicks.filter(t => t < due(0) - 0.001).slice(-1)[0] - (due(0) - R.beat)) < 0.002);
+    if (m === 'tempo') ck('tempo: four count-in clicks before the first note and one on its beat (the audio clock decides when the count-in ends, not a timer)', clicks.filter(t => t < due(0) - 0.001).length >= 4 && Math.abs(clicks.filter(t => t < due(0) - 0.001).slice(-1)[0] - (due(0) - R.beat)) < 0.002 && near(clicks, due(0)) < 0.002);
     // a frame lasts as long as the browser makes it (headless Edge often runs at 30 fps): allow two frames
     const dts = R.frames.slice(1).map((x, i) => x.t - R.frames[i].t).filter(x => x > 0).sort((a, b) => a - b), tol = 2 * dts[dts.length >> 1] + 0.01;
     console.log(`${m}: frame ${(dts[dts.length >> 1] * 1000).toFixed(0)} ms, tolerance ${(tol * 1000).toFixed(0)} ms`);

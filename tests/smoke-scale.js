@@ -14,7 +14,7 @@ function play(t,m,c,n){var k;for(k=0;k<n;k++){var tt=t+k/60,f=fq(m,c);det.frame(
 function quiet(t,n){for(var k=0;k<n;k++){var tt=t+k/60;det.frame(tt,null,440);liveScaleFrame(null,tt);collectHold(null)}return t+n/60}
 try{
 showTab('scale');
-setEngineSettings(Object.assign({}, engSet, { default: Object.assign({}, engSet.default, { 'scorer:live': 'strict' }) }));   // the checks below are about the app logic, in the exact equal-tempered view; the Practical grader has its own checks at the end
+setGradeMode('strict', true);   // the checks below are about the app logic, in the exact equal-tempered view; the Practical grader has its own checks at the end
 ck('no Octave or Direction control',!$('scOct')&&!$('scDir'));
 ck('span 1 to 3 octaves',[].map.call($('scSpan').options,function(o){return o.value}).join()==='1,2,3');
 var offered=[].map.call($('scInst').options,function(o){return o.value}).join(); ck('instruments: only Violin, Guitar, Piano, Ukulele',offered==='violin,guitar,chromatic,ukulele');
@@ -115,16 +115,24 @@ droneToggle(true); ck('drone starts',DRONE.on&&DRONE.nodes.length===3); droneTog
 
 // ---- the Practical grader and its Settings choices
 pick('scInst','violin'); pick('scRoot',0); pick('scType','major'); resetPractice();
-ck('Settings has a "Scale drills: grading" row and a "Scale drills: pitch algorithm" row',/Scale drills: grading/.test($('engBody').textContent)&&/Scale drills: pitch algorithm/.test($('engBody').textContent));
+ck('Settings > Engines has the pitch-algorithm row for scale drills and no grading row (grading is the Practical / Strict buttons)',/Scale drills: pitch algorithm/.test($('engBody').textContent)&&!/Scale drills: grading/.test($('engBody').textContent)&&document.querySelectorAll('#scGrade button').length===2);
 ck('Strict is exact: no offset forgiven, tolerance is the Tuner setting',scaleDev(-13,64)===-13&&scaleShift()===0&&scaleTol()===tol());
-setEngineSettings(Object.assign({}, engSet, { default: Object.assign({}, engSet.default, { 'scorer:live': 'auto' }) }));
-ck('Auto grading is Practical',engineFor('scorer','live').id==='practical');
+document.querySelector('#scGrade button[data-g=practical]').click();
+ck('the Practical button switches the grader and is remembered',scaleScorer().id==='practical'&&localStorage.getItem('tuner-scgrade')==='practical'&&document.querySelector('#scGrade button.on').dataset.g==='practical');
 ck('violin: a just-intonation major third (13 cents low) counts as in tune',scaleDev(-13,64)===0&&scaleDev(-30,64)<-10);
 ck('violin: a high leading tone (+18 cents) is accepted, +45 is not',scaleDev(18,71)===0&&scaleDev(45,71)>20);
 pick('scInst','guitar'); resetPractice(); ck('guitar (equal-tempered): no just-intonation zone',scaleDev(-13,64)===-13);
 pick('scInst','violin'); resetPractice(); sc.devHist=[-10,-10,-10,-10];
 ck('overall offset: 4 notes 10 cents flat shifts the live meter by 7 cents (70% forgiven); fewer than 4 notes shift nothing',Math.abs(scaleShift()+7)<0.01&&(sc.devHist=[-10,-10],scaleShift()===0));
 ck('Practical in-tune tolerance is wider than the Tuner setting',scaleTol()>=12);
+// per-instrument settings: stored for the selected instrument, just / Pythagorean only on bowed strings, all off in Strict
+setGradeSetting('violin','tolerance',20); ck('tolerance is stored per instrument (violin 20, guitar keeps its own default)',gradeSettings('violin').tolerance===20&&gradeSettings('guitar').tolerance===10&&scaleTol()>=20);
+setGradeSetting('violin','expressive',0); ck('turning just / Pythagorean off puts the third back on the equal-tempered target',scaleDev(-13,64)===-13); setGradeSetting('violin','expressive',1);
+setGradeSetting('guitar','expressive',1); ck('guitar cannot be given just / Pythagorean intonation (equal-tempered)',gradeSettings('guitar').expressive===0);
+renderGradeSettings(); ck('Settings panel (violin): all three controls on',!$('sgTol').disabled&&!$('sgDrift').disabled&&!$('sgExpr').disabled&&$('sgInst').value==='violin');
+pick('scInst','guitar'); ck('Settings panel (guitar): the just / Pythagorean option is off, the other two stay on',$('sgExpr').disabled&&!$('sgTol').disabled&&$('sgInst').value==='guitar'); pick('scInst','violin');
+document.querySelector('#scGrade button[data-g=strict]').click(); ck('Strict selected: the three settings are off',$('sgTol').disabled&&$('sgDrift').disabled&&$('sgExpr').disabled&&scaleScorer().id==='strict'); document.querySelector('#scGrade button[data-g=practical]').click();
+setGradeSetting('violin','tolerance',12); sc.running=true; document.querySelector('#scGrade button[data-g=strict]').click(); ck('the grading cannot be changed in the middle of a run',scaleScorer().id==='practical'); sc.running=false;
 ck('the result card says which grader marked the run',(function(){var e=scoreRun([{index:0,pass:1,name:'a',midi:60,d:'up',k:'h',c:0,m:0,a:1,s:3,e:0,sp:1,wrong:0,rt:0}],{beatMs:750,mode:'tempo',wobbleCap:40});return e&&e.engine==='practical'})());
 listening=false;}catch(e){listening=false;ck('exception '+e.message+' '+(e.stack||'').split('\\n')[1],false)}
 document.title='RESULT|'+r.join('|')},1500)</script>`;

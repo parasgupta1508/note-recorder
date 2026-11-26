@@ -175,7 +175,7 @@
             <button id="scResBtn" class="sec" type="button" aria-expanded="false" aria-controls="scResult" title="Show or hide the result of the last run" disabled>Result</button>
             <button id="scCardBtn" class="sec" aria-expanded="false" aria-controls="scCardPanel" title="Show the note scorecard and the weak spots">Scorecard</button>
           </div>
-          <label class="pl-loop" title="Strict: a wrong note is flagged and does not move you on"><input type="checkbox" id="scStrict" checked><span>✓ Strict</span></label>
+          <div class="seg sm" id="scGrade" role="group" aria-label="Grading"><button type="button" data-g="practical" class="on" aria-pressed="true" title="Practical: marks like a teacher. Human tolerance, just intonation on bowed strings, an overall offset forgiven. Details in Settings">Practical</button><button type="button" data-g="strict" aria-pressed="false" title="Strict: exact equal-temperament marking, full marks only within 6 cents">Strict</button></div><input type="checkbox" id="scStrict" checked hidden aria-hidden="true">
           <div class="seg sm" id="scMode" role="group" aria-label="Practice mode">
           <button type="button" data-mode="tempo" class="on" title="The target follows the BPM: a count-in bar, then each note is due on its beat">⏱ Tempo</button>
           <button type="button" data-mode="wait" title="The target waits for you and moves on when the note is held in tune">⏸ Wait</button>
@@ -388,6 +388,15 @@
       <label class="field"><span>Keep screen on</span><select id="awake"><option value="1">While listening</option><option value="0">Never</option></select></label>
     </div></div>
 
+  <div class="set-group" data-g="grading"><h3>Scale drill grading</h3><p>Practical marks like a teacher; Strict is exact (choose it on the Scale drills screen). These settings are kept for the instrument shown here and apply to Practical.</p>
+    <div class="sg-grid">
+      <label class="field"><span>Instrument</span><select id="sgInst" aria-label="Instrument for these settings"></select></label>
+      <label class="field"><span>In-tune tolerance: <b id="sgTolV"></b> cents</span><input type="range" id="sgTol" min="6" max="30" step="1"></label>
+      <label class="field"><span>Forgive overall offset: <b id="sgDriftV"></b>%</span><input type="range" id="sgDrift" min="0" max="100" step="5"></label>
+      <label class="field sg-check"><span>Allow just / Pythagorean intonation</span><input type="checkbox" id="sgExpr"></label>
+    </div>
+    <p class="hint2" id="sgNote" style="margin:8px 0 0"></p>
+    <div class="row" style="margin-top:8px"><button type="button" class="sec" id="sgReset">Reset this instrument</button></div></div>
   <div class="set-group" data-g="mic"><h3>Microphone</h3><p>Watch the Input bar at the top while you play: it turns green when your sound is loud enough to be analysed.</p>
     <label class="field"><span>Input device</span><select id="micDev"><option value="">Default microphone</option></select></label>
     <div class="row" style="margin-top:12px"><button id="calib" class="sec">Calibrate microphone</button><span class="hint2" id="calibMsg">Takes 7 seconds. Sets the noise gate and input level for your room.</span></div>
@@ -420,7 +429,7 @@
       <div class="qk" id="rangeQ"><button data-r="30,400">Bass</button><button data-r="70,1500">Guitar</button><button data-r="180,2800">Violin</button><button data-r="140,1400">Ukulele</button><button data-r="80,1100">Voice</button><button data-r="60,1500">All</button></div>
       <p class="hint2" style="margin:10px 0 0">Tap your instrument, or type your own limits. A narrower range avoids octave mistakes and saves battery. The Tuner already narrows it to your instrument's strings; this applies to the Recorder and Practice.</p></details></div>
 
-  <div class="set-group" data-g="engines"><h3>Engines</h3><p>Which method listens and writes the notes. “Auto” keeps today's behaviour. The Detection presets above stay where they are.</p>
+  <div class="set-group" data-g="engines"><h3>Engines</h3><p>Which method listens and writes the notes. “Auto” keeps today's behaviour.</p>
     <div id="engBody"></div>
     <div class="row" style="margin-top:10px"><button type="button" class="sec" id="engCompare">Compare in Lab</button></div></div>
   <div class="set-group" data-g="check"><h3>Accuracy check</h3><p>The software test proves the maths. The live check measures your own microphone and instrument.</p>
@@ -489,6 +498,7 @@
 <script src="js/app/selftest.js"></script>
 <script src="js/app/settings-ui.js"></script>
 <script src="js/app/practice-engine.js"></script>
+<script src="js/app/scale-grade.js"></script>
 <script src="js/app/scale-visual.js"></script>
 <script src="js/app/scale-history.js"></script>
 <script src="js/app/recorder.js"></script>

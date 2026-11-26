@@ -14,6 +14,7 @@ function clickAt(time, accent) {
 }
 function metroTick() {
   // during a run or a demo the click uses the run's own tempo (a change of the BPM box mid-run must not pull the click away from the cursor)
+  if (typeof sc !== 'undefined' && sc.countEnd != null && !sc.clickAfter && getCtx().currentTime >= sc.countEnd + 0.03) { stopMetro(); return; }   // count-in over
   const c = getCtx(), spb = 60 / ((sc.running || demoIdx >= 0) && sc.bpm ? sc.bpm : (+$('scBpm').value || 80)), n = sigBeats();
   while (metroNext < c.currentTime + 0.3) {
     const b = metroBeat % n;
@@ -35,6 +36,7 @@ function startMetro(at) {   // at: the audio-clock time of beat 1 (the caller's 
   beatQ = []; metroTick(); metroTimer = setInterval(metroTick, 50); cancelAnimationFrame(beatRaf); beatRaf = requestAnimationFrame(beatPump); $('metro').classList.add('on'); $('metro').textContent = '■ Click';
 }
 function stopMetro() {
+  if (typeof sc !== 'undefined') sc.countEnd = null;
   clearInterval(metroTimer); metroTimer = null; beatTimers.forEach(clearTimeout); beatTimers = []; beatQ = []; cancelAnimationFrame(beatRaf); beatRaf = 0; metroOn = false;
   if ($('beats')) flashBeat(-1); $('metro').classList.remove('on'); $('metro').textContent = '♩ Click';
 }
