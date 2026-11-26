@@ -41,12 +41,9 @@
 - [ ] Staff: beams, ties and slurs, a bass clef and a grand staff for piano, and spacing in proportion to note length (today every note gets the same width).
 - [ ] Violin hand position: `ppPositions` picks the lowest position that reaches each note and stays while it can; use the score's own fingering marks (`<fingering>`) when they exist.
 - [ ] Wait mode with accompaniment (today the other parts play in Tempo mode and "Hear piece" only).
-- [ ] Offer "Save to my library" for a piece opened from GitHub (today nothing is stored by design).
 - [ ] Let a piece open from the Pieces tab with a "Practise with scoring" button, so the two screens share one list.
 - [ ] The Staff, Tab, Fingerboard and Piano roll exist twice now (`scale-visual.js` and `piece-visual.js`), as do the two engines. When the owner agrees, share the drawing code (a parameterised view) instead of keeping two copies in step.
 - [ ] Per-piece progress in the Progress tab and in the backup file: piece runs are in `localStorage` (`tuner-piece-runs-v1`) only. Needs a decision with the owner, because the Progress tab and the backup belong to the Scale drills history.
 - [ ] The local checkout of `main` was 18 commits behind GitHub and holds an unfinished experiment (Recorder views Staff/Tab/Fingerboard/Roll: `js/core/fingerboard.js`, `instrument-views.js` missing). The Scale drills now have these displays, so decide whether that experiment is still wanted before it is merged or deleted.
-- [ ] Add the Piece libraries list (`tuner-piece-libs-v1`) and the piece run summaries to the backup / restore file.
-- [ ] Instrument filter: libraries rarely say which instrument a score is for. Once a piece is opened its real instrument is known; consider remembering it (in memory only, or by file path in `localStorage`) so the filter gets better as pieces are opened.
 - [ ] Grand staff: beams between the two staves, notes that cross between staves keep the split at middle C.
 

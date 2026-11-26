@@ -23,27 +23,8 @@ setGradeMode('strict', true);
 var nav=$('nav-piece'); ck('main menu: "Piece practice" is a new item, next to Practice',!!nav&&/Piece practice/.test(nav.textContent)&&nav.nextElementSibling===$('nav-pieces')&&nav.previousElementSibling===$('nav-home'));
 nav.click(); ck('opening it shows its own screen and hides the Scale drills',tab==='piece'&&!$('tab-piece').classList.contains('hide')&&$('tab-scale').classList.contains('hide')&&nav.classList.contains('on'));
 ck('it is not inside the Scale drills screen',!$('tab-scale').contains($('tab-piece'))&&!$('tab-piece').contains($('tab-scale')));
-ck('before a piece is chosen: the library view (search, instrument filter, from this device, link box) and no player',!$('pzLib').hidden&&$('pzPlayer').hidden&&!!$('pzLibSearch')&&!!$('pzLibInst')&&!!$('ppPick')&&!!$('ppUrl')&&!!$('pzLibSettings'));
-// the library list, search and filter (the lists are put in memory here: the test does not go to GitHub)
-PLS=[{id:'t/one',owner:'t',repo:'one',ref:'',prefix:'',includeXml:false,inst:'any',title:'Test library',on:true},{id:'t/two',owner:'t',repo:'two',ref:'',prefix:'',includeXml:false,inst:'chromatic',title:'Piano library',on:true},{id:'t/off',owner:'t',repo:'off',ref:'',prefix:'',includeXml:false,inst:'any',title:'Switched off',on:false}];
-PLC['t/one']={state:'ok',files:[{path:'x/Violin_Romance.mxl',name:'Violin_Romance.mxl',label:'Violin Romance',dir:'x',ext:'mxl',size:2048},{path:'x/Canon.mxl',name:'Canon.mxl',label:'Canon',dir:'x',ext:'mxl',size:1024}]};
-PLC['t/two']={state:'ok',files:[{path:'y/Moonlight_Sonata.mxl',name:'Moonlight_Sonata.mxl',label:'Moonlight Sonata',dir:'y',ext:'mxl',size:4096}]};
-PLC['t/off']={state:'ok',files:[{path:'z/Hidden.mxl',name:'Hidden.mxl',label:'Hidden',dir:'z',ext:'mxl',size:1}]};
-plRender();
-ck('library: every piece of the libraries that are on (3), none of the one that is off',$('pzLibList').querySelectorAll('button.pp-file').length===3&&!/Hidden/.test($('pzLibList').textContent)&&/3 pieces/.test($('pzLibCount').textContent));
-ck('library: instrument filter buttons with counts (All 3, Piano 1, Violin 1, Not stated 1)',/All\\s*3/.test($('pzLibInst').textContent)&&/Piano\\s*1/.test($('pzLibInst').textContent)&&/Violin\\s*1/.test($('pzLibInst').textContent)&&/Not stated\\s*1/.test($('pzLibInst').textContent)&&!/Guitar/.test($('pzLibInst').textContent));
-$('pzLibInst').querySelector('button[data-i=violin]').click(); ck('library: the Violin filter shows only the violin piece',$('pzLibList').querySelectorAll('button.pp-file').length===1&&/Violin Romance/.test($('pzLibList').textContent));
-$('pzLibInst').querySelector('button[data-i=all]').click(); $('pzLibSearch').value='sonata'; $('pzLibSearch').dispatchEvent(new Event('input')); ck('library: search finds a piece by its name',$('pzLibList').querySelectorAll('button.pp-file').length===1&&/Moonlight/.test($('pzLibList').textContent));
-$('pzLibSearch').value='zzz'; $('pzLibSearch').dispatchEvent(new Event('input')); ck('library: no match says so',$('pzLibList').querySelectorAll('button.pp-file').length===0&&/No piece matches/.test($('pzLibStatus').textContent));
-$('pzLibSearch').value=''; $('pzLibSearch').dispatchEvent(new Event('input')); pick('pzLibRepo','t/two'); ck('library: the library menu limits the list',$('pzLibList').querySelectorAll('button.pp-file').length===1); pick('pzLibRepo','all');
-// Settings > Piece libraries
-$('plAddUrl').value='https://github.com/foo/bar-scores'; pick('plAddInst','violin'); $('plAddForm').dispatchEvent(new Event('submit',{cancelable:true}));
-ck('settings: a library is added with its instrument and saved on this device',PLS.length===4&&PLS[3].id==='foo/bar-scores'&&PLS[3].inst==='violin'&&JSON.parse(localStorage.getItem(PL_KEY)).some(function(x){return x.id==='foo/bar-scores'})&&$('plRepos').querySelectorAll('.pl-repo').length===4);
-$('plAddUrl').value='nonsense'; $('plAddForm').dispatchEvent(new Event('submit',{cancelable:true})); ck('settings: a bad link is refused with a reason',/Paste a GitHub/.test($('plAddMsg').textContent)&&PLS.length===4);
-$('plRepos').querySelector('input[data-on="t/one"]').click(); ck('settings: switching a library off removes its pieces from the list',PLS[0].on===false&&$('pzLibList').querySelectorAll('button.pp-file').length===1);
-$('plRepos').querySelector('button[data-rm="foo/bar-scores"]').click(); ck('settings: a library is removed',PLS.length===3&&!JSON.parse(localStorage.getItem(PL_KEY)).some(function(x){return x.id==='foo/bar-scores'}));
-ck('settings: the group is in the Settings menu',!!document.querySelector('.set-group[data-g=piecelibs]')&&/Piece libraries/.test($('setMenu').textContent));
-PLS[0].on=true; plSave(); plRender();
+ck('before a piece is chosen: the open screen (choose from my pieces, open a file from this device) and no player, and no GitHub or library listing anywhere',!$('pzLib').hidden&&$('pzPlayer').hidden&&!!$('pzLibPieces')&&!!$('ppPick')&&!$('pzLibSearch')&&!$('ppUrl')&&!$('plRepos')&&!document.querySelector('.set-group[data-g=piecelibs]')&&typeof ghParseUrl==='undefined');
+$('pzLibPieces').click(); ck('"Choose from my pieces" goes to the Pieces screen',tab==='pieces'&&!$('tab-pieces').classList.contains('hide')); showTab('piece');
 ck('the file picker takes .musicxml, .xml and .mxl',/\\.musicxml/.test($('ppFile').accept)&&/\\.xml/.test($('ppFile').accept)&&/\\.mxl/.test($('ppFile').accept));
 ck('the instrument list is the drills\\' four',[].map.call($('pzInst').options,function(o){return o.value}).join()==='violin,guitar,chromatic,ukulele');
 
@@ -71,12 +52,11 @@ ck('violin hand position per note',Array.isArray(PE.plan.posList)&&PE.plan.posLi
 // ---- pieces saved in the Pieces library join the Open a piece list; a score can be saved into it
 ck('save: a button to keep the opened score, shown for a score that came from a file or GitHub',!$('ppSave').hidden&&!$('ppSave').disabled&&/Save to my pieces/.test($('ppSave').textContent));
 var bp=ppBuildPiece(); ck('save: the library piece has the title, instrument, category, chosen part and the score text',!!bp&&bp.title==='Etude'&&bp.instrument==='violin'&&bp.categoryPath.join()==='My imports'&&bp.part===0&&bp.source==='musicxml'&&bp.parts.length===5&&/<score-partwise/.test(bp.xml)&&bp.verified===true&&!bp.builtin);
-ck('save: GitHub folders become the category (composer, work), without the generic "scores" folder',JSON.stringify(ppFolders('scores/Haydn,_Joseph/String_Quartet_No.1/sq1.mxl'))==='["Haydn, Joseph","String Quartet No.1"]'&&ppFolders('a.mxl').length===0);
-var lp=pieceFromMusicXml(${multi},{title:'Saved Etude',instrument:'violin'}); lp.title='Saved Etude'; lp.categoryPath=['Composer','Book 1']; PLL.items=[lp]; $('pzLib').hidden=false; $('pzPlayer').hidden=true; PLV.q=''; PLV.inst='all'; PLV.lib='all'; plRender();
-ck('library: a saved piece is in the list, marked as on this device, filed by its category',/Saved Etude/.test($('pzLibList').textContent)&&/on this device/.test($('pzLibList').textContent)&&/My pieces/.test($('pzLibRepo').textContent));
-PLV.lib='local'; PLV.inst='violin'; plRender(); ck('library: the instrument filter and the library menu work on saved pieces',$('pzLibList').querySelectorAll('button.pp-file').length===1);
-$('pzLibList').querySelector('button.pp-file').click(); ck('library: opening a saved piece loads it (several parts: the part list), and it cannot be saved again',PP.src==='mine'&&PP.title==='Saved Etude'&&PP.sum.length===5&&$('ppSave').hidden&&!$('pzPlayer').hidden&&$('pzLib').hidden);
-PLL.items=[]; PLV.lib='all'; PLV.inst='all'; ppChoosePart(0);
+ck('save: folders become the category (composer, work), without the generic "scores" folder',JSON.stringify(ppFolders('scores/Haydn,_Joseph/String_Quartet_No.1/sq1.mxl'))==='["Haydn, Joseph","String Quartet No.1"]'&&ppFolders('a.mxl').length===0);
+var lp=pieceFromMusicXml(${multi},{title:'Saved Etude',instrument:'violin'}); lp.title='Saved Etude'; lp.id='t-etude'; lp.categoryPath=['Composer']; PC.lib=[lp];
+ck('Pieces screen: a MusicXML piece can be practised here (the Practise button opens it with scoring)',plUsable(lp)&&ppOpenLibPiece('t-etude')===true&&tab==='piece'&&PP.src==='mine'&&PP.title==='Saved Etude'&&PP.sum.length===5&&$('ppSave').hidden&&!$('pzPlayer').hidden);
+PC.lib=[{id:'m1',source:'midi',parts:[{notes:[{midi:60,start:0,dur:500}]}]},{id:'g1',generator:{},parts:[]}]; ck('Pieces screen: MIDI pieces and generated scales are not taken (they have no bars to score)',ppOpenLibPiece('m1')===false&&ppOpenLibPiece('g1')===false&&ppOpenLibPiece('nope')===false); PC.lib=[];
+ppChoosePart(0);
 
 // ---- the engraved staff (Verovio loads as a module, which a file:// page cannot do: here it must fail politely and the simple staff must come back)
 ck('engraved: a button next to the instrument button, off by default',!!$('pzEngBtn')&&!PW.eng&&$('pzEngBox').hidden);

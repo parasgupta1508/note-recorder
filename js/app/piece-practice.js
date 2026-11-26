@@ -1,9 +1,9 @@
-// Piece practice screen: where the music comes from (the GitHub libraries chosen in Settings, a pasted link, or a local MusicXML file), which instrument and part, which bars, and the accompaniment.
+// Piece practice screen: where the music comes from (the Pieces library, or a MusicXML file from this device), which instrument and part, which bars, and the accompaniment.
 // The file is parsed by js/core/musicxml.js, the chosen part becomes a timeline (js/core/piece-practice.js), and the engine (piece-engine.js) and the displays (piece-visual.js)
 // play and draw it. This screen is separate from the Scale drills and does not change them.
 // Part of the app. Scripts in js/app load in the order listed in index.html and share one scope.
 //
-// Nothing is stored: not the file, not the GitHub list. They live in memory until the page is closed or another piece is opened.
+// A file opened from the device lives in memory until the page is closed or another piece is opened, unless the player saves it (Save to my pieces).
 
 const PP = { parsed: null, sum: [], idx: -1, title: '', from: 1, to: 1, last: 1, line: 'top', oct: 'auto', backing: false, backOff: new Set(), bpm0: 80, src: '', id: 0 };
 const PP_MAX_FILE = 25 * 1024 * 1024, PP_MAX_XML = 80 * 1024 * 1024;   // bytes in a file / bytes of MusicXML text after un-zipping (a zip bomb stops here)
@@ -83,14 +83,6 @@ async function ppOpenBytes(bytes, name, src, cats) {
 }
 async function ppOpenFile(file) { if (!file) return; if (file.size > PP_MAX_FILE) { ppBusy('This file is larger than 25 MB.', true); return; } return ppOpenBytes(new Uint8Array(await file.arrayBuffer()), file.name, 'file'); }
 
-// Reads a URL into memory (GitHub's two hosts only; the caller built the URL from checked parts).
-async function ppFetch(url) {
-  let r; try { r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store' }); } catch { throw new Error(ghExplain(0)); }
-  if (!r.ok) throw new Error(ghExplain(r.status, r.headers.get('x-ratelimit-remaining'), r.headers.get('x-ratelimit-reset')));
-  if (+r.headers.get('content-length') > GH_MAX_BYTES) throw new Error('This file is larger than 25 MB.');
-  const b = new Uint8Array(await r.arrayBuffer()); if (b.length > GH_MAX_BYTES) throw new Error('This file is larger than 25 MB.'); return b;
-}
-
 // ================= a score is open: which instrument, which part =================
 function ppLoadParsed(x, name, src, text, cats) {
   if (PE.running || PE.demo >= 0) peStop();
@@ -157,100 +149,23 @@ $('pzBpmUp').onclick = () => { $('pzBpm').value = Math.min(240, (+$('pzBpm').val
 $('ppBack').onchange = () => { PP.backing = $('ppBack').checked; if (!PP.backing) ppBackingStop(); else peMsg('Accompaniment is on: use headphones so the microphone does not hear it'); };
 $('ppBackList').onchange = e => { const b = e.target.closest('input[data-b]'); if (!b) return; if (b.checked) PP.backOff.delete(+b.dataset.b); else PP.backOff.add(+b.dataset.b); };
 
-// ================= Open a piece: the player's GitHub libraries, with search and an instrument filter =================
-// The list of libraries is saved on this device (Settings > Piece libraries). The scores and the file lists are read from GitHub into memory when this screen opens and are never saved.
-const PL_KEY = 'tuner-piece-libs-v1';
-let PLS = (() => { try { const raw = localStorage.getItem(PL_KEY), v = +localStorage.getItem(PL_KEY + '-ver') || 1; return raw ? plMigrate(plNormalize(JSON.parse(raw)), v) : plDefaults(); } catch { return plDefaults(); } })();
-const plSave = () => { try { localStorage.setItem(PL_KEY, JSON.stringify(PLS)); localStorage.setItem(PL_KEY + '-ver', String(PL_VERSION)); } catch {} };
-plSave();   // (also saves the version after a migration)
-const PLC = {};                                   // library id -> { state: 'loading' | 'ok' | 'error', files, truncated, skipped, error }   (memory only)
-const PLV = { q: '', inst: 'all', lib: 'all' };   // what the list is showing
-const PL_SHOW = 200;                              // rows drawn at once (search to narrow a long list)
-function plSummary() { const n = PLS.filter(r => r.on).length; return `${n} librar${n === 1 ? 'y' : 'ies'} on`; }
-// Where a library's list of scores comes from, in this order (GitHub's own API allows only 60 requests an hour per network, so it is the last resort):
-//   1. the suggested libraries: a list that ships with the app (data/library/, built by tools/build-library-index.js), no GitHub request at all;
-//   2. a list saved on this device in the last 24 hours (the file names only, never a score);
-//   3. GitHub's API, and the result saved for next time. If GitHub says no, an older saved list is used, with a note.
-const PL_TREE = 'tuner-piece-tree-', PL_TTL = 24 * 3600e3;
-const plIdx = id => 'data/library/' + id.replace(/[^A-Za-z0-9]+/g, '_') + '.json';
-const plFromPairs = (pairs, x = {}) => { const m = ghMusicFiles({ tree: pairs.map(([path, size]) => ({ type: 'blob', path, size })) }, { includeXml: true }); return { files: m.files, truncated: !!x.truncated, skipped: x.skipped || 0 }; };
-const plSaved = id => { try { const o = JSON.parse(localStorage.getItem(PL_TREE + id)); return o && Array.isArray(o.files) ? o : null; } catch { return null; } };
-async function plLoadOne(r, force) {
-  const c = PLC[r.id]; if (!force && c && (c.state === 'ok' || c.state === 'loading')) return;
-  PLC[r.id] = { state: 'loading' }; plRender();
-  const ok = (m, note) => { PLC[r.id] = { state: 'ok', files: m.files, truncated: m.truncated, skipped: m.skipped, note: note || '' }; };
-  if (plDefaults().some(d => d.id === r.id)) {   // 1
-    try { const res = await fetch(plIdx(r.id), { cache: 'no-cache' }); if (res.ok) { const j = await res.json(); ok(plFromPairs(j.files, { truncated: j.truncated, skipped: j.skipped })); plRender(); return; } } catch {}
-  }
-  const saved = plSaved(r.id);
-  if (!force && saved && Date.now() - saved.t < PL_TTL) { ok(plFromPairs(saved.files, saved)); plRender(); return; }   // 2
-  try {   // 3
-    const tree = JSON.parse(new TextDecoder().decode(await ppFetch(ghTreeUrl(r)))), m = ghMusicFiles(tree, { prefix: r.prefix, includeXml: r.includeXml });
-    try { localStorage.setItem(PL_TREE + r.id, JSON.stringify({ t: Date.now(), truncated: m.truncated, skipped: m.skipped, files: m.files.map(f => [f.path, f.size]) })); } catch {}
-    ok(m);
-  } catch (e) {
-    if (saved) ok(plFromPairs(saved.files, saved), `${r.title}: showing the list saved on ${new Date(saved.t).toLocaleDateString()} (${/limiting/.test(e.message) ? 'GitHub is limiting requests right now' : e.message})`);
-    else PLC[r.id] = { state: 'error', error: e.message + (/limiting/.test(e.message) ? ' The suggested libraries do not need GitHub for their lists; a library you added does.' : '') };
-  }
-  plRender();
+// ================= Open a piece =================
+// The pieces to choose from are the Pieces screen's (instrument, search, Built-in / Mine / Favourites; add .mxl or .musicxml files there with + Add a piece): its Practise button
+// opens a MusicXML piece here, with scoring. This screen also opens one file straight from this device.
+const plUsable = p => !p.generator && p.source === 'musicxml' && Array.isArray(p.parts) && p.parts.some(x => x.notes && x.notes[0] && x.notes[0].q != null);   // MIDI pieces and generated scales have no bars or note lengths to score
+// A Pieces-library piece -> opened here. Returns false when it cannot be practised with scoring (the Pieces screen then opens it as before).
+function ppOpenLibPiece(id) {
+  const p = (typeof PC !== 'undefined' ? PC.lib : []).find(x => x.id === id); if (!p || !plUsable(p)) return false;
+  showTab('piece');
+  ppLoadParsed({ title: p.title, parts: p.parts, bpm: p.bpm || 80, timeSig: p.timeSig || [4, 4], key: p.key || { fifths: 0, minor: false } }, p.title, 'mine', p.xml || '');
+  ppBusy(''); return true;
 }
-const plRefresh = force => Promise.all(PLS.filter(r => r.on).map(r => plLoadOne(r, force)));
-// "My pieces & built-in": the pieces kept in the Pieces library on this device (js/app/pieces.js, IndexedDB). Only MusicXML pieces can be practised with scoring: they have bars and note lengths.
-const PLL = { items: [] }, PL_LOCAL = 'local', PL_LOCAL_INST = { piano: 'chromatic', violin: 'violin', guitar: 'guitar', ukulele: 'ukulele' };
-const plUsable = p => !p.generator && p.source === 'musicxml' && Array.isArray(p.parts) && p.parts.some(x => x.notes && x.notes[0] && x.notes[0].q != null);
-async function plLoadLocal() { try { const all = await LIBDB.all(); if (typeof PC !== 'undefined') PC.lib = all; PLL.items = all.filter(plUsable); } catch { PLL.items = []; } plRender(); }
-const plLocalEntries = () => PLL.items.map(p => ({ path: [...(p.categoryPath || []), p.title].join('/'), pid: p.id, name: p.title, label: p.title, dir: (p.categoryPath || []).join(' › '), ext: 'saved', size: 0, local: true, libId: PL_LOCAL, lib: 'My pieces & built-in', inst: PL_LOCAL_INST[p.instrument] || '' }));
-const plAll = () => PLS.filter(r => r.on && PLC[r.id] && PLC[r.id].state === 'ok').flatMap(r => plEntries(r, PLC[r.id].files)).concat(plLocalEntries());
-function plRender() {
-  if ($('pzLib').hidden) return;
-  const on = PLS.filter(r => r.on), all = plAll(), loading = on.filter(r => PLC[r.id] && PLC[r.id].state === 'loading'), failed = on.filter(r => PLC[r.id] && PLC[r.id].state === 'error');
-  if (PLV.lib !== 'all' && PLV.lib !== PL_LOCAL && !on.some(r => r.id === PLV.lib)) PLV.lib = 'all';
-  const cnt = plCounts(all, { q: PLV.q, lib: PLV.lib }), shown = plFilter(all, PLV).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
-  $('pzLibCount').textContent = all.length ? `${all.length} piece${all.length === 1 ? '' : 's'}` : '';
-  $('pzLibInst').innerHTML = [['all', 'All'], ...PL_INSTRUMENTS, ['unknown', 'Not stated']].filter(([k]) => k === 'all' || cnt[k] > 0 || PLV.inst === k)
-    .map(([k, n]) => `<button type="button" data-i="${k}" class="${PLV.inst === k ? 'on' : ''}" aria-pressed="${PLV.inst === k}">${n} <small>${cnt[k]}</small></button>`).join('');
-  $('pzLibRepo').innerHTML = `<option value="all">All libraries</option>` + (PLL.items.length ? `<option value="${PL_LOCAL}"${PLV.lib === PL_LOCAL ? ' selected' : ''}>My pieces &amp; built-in (${PLL.items.length})</option>` : '') + on.map(r => `<option value="${ppEsc(r.id)}"${PLV.lib === r.id ? ' selected' : ''}>${ppEsc(r.title)}${PLC[r.id] && PLC[r.id].state === 'ok' ? ' (' + PLC[r.id].files.length + ')' : ''}</option>`).join('');
-  $('pzLibRepo').hidden = on.length + (PLL.items.length ? 1 : 0) < 2;
-  const bits = [];
-  if (!on.length && !PLL.items.length) bits.push('No library is switched on. Open ⚙ Libraries to add a GitHub repository of scores.');
-  if (loading.length) bits.push(`Reading ${loading.map(r => r.title).join(', ')}…`);
-  for (const r of failed) bits.push(`${r.title}: ${PLC[r.id].error}`);
-  for (const r of on) if (PLC[r.id] && PLC[r.id].note) bits.push(PLC[r.id].note);
-  if (all.length && !loading.length && !failed.length) bits.push(shown.length ? 'Tap a piece to open it.' : 'No piece matches. Try fewer words or another instrument.');
-  const trunc = on.filter(r => PLC[r.id] && PLC[r.id].truncated).map(r => r.title);
-  if (trunc.length) bits.push(`${trunc.join(', ')}: GitHub cut the list short (a very large repository); add a folder of it as its own library to see the rest.`);
-  $('pzLibStatus').innerHTML = bits.map(b => `<div class="${failed.some(r => b.startsWith(r.title + ':')) ? 'bad-t' : ''}">${ppEsc(b)}</div>`).join('');
-  const tag = e => e.inst ? (PL_INSTRUMENTS.find(x => x[0] === e.inst) || [0, ''])[1] : '';
-  $('pzLibList').innerHTML = shown.slice(0, PL_SHOW).map(e => `<button type="button" class="pp-file" role="listitem" data-l="${ppEsc(e.libId)}" data-p="${ppEsc(e.pid || e.path)}"><b>${ppEsc(e.label)}</b><span>${tag(e) ? `<em>${tag(e)}</em> · ` : ''}${ppEsc(e.lib)} · ${e.local ? 'on this device' : ppKb(e.size)}</span></button>`).join('')
-    + (shown.length > PL_SHOW ? `<div class="hint2">Showing ${PL_SHOW} of ${shown.length}: type in the search box to narrow it down.</div>` : '');
-}
-async function plOpenLocal(id) {
-  const p = PLL.items.find(x => x.id === id); if (!p) return;
-  const key = p.key || { fifths: 0, minor: false };
-  ppLoadParsed({ title: p.title, parts: p.parts, bpm: p.bpm || 80, timeSig: p.timeSig || [4, 4], key }, p.title, 'mine', p.xml || '');
-  ppBusy('');
-}
-async function plOpen(libId, path) {
-  if (libId === PL_LOCAL) return plOpenLocal(path);
-  const r = PLS.find(x => x.id === libId); if (!r) return;
-  const f = (PLC[libId] && PLC[libId].files || []).find(x => x.path === path); if (!f) return;
-  ppBusy(`Reading ${f.label} (${ppKb(f.size)})…`);
-  try { await ppOpenBytes(await ppFetch(ghRawUrl(r, f.path)), f.name, `github:${r.owner}/${r.repo}`, ppFolders(f.path)); } catch (e) { ppBusy(e.message, true); }
-}
-// The library screen and the player are two views of this tab.
-function ppShowLib(show) {
-  $('pzLib').hidden = !show; $('pzPlayer').hidden = show;
-  if (show) { $('pzLibBack').hidden = !ppActive() && !PP.parsed; plRefresh(false); plLoadLocal(); plRender(); } else ppBusy('');
-}
-function ppEnter() { if (!$('pzLib').hidden) { plRefresh(false); plLoadLocal(); plRender(); ppInstallBuiltins(); } peUi(); }   // the screen was opened
-$('pzLibSearch').oninput = () => { PLV.q = $('pzLibSearch').value; plRender(); };
-$('pzLibInst').onclick = e => { const b = e.target.closest('button[data-i]'); if (b) { PLV.inst = b.dataset.i; plRender(); } };
-$('pzLibRepo').onchange = () => { PLV.lib = $('pzLibRepo').value; plRender(); };
-$('pzLibList').onclick = e => { const b = e.target.closest('button[data-p]'); if (b) plOpen(b.dataset.l, b.dataset.p); };
-$('pzLibRefresh').onclick = () => plRefresh(true);
+// The open screen and the player are two views of this tab.
+function ppShowLib(show) { $('pzLib').hidden = !show; $('pzPlayer').hidden = show; if (show) $('pzLibBack').hidden = !PP.parsed; else ppBusy(''); }
+function ppEnter() { ppInstallBuiltins(); peUi(); }   // the screen was opened
 $('pzLibBack').onclick = () => ppShowLib(false);
 $('ppChange').onclick = () => { if (PE.running || PE.demo >= 0) peStop(); ppShowLib(true); };
-$('pzLibSettings').onclick = () => { showTab('settings'); if (typeof setLay !== 'undefined' && setLay !== 'classic') { setCur = 'piecelibs'; renderSet(); } const g = document.querySelector('.set-group[data-g=piecelibs]'); if (g) g.scrollIntoView(); else scrollTo(0, 0); };
+$('pzLibPieces').onclick = () => showTab('pieces');
 
 // ----- Save to my pieces: the opened score goes into the Pieces library on this device (IndexedDB), filed under its composer or folder, and then works offline -----
 const ppFolders = path => path.split('/').slice(0, -1).filter(x => x !== '_' && x.toLowerCase() !== 'scores').map(x => x.replace(/_/g, ' ')).slice(0, 2);   // "scores/Haydn,_Joseph/Quartet/x.mxl" -> [Haydn, Joseph; Quartet]
@@ -273,8 +188,8 @@ $('ppSave').onclick = async () => {
   const piece = ppBuildPiece(); if (!piece) return;
   try {
     const all = await LIBDB.all(); if (all.some(p => p.title === piece.title && p.source === 'musicxml' && p.parts.length === piece.parts.length && p.parts[0].notes.length === piece.parts[0].notes.length)) { PP.saved = true; ppSaveUi(); peMsg('This piece is already in your Pieces library.'); return; }
-    await LIBDB.put([piece]); if (typeof PC !== 'undefined') PC.lib = await LIBDB.all(); PP.saved = true; ppSaveUi(); plLoadLocal();
-    peMsg(`Saved. Find it in Pieces, under ${piece.categoryPath.join(' › ')}, and in Open a piece under My pieces & built-in.`, 'ok');
+    await LIBDB.put([piece]); if (typeof PC !== 'undefined') PC.lib = await LIBDB.all(); PP.saved = true; ppSaveUi();
+    peMsg(`Saved. Find it in Pieces, under ${piece.categoryPath.join(' › ')}.`, 'ok');
   } catch (e) { peMsg('Could not save on this device: ' + (e.message || e), 'bad'); }
 };
 
@@ -291,7 +206,7 @@ async function ppInstallBuiltins() {
       Object.assign(piece, { id: b.id, title: b.title, instrument: b.instrument, categoryPath: b.categoryPath || ['Built-in'], builtin: true, favourite: false, verified: true, pack: null, xml: text });
       await LIBDB.put([piece]); done.add(b.id);
     }
-    localStorage.setItem(PL_BI_KEY, JSON.stringify([...done])); if (typeof PC !== 'undefined') PC.lib = await LIBDB.all(); plLoadLocal();
+    localStorage.setItem(PL_BI_KEY, JSON.stringify([...done])); if (typeof PC !== 'undefined') { PC.lib = await LIBDB.all(); if (typeof pcRenderHome === 'function') pcRenderHome(); }
   } catch {}
 }
 
@@ -301,46 +216,6 @@ $('ppFile').onchange = async () => { const f = $('ppFile').files[0]; $('ppFile')
 { const d = $('pzLib');
   d.addEventListener('dragover', e => { e.preventDefault(); d.classList.add('over'); }); d.addEventListener('dragleave', () => d.classList.remove('over'));
   d.addEventListener('drop', async e => { e.preventDefault(); d.classList.remove('over'); await ppOpenFile(e.dataTransfer.files[0]); }); }
-
-// ----- a pasted link: one score opens at once; a repository or folder is added to the libraries -----
-async function ppLink(text) {
-  const s = ghParseUrl(text);
-  if (!s) { ppBusy('Paste a link to a GitHub repository, a folder in one, or a .mxl / .musicxml file (for example github.com/owner/repo).', true); return; }
-  if (s.kind === 'file') {
-    if (!GH_MUSIC_EXT.concat('xml').includes(ghExt(s.path))) { ppBusy('That link is not a MusicXML file (.mxl, .musicxml or .xml).', true); return; }
-    const name = s.path.split('/').pop(); ppBusy(`Reading ${name}…`);
-    try { await ppOpenBytes(await ppFetch(ghRawUrl(s, s.path)), name, `github:${s.owner}/${s.repo}`); } catch (e) { ppBusy(e.message, true); }
-    return;
-  }
-  const r = plAdd(PLS, text, 'any');
-  if (r.error) { ppBusy(r.error, true); return; }
-  PLS = r.list; plSave(); plRenderSettings(); ppBusy(`Added ${r.added.title} to your libraries (Settings > Piece libraries).`); $('ppUrl').value = ''; plLoadOne(r.added, true);
-}
-$('ppUrlForm').onsubmit = e => { e.preventDefault(); const v = $('ppUrl').value; if (v.trim()) ppLink(v); };
-
-// ----- Settings > Piece libraries: add, remove, switch off, say what instrument a library is for -----
-PL_INSTRUMENTS.forEach(([k, n]) => $('plAddInst').add(new Option(n, k)));
-function plRenderSettings() {
-  $('plRepos').innerHTML = PLS.length ? PLS.map(r => `<div class="pl-repo"><label class="check"><input type="checkbox" data-on="${ppEsc(r.id)}" ${r.on ? 'checked' : ''} aria-label="Use ${ppEsc(r.title)}"><span><b>${ppEsc(r.title)}</b><small>github.com/${ppEsc(r.owner)}/${ppEsc(r.repo)}${r.prefix ? ' · folder ' + ppEsc(r.prefix) : ''}</small></span></label>`
-    + `<select data-inst="${ppEsc(r.id)}" aria-label="Instrument of ${ppEsc(r.title)}"><option value="any">Any instrument</option>${PL_INSTRUMENTS.map(([k, n]) => `<option value="${k}"${r.inst === k ? ' selected' : ''}>${n}</option>`).join('')}</select>`
-    + `<button type="button" class="sec" data-rm="${ppEsc(r.id)}">Remove</button></div>`).join('') : '<p class="hint2">No libraries. Add one below, or restore the suggested ones.</p>';
-  if (typeof renderSet === 'function') renderSet();
-}
-$('plRepos').onchange = e => {
-  const on = e.target.closest('input[data-on]'), inst = e.target.closest('select[data-inst]');
-  if (on) { const r = PLS.find(x => x.id === on.dataset.on); if (r) r.on = on.checked; }
-  else if (inst) { const r = PLS.find(x => x.id === inst.dataset.inst); if (r) r.inst = inst.value; }
-  else return;
-  plSave(); if (typeof renderSet === 'function') renderSet(); plRender();
-};
-$('plRepos').onclick = e => { const b = e.target.closest('button[data-rm]'); if (!b) return; PLS = PLS.filter(r => r.id !== b.dataset.rm); delete PLC[b.dataset.rm]; try { localStorage.removeItem(PL_TREE + b.dataset.rm); } catch {} plSave(); plRenderSettings(); plRender(); };
-$('plAddForm').onsubmit = e => {
-  e.preventDefault(); const r = plAdd(PLS, $('plAddUrl').value, $('plAddInst').value), m = $('plAddMsg');
-  if (r.error) { m.textContent = r.error; m.className = 'hint2 bad-t'; return; }
-  PLS = r.list; plSave(); $('plAddUrl').value = ''; m.textContent = `Added ${r.added.title}. Its pieces show in Piece practice.`; m.className = 'hint2 ok-t'; plRenderSettings();
-};
-$('plReset').onclick = () => { if (!confirm('Put back the suggested libraries? Libraries you added are removed from the list.')) return; PLS = plDefaults(); for (const k in PLC) delete PLC[k]; plSave(); plRenderSettings(); plRender(); };
-plRenderSettings();
 
 // ================= the other parts, as sound =================
 // While a piece runs in Tempo mode (or "Hear piece"), the parts the player is not playing are played by the app's own synth, scheduled just ahead on the audio clock.
@@ -370,3 +245,4 @@ function ppBackingPump() {
 function ppBackingStop() { clearInterval(PPB.timer); PPB.timer = 0; PPB.i = PPB.events.length; PPB.nodes.forEach(o => { try { o.stop(); } catch {} }); PPB.nodes = []; }
 
 ppFillControls(); $('pzPlayer').hidden = true; ppRender(); peUi();   // the library is the first view; it reads GitHub when the screen is opened (ppEnter)
+setTimeout(ppInstallBuiltins, 1500);   // built-in pieces appear in the Pieces screen without having to open this one first

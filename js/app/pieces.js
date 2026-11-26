@@ -58,7 +58,7 @@ const pcRow = p => `<div class="pc-item"><div><b>${pcEsc(p.title)}</b><small>${p
 $('pcList').addEventListener('click', e => {
   const f = e.target.closest('[data-folder]'); if (f) { PC.path.push(f.dataset.folder); pcRenderHome(); return; }
   const l = e.target.closest('[data-listen]'), pr = e.target.closest('[data-practise]');
-  if (l) pvOpen(l.dataset.listen, true); else if (pr) pvOpen(pr.dataset.practise, false);
+  if (l) pvOpen(l.dataset.listen, true); else if (pr) { if (typeof ppOpenLibPiece === 'function' && ppOpenLibPiece(pr.dataset.practise)) return; pvOpen(pr.dataset.practise, false); }   // a MusicXML piece is practised with scoring in Piece practice
 });
 $('pcCrumb').addEventListener('click', e => { const b = e.target.closest('[data-crumb]'); if (b) { PC.path = PC.path.slice(0, +b.dataset.crumb + 1); pcRenderHome(); } });
 $('pcLibInst').addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if (b) pcSetInst(b.dataset.i, true); });

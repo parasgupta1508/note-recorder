@@ -94,3 +94,5 @@
 #pzEng g.note.pg-cur,#pzEng g.note.pg-cur *{fill:#22d3ee;stroke:#22d3ee} #pzEng g.note.pg-cur.pg-ok *{fill:var(--ok);stroke:var(--ok)}
 
 #ppSave[hidden]{display:none} .pp-head #ppSave{margin-left:auto} .pp-head #ppSave+.mini{margin-left:0}
+
+.pz-open{display:flex;gap:10px;flex-wrap:wrap} .pz-open button{min-height:48px;padding:10px 18px;font-size:15px}
