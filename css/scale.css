@@ -74,13 +74,13 @@
 .tabbox .tl{stroke:var(--sv-line);stroke-width:1.3} .tabbox .sn,.rollbox .sn{fill:var(--fg)} .tabbox .snc{fill:#1b2440;stroke:#5a6a96;stroke-width:1.5} .tabbox .bt,.rollbox .bt{stroke:#ffffff14;stroke-width:1}
 .tabbox .hn rect{fill:#1b2748;stroke:#4a5c93;stroke-width:1.4} .tabbox .hn text{fill:var(--fg)} .tabbox .hn .cap{fill:var(--sv-dim);font-weight:500}
 .hn.ok rect{fill:#134a38;stroke:var(--ok)} .hn.close rect{fill:#5a4510;stroke:var(--warn)} .hn.bad rect{fill:#5c2326;stroke:var(--bad)}
-.tabbox .hn.cur rect{fill:var(--sv-cy-d);stroke:var(--sv-cy);stroke-width:2.2;filter:drop-shadow(0 0 6px var(--sv-cy))}
+.tabbox .hn.cur rect{stroke:var(--sv-cy);stroke-width:2.2;filter:drop-shadow(0 0 6px var(--sv-cy))} .tabbox .hn.cur.pend rect{fill:var(--sv-cy-d)}   /* the glow keeps the result colour once the note has been graded */
 .rollbox .rr{fill:#101729;stroke:#1d2740;stroke-width:.6} .rollbox .rr.blk{fill:#0b1121}
 .rollbox .gk{fill:#e9edf7;stroke:#141a2b;stroke-width:.8} .rollbox .gk.blk{fill:#161c2e;stroke:none} .rollbox .gk+.sn{fill:#2b3350;font-weight:600}
 .rollbox .hn rect{fill:url(#rbBlue);stroke:#ffffff40;stroke-width:1} .rollbox .hn text{fill:#fff;font-weight:700;pointer-events:none}
 .rollbox .hn.ok rect{fill:url(#rbOk)} .rollbox .hn.close rect{fill:url(#rbClose)} .rollbox .hn.bad rect{fill:url(#rbBad)}
 .rollbox .hn.close text{fill:#2b1c00} .rollbox .hn.ok text{fill:#04281c}
-.rollbox .hn.cur rect{fill:url(#rbCur);stroke:#fff;stroke-width:1.5;filter:drop-shadow(0 0 7px var(--sv-cy))} .rollbox .hn.cur text{fill:#06202a}
+.rollbox .hn.cur rect{stroke:#fff;stroke-width:1.5;filter:drop-shadow(0 0 7px var(--sv-cy))} .rollbox .hn.cur.pend rect{fill:url(#rbCur)} .rollbox .hn.cur.pend text{fill:#06202a}
 .tabbox .play,.rollbox .play{stroke:var(--sv-cy);stroke-width:2.5;stroke-linecap:round}
 .tabbox .playglow,.rollbox .playglow{fill:var(--sv-cy);opacity:.1;pointer-events:none} .tabbox .pill{fill:var(--sv-cy)} .tabbox .pilt{fill:#06202a} .rollbox .pmark{fill:var(--sv-cy)}
 .neckbox .dot.f0{fill:#8c93a8} .neckbox .dot.f1{fill:#34d399} .neckbox .dot.f2{fill:#fb923c} .neckbox .dot.f3{fill:#60a5fa} .neckbox .dot.f4{fill:#a78bfa} .neckbox .dot.fx{fill:#7f8aa8}

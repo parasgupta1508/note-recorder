@@ -131,9 +131,9 @@ function svBuildNeck(W, big) {
 function svHighwayFrame(W, H, dyn, stat, tag, clipX, pill) {
   const playX = Math.max(84, Math.round(W * 0.3));
   const grad = (id, a, b) => `<linearGradient id="${id}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>`;
-  const defs = `<clipPath id="hwc"><rect x="${clipX}" y="0" width="${W}" height="${H}"/></clipPath>` + grad('rbBlue', '#3b6bff', '#27c4ee') + grad('rbOk', '#1f9d6c', '#34d399') + grad('rbClose', '#c98a12', '#fbbf24') + grad('rbBad', '#c24545', '#f87171') + grad('rbCur', '#bff6ff', '#22d3ee');
+  const defs = `<clipPath id="hwc${pill ? 'T' : 'R'}"><rect x="${clipX}" y="0" width="${W}" height="${H}"/></clipPath>` + grad('rbBlue', '#3b6bff', '#27c4ee') + grad('rbOk', '#1f9d6c', '#34d399') + grad('rbClose', '#c98a12', '#fbbf24') + grad('rbBad', '#c24545', '#f87171') + grad('rbCur', '#bff6ff', '#22d3ee');
   const mark = pill ? `<rect class="pill" x="${playX - 26}" y="1" width="52" height="19" rx="9.5"/><text class="pilt" x="${playX}" y="14.5" text-anchor="middle" font-size="11" font-weight="700">NOW</text>` : `<path class="pmark" d="M${playX - 7} 1 h14 l-7 10z"/>`;
-  return { playX, svg: `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${tag}"><defs>${defs}</defs>${stat}<g clip-path="url(#hwc)"><g id="svHw">${dyn}</g></g><rect class="playglow" x="${playX - 14}" y="0" width="28" height="${H}" rx="6"/><line class="play" x1="${playX}" x2="${playX}" y1="${pill ? 20 : 8}" y2="${H - 2}"/>${mark}</svg>` };
+  return { playX, svg: `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${tag}"><defs>${defs}</defs>${stat}<g clip-path="url(#hwc${pill ? 'T' : 'R'})"><g id="svHw">${dyn}</g></g><rect class="playglow" x="${playX - 14}" y="0" width="28" height="${H}" rx="6"/><line class="play" x1="${playX}" x2="${playX}" y1="${pill ? 20 : 8}" y2="${H - 2}"/>${mark}</svg>` };
 }
 function svBuildTab(W) {
   const p = sc.plan, tl = p.tl, inst = p.inst, strings = stringsOf(inst), rowsN = strings.length, rh = 38, H = 32 + rowsN * rh + 16, yRow = r => 30 + r * rh + rh / 2, bowed = svIsBowed(inst);
@@ -148,7 +148,7 @@ function svBuildTab(W) {
   });
   for (let r = 0; r < rowsN; r++) stat += `<circle class="snc" cx="16" cy="${yRow(r)}" r="12"/><text class="sn" x="16" y="${yRow(r) + 4.5}" text-anchor="middle" font-size="12" font-weight="700">${svSharp(midiName(strings[strings.length - 1 - r]).replace(/-?\d+$/, ''))}</text>`;
   const fr = svHighwayFrame(W, H, dyn, stat, `Tab: ${tl.length} notes`, 34, true); SV.playX = fr.playX;
-  $('scTab').innerHTML = fr.svg; SV.hw = $('svHw');
+  $('scTab').innerHTML = fr.svg; SV.hw = $('scTab').querySelector('#svHw');   // look inside this view: Tab and Piano roll both have a #svHw
   SV.hwNodes = [...$('scTab').querySelectorAll('g.hn')].reduce((a, g) => (a[+g.dataset.i] = g, a), []);
 }
 function svBuildRoll(W) {
@@ -168,7 +168,7 @@ function svBuildRoll(W) {
     dyn += `<g class="hn" data-i="${i}"><rect x="${i * SV_PPB}" y="${yOf(nt.midi) + 1}" width="${w}" height="${rh - 2}" rx="${Math.min(6, (rh - 2) / 2)}"/>` + (rh >= 12 && w > 34 ? `<text x="${i * SV_PPB + 7}" y="${yOf(nt.midi) + rh / 2 + 4}" font-size="${Math.min(11, rh - 4)}">${svNoteName(i)}</text>` : '') + `</g>`;
   });
   const fr = svHighwayFrame(W, H, dyn, stat, `Piano roll: ${tl.length} notes`, gut); SV.playX = fr.playX;
-  $('scRoll').innerHTML = fr.svg; SV.hw = $('svHw');
+  $('scRoll').innerHTML = fr.svg; SV.hw = $('scRoll').querySelector('#svHw');
   SV.hwNodes = [...$('scRoll').querySelectorAll('g.hn')].reduce((a, g) => (a[+g.dataset.i] = g, a), []);
 }
 

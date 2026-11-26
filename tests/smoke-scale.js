@@ -55,7 +55,7 @@ view('board'); ck('Fingerboard: a fretboard and a readout',!$('scNeck').hidden&&
 var dotsScale=$('scNeck').querySelectorAll('.dot').length; $('scShow').value='all'; $('scShow').dispatchEvent(new Event('change')); ck('Fingerboard: All notes shows more places',$('scNeck').querySelectorAll('.dot').length>dotsScale); $('scShow').value='scale'; $('scShow').dispatchEvent(new Event('change'));
 pick('scInst','violin'); ck('Fingerboard: violin neck with coloured fingers and a legend',!!$('scNeck').querySelector('.dot.f1')&&!!$('scNeck').querySelector('.sv-leg')&&$('scNeck').querySelectorAll('.str').length===4);
 view('roll'); ck('Piano roll: a bar for every note on a pitch grid',!$('scRoll').hidden&&$('scRoll').querySelectorAll('g.hn').length===sc.tl.length&&$('scRoll').querySelectorAll('.rr').length>=13);
-svFrame(); ck('Piano roll scrolls: the notes group is moved to the playhead',/translate/.test($('svHw').getAttribute('transform')||''));
+svFrame(); ck('Piano roll scrolls: the notes group is moved to the playhead',/translate/.test($('scRoll').querySelector('#svHw').getAttribute('transform')||''));
 pick('scInst','chromatic'); view('tab'); ck('piano: Tab is not offered and the Staff is shown instead',document.querySelector('#scView button[data-v=tab]').hidden&&!$('scStaff').hidden&&$('scTab').hidden);
 view('board'); ck('piano: the Fingerboard view is the keyboard',$('scNeck').querySelectorAll('.pk').length>=13&&!$('scNeck').querySelector('.str'));
 view('staff'); pick('scInst','violin');
