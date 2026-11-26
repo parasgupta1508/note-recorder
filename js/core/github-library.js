@@ -9,9 +9,11 @@ const GH_OWNER = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/, GH_REPO = /^[A-Za-z0-9._
 
 // Catalogues worth offering first. prefix: only files under this folder are listed. includeXml: also list plain .xml files.
 const GH_PRESETS = [
-  { id: 'musetrainer', owner: 'musetrainer', repo: 'library', title: 'MuseTrainer library', note: 'Popular and classical pieces as compressed MusicXML (.mxl). Check each score\'s own licence before sharing it.', prefix: '', includeXml: false },
+  { id: 'lieder', owner: 'OpenScore', repo: 'Lieder', title: 'OpenScore Lieder', note: 'About 1,460 art songs for voice and piano, by Schubert, Schumann, Brahms and others. Public domain (CC0). Choose the piano part, or the voice.', prefix: 'scores', includeXml: false },
+  { id: 'quartets', owner: 'OpenScore', repo: 'StringQuartets', title: 'OpenScore string quartets', note: 'About 200 quartets by Haydn, Mozart, Beethoven, Dvořák and others. Public domain (CC0). Choose the violin or cello part.', prefix: 'scores', includeXml: false },
+  { id: 'music21', owner: 'cuthbertLab', repo: 'music21', title: 'music21 corpus', note: 'Over 600 scores: Bach chorales and cantatas, Beethoven, Mozart, Haydn, Schumann, early music (BSD-licensed project).', prefix: 'music21/corpus', includeXml: true },
   { id: 'asap', owner: 'fosfrancesco', repo: 'asap-dataset', title: 'ASAP piano scores', note: 'Piano works by Bach, Beethoven, Chopin, Schubert and others (MusicXML, from the ASAP research dataset).', prefix: '', includeXml: false },
-  { id: 'musescore', owner: 'musescore', repo: 'musescore', title: 'MuseScore test scores', note: 'MusicXML files from the MuseScore project\'s own tests (GPL-3.0 project): short examples of every notation feature.', prefix: 'src/importexport/musicxml/tests/data', includeXml: true },
+  { id: 'musetrainer', owner: 'musetrainer', repo: 'library', title: 'MuseTrainer library', note: 'Popular and classical pieces as compressed MusicXML (.mxl). The repository states no licence: check a score before sharing it.', prefix: '', includeXml: false },
 ];
 
 const ghSafePath = p => typeof p === 'string' && p.length > 0 && p.length < 400 && !p.split('/').some(s => s === '..' || s === '.' || s === '') && !/[\\\0]/.test(p);   // # and ? are fine in a repository's file name: they are encoded in the URL
@@ -56,11 +58,11 @@ function ghRawUrl(s, path) {
 }
 
 // A name a person can read: the file name, or for a generic name (ASAP calls every score xml_score.musicxml) the folders it sits in.
-const GH_GENERIC = /^(xml[_ -]?score|score|musicxml|music|main|piece|export)$/i;
+const GH_GENERIC = /^(xml[_ -]?score|score|musicxml|music|main|piece|export|(lc|sq)\d+)$/i;
 function ghLabel(path) {
   const segs = path.split('/'), base = segs[segs.length - 1].replace(/\.(mxl|musicxml|xml)$/i, '');
   const clean = x => x.replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim();
-  return GH_GENERIC.test(base) && segs.length > 1 ? segs.slice(-4, -1).map(clean).join(' · ') : clean(base);
+  return GH_GENERIC.test(base) && segs.length > 1 ? segs.slice(0, -1).filter(x => x !== '_' && x !== 'scores').slice(-3).map(clean).join(' · ') : clean(base);
 }
 
 // The git tree JSON -> { files: [{ path, name, label, dir, ext, size }], truncated, skipped (too large) }.

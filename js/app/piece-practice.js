@@ -160,8 +160,9 @@ $('ppBackList').onchange = e => { const b = e.target.closest('input[data-b]'); i
 // ================= Open a piece: the player's GitHub libraries, with search and an instrument filter =================
 // The list of libraries is saved on this device (Settings > Piece libraries). The scores and the file lists are read from GitHub into memory when this screen opens and are never saved.
 const PL_KEY = 'tuner-piece-libs-v1';
-let PLS = (() => { try { const raw = localStorage.getItem(PL_KEY); return raw ? plNormalize(JSON.parse(raw)) : plDefaults(); } catch { return plDefaults(); } })();
-const plSave = () => { try { localStorage.setItem(PL_KEY, JSON.stringify(PLS)); } catch {} };
+let PLS = (() => { try { const raw = localStorage.getItem(PL_KEY), v = +localStorage.getItem(PL_KEY + '-ver') || 1; return raw ? plMigrate(plNormalize(JSON.parse(raw)), v) : plDefaults(); } catch { return plDefaults(); } })();
+const plSave = () => { try { localStorage.setItem(PL_KEY, JSON.stringify(PLS)); localStorage.setItem(PL_KEY + '-ver', String(PL_VERSION)); } catch {} };
+plSave();   // (also saves the version after a migration)
 const PLC = {};                                   // library id -> { state: 'loading' | 'ok' | 'error', files, truncated, skipped, error }   (memory only)
 const PLV = { q: '', inst: 'all', lib: 'all' };   // what the list is showing
 const PL_SHOW = 200;                              // rows drawn at once (search to narrow a long list)

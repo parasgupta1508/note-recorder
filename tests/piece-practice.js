@@ -112,15 +112,18 @@ ok(lib.ghSearch(lst.files, 'fugue 848').length === 1 && lib.ghSearch(lst.files, 
 const top2 = lib.ghList(lst.files, ''), col = lib.ghCollapse(lst.files, 'Bach');
 ok(top2.dirs.map(d => d.name).join() === 'Bach,scores' && top2.dirs[0].count === 2 && col.dir === 'Bach/Fugue' && col.dirs.length === 2, 'github: folders can be browsed, and a folder with one sub-folder is skipped over');
 ok(/60 requests/.test(lib.ghExplain(403, '0', '1700000000')) && /public/.test(lib.ghExplain(404)) && /internet/.test(lib.ghExplain(0)), 'github: errors say what to do');
-ok(lib.GH_PRESETS.length === 3 && lib.GH_PRESETS.every(p => lib.ghParseUrl(`${p.owner}/${p.repo}`)), 'github: the three suggested catalogues are valid');
+ok(lib.GH_PRESETS.length === 5 && lib.GH_PRESETS.every(p => lib.ghParseUrl(`${p.owner}/${p.repo}`)), 'github: the suggested catalogues are valid');
 
 
 // ---- the libraries the player chooses, and the search over their scores
 const defs = lib.plDefaults();
-ok(defs.length === 3 && defs.every(d => d.on && d.id && lib.ghParseUrl(d.owner + '/' + d.repo)) && defs[1].inst === 'chromatic', 'libraries: three suggested ones, ASAP marked as piano');
+ok(defs.length === 5 && defs.every(d => d.on && d.id && lib.ghParseUrl(d.owner + '/' + d.repo)) && defs[0].inst === 'chromatic' && defs[1].inst === 'violin' && !defs.some(d => d.repo === 'musescore'), 'libraries: five suggested ones (Lieder, string quartets, music21, ASAP, MuseTrainer), none of them test files');
 ok(lib.plNormalize([{ owner: 'a', repo: 'b' }, { owner: 'a', repo: 'b' }, { owner: '../x', repo: 'b' }, null, { owner: 'c', repo: 'd', inst: 'tuba', on: false, prefix: 'x/../y' }]).map(r => r.id + ':' + r.inst + ':' + r.on).join() === 'a/b:any:true,c/d:any:false', 'libraries: stored data is cleaned (duplicates, bad names, unknown instrument, a path with ".." dropped)');
+const old = [{ owner: 'musescore', repo: 'musescore', prefix: 'src/importexport/musicxml/tests/data', includeXml: true, on: true, inst: 'any' }, { owner: 'me', repo: 'mine', on: false, inst: 'guitar' }];
+const mig = lib.plMigrate(lib.plNormalize(old), 1);
+ok(!mig.some(r => r.repo === 'musescore') && mig.some(r => r.id === 'me/mine' && !r.on && r.inst === 'guitar') && mig.some(r => r.repo === 'Lieder') && mig.length === 6 && lib.plMigrate(mig.slice(0, 2), 2).length === 2, 'libraries: an old saved list loses the test-file library, keeps your own, gains the clean ones once; a current list is left alone');
 const a1 = lib.plAdd(defs, 'https://github.com/foo/bar-scores', 'violin');
-ok(a1.added && a1.added.id === 'foo/bar-scores' && a1.added.inst === 'violin' && a1.list.length === 4 && !a1.added.includeXml, 'libraries: a repository link is added with its instrument');
+ok(a1.added && a1.added.id === 'foo/bar-scores' && a1.added.inst === 'violin' && a1.list.length === 6 && !a1.added.includeXml, 'libraries: a repository link is added with its instrument');
 const a2 = lib.plAdd(a1.list, 'https://github.com/foo/bar-scores/tree/main/violin/easy', 'any');
 ok(a2.added && a2.added.prefix === 'violin/easy' && a2.added.ref === 'main' && a2.added.includeXml, 'libraries: a folder link is added as its own library (with .xml files)');
 ok(lib.plAdd(a1.list, 'foo/bar-scores').error && lib.plAdd(a1.list, 'nonsense').error && lib.plAdd(a1.list, 'https://github.com/a/b/blob/main/x.mxl').error, 'libraries: a duplicate, a non-link and a single file are refused with a reason');
@@ -130,5 +133,7 @@ ok(ents.map(e => e.inst).join() === 'chromatic,violin,,guitar', 'search: every e
 ok(lib.plFilter(ents, { q: 'sonata' }).length === 1 && lib.plFilter(ents, { q: 'lib two' }).length === 2 && lib.plFilter(ents, { q: 'study guitar' }).length === 1, 'search: every word must match (name, folder or library)');
 ok(lib.plFilter(ents, { inst: 'violin' }).length === 1 && lib.plFilter(ents, { inst: 'unknown' }).length === 1 && lib.plFilter(ents, { lib: 'L2' }).length === 2 && lib.plFilter(ents, { inst: 'chromatic', lib: 'L2' }).length === 0, 'filter: by instrument, by "not stated", by library, and together');
 const cn = lib.plCounts(ents, {}); ok(cn.all === 4 && cn.chromatic === 1 && cn.violin === 1 && cn.guitar === 1 && cn.unknown === 1 && lib.plCounts(ents, { q: 'lib two' }).chromatic === 0, 'filter: the numbers on the filter buttons follow the search');
+
+ok(lib.ghLabel('scores/Abbott,_Jane_Bingham/_/Just_for_Today/lc6583477.mxl') === 'Abbott, Jane Bingham · Just for Today' && lib.ghLabel('scores/Haydn,_Joseph/String_Quartet_No.1/sq123.mxl') === 'Haydn, Joseph · String Quartet No.1' && lib.ghLabel('music21/corpus/bach/bwv1.6.mxl') === 'bwv1.6', 'github: OpenScore file codes (lc123, sq123) are labelled by composer and title');
 
 console.log(fail ? `\n${fail} FAILED` : '\nall piece practice checks pass'); process.exit(fail ? 1 : 0);

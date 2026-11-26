@@ -5,14 +5,14 @@
 //   inst: the instrument its scores are for ('any' when mixed). It is only a hint for the instrument filter: the real instrument is read from the score when it is opened.
 
 const PL_INSTRUMENTS = [['chromatic', 'Piano'], ['violin', 'Violin'], ['guitar', 'Guitar'], ['ukulele', 'Ukulele']];   // what the filter and a library's hint offer (the drills' instruments)
-const PL_MAX = 30;   // libraries a player can keep
+const PL_MAX = 30, PL_VERSION = 2;   // PL_VERSION: bump when the suggested libraries change (plMigrate)   // libraries a player can keep
 
 const plId = (o, r, ref, prefix) => `${o}/${r}` + (ref ? '@' + ref : '') + (prefix ? ':' + prefix : '');
 const plTitle = (o, r, prefix) => (prefix ? `${r}/${prefix.split('/').pop()}` : `${o}/${r}`);
 
 // The libraries offered the first time (and by "Restore suggested libraries").
 function plDefaults() {
-  const inst = { musetrainer: 'any', asap: 'chromatic', musescore: 'any' };
+  const inst = { lieder: 'chromatic', quartets: 'violin', music21: 'any', asap: 'chromatic', musetrainer: 'any' };   // lieder: the piano part is the one to practise; quartets: the violin parts
   return GH_PRESETS.map(p => ({ id: plId(p.owner, p.repo, '', p.prefix), owner: p.owner, repo: p.repo, ref: '', prefix: p.prefix || '', includeXml: !!p.includeXml, inst: inst[p.id] || 'any', title: p.title, on: true }));
 }
 // What came out of storage -> a clean list (anything odd is dropped, never trusted).
@@ -36,6 +36,15 @@ function plAdd(list, text, inst) {
   if (list.some(r => r.id === id)) return { error: 'That library is already in the list.' };
   const added = { id, owner: s.owner, repo: s.repo, ref: s.ref, prefix: s.kind === 'dir' ? s.path : '', includeXml: s.kind === 'dir', inst: PL_INSTRUMENTS.some(x => x[0] === inst) ? inst : 'any', title: plTitle(s.owner, s.repo, s.kind === 'dir' ? s.path : ''), on: true };
   return { list: list.concat([added]), added };
+}
+
+// A list saved by an older version -> brought up to date without losing what the player added. Version 2: the MuseScore test-file library is gone (test fixtures, not music)
+// and the clean libraries are added, once. Libraries the player removed on purpose stay removed after that (the version is then saved).
+function plMigrate(list, fromVersion) {
+  if (fromVersion >= PL_VERSION) return list;
+  const out = list.filter(r => !(r.owner === 'musescore' && r.repo === 'musescore'));
+  for (const d of plDefaults()) if (!out.some(r => r.id === d.id)) out.push(d);
+  return plNormalize(out);
 }
 
 // Which instrument does this score look like it is for? From words in its path; otherwise the library's hint; otherwise '' (not stated).
