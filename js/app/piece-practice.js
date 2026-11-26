@@ -78,7 +78,7 @@ async function ppOpenBytes(bytes, name, src) {
     if (det.kind === 'midi') throw new Error('That is a MIDI file. Piece practice reads MusicXML (.musicxml, .xml or .mxl).');
     if (det.kind !== 'musicxml' && det.kind !== 'mxl') throw new Error(`Piece practice reads MusicXML (.musicxml, .xml or .mxl), not ${det.label === 'unknown file' ? 'this kind of file' : det.label}.`);
     const text = det.kind === 'mxl' || (bytes[0] === 0x50 && bytes[1] === 0x4b) ? await mxlToXml(bytes, ppInflate) : ppDecode(bytes);
-    ppLoadParsed(parseMusicXml(text), name, src); ppBusy(''); return true;
+    ppLoadParsed(parseMusicXml(text), name, src, text); ppBusy(''); return true;
   } catch (e) { ppBusy(e && e.message ? e.message : String(e), true); return false; }
 }
 async function ppOpenFile(file) { if (!file) return; if (file.size > PP_MAX_FILE) { ppBusy('This file is larger than 25 MB.', true); return; } return ppOpenBytes(new Uint8Array(await file.arrayBuffer()), file.name, 'file'); }
@@ -92,9 +92,9 @@ async function ppFetch(url) {
 }
 
 // ================= a score is open: which instrument, which part =================
-function ppLoadParsed(x, name, src) {
+function ppLoadParsed(x, name, src, text) {
   if (PE.running || PE.demo >= 0) peStop();
-  PP.parsed = x; PP.id++; PP.src = src; PP.title = cleanTitle(x.title || name, 'MusicXML piece'); PP.sum = summariseParts(x); PP.line = 'top'; PP.oct = 'auto'; PP.backing = false; PP.backOff = new Set();
+  PP.parsed = x; PP.xml = text || ''; PP.id++; PP.src = src; PP.title = cleanTitle(x.title || name, 'MusicXML piece'); PP.sum = summariseParts(x); PP.line = 'top'; PP.oct = 'auto'; PP.backing = false; PP.backOff = new Set();
   PP.bpm0 = Math.max(30, Math.min(240, Math.round(x.bpm) || 80)); $('pzBpm').value = PP.bpm0; $('pzSig').value = String(ppSigBeats(x.timeSig));
   PP.idx = -1; ppMemo = { k: '', plan: null }; PE.plan = null; PE.tl = []; PE.seq = [];
   ppShowLib(false);

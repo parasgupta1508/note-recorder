@@ -136,4 +136,9 @@ const cn = lib.plCounts(ents, {}); ok(cn.all === 4 && cn.chromatic === 1 && cn.v
 
 ok(lib.ghLabel('scores/Abbott,_Jane_Bingham/_/Just_for_Today/lc6583477.mxl') === 'Abbott, Jane Bingham · Just for Today' && lib.ghLabel('scores/Haydn,_Joseph/String_Quartet_No.1/sq123.mxl') === 'Haydn, Joseph · String Quartet No.1' && lib.ghLabel('music21/corpus/bach/bwv1.6.mxl') === 'bwv1.6', 'github: OpenScore file codes (lc123, sq123) are labelled by composer and title');
 
+// ---- one part of a score, for the engraved view
+const xml = score(), one = lib.ppPartXml(xml, 'P3'), onep = lib.parseMusicXml(one);
+ok(onep.parts.length === 1 && onep.parts[0].id === 'P3' && onep.parts[0].notes.length === px.parts[2].notes.length && (one.match(/<score-part /g) || []).length === 1 && !/<part id="P1"/.test(one), 'engraved: a score cut down to one part keeps the notes of that part and its part-list entry');
+ok(lib.ppPartXml("<score-partwise><part-list><part-group type='start' number='1'/><score-part id='A'><part-name>x</part-name></score-part><score-part id='B'></score-part><part-group type='stop' number='1'/></part-list><part id='A'><measure number='1'/></part><part id='B'><measure number='1'/></part></score-partwise>", 'B') === "<score-partwise><part-list><score-part id='B'></score-part></part-list><part id='B'><measure number='1'/></part></score-partwise>", 'engraved: single-quoted ids work and part groups are dropped');
+
 console.log(fail ? `\n${fail} FAILED` : '\nall piece practice checks pass'); process.exit(fail ? 1 : 0);

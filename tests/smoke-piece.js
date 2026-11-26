@@ -68,6 +68,11 @@ document.querySelector('#pzView button[data-v=staff]').click();
 ck('no element id is shared with another screen (the Scale drills elements and SVG ids are not reused)',(function(){var mine={},bad=0;[].forEach.call($('tab-piece').querySelectorAll('[id]'),function(e){mine[e.id]=1});[].forEach.call($('pzLib').querySelectorAll('[id]'),function(e){mine[e.id]=1});[].forEach.call(document.querySelectorAll('[id]'),function(e){if(mine[e.id]&&!$('tab-piece').contains(e)&&!$('pzLib').contains(e))bad++});return bad===0})());
 ck('violin hand position per note',Array.isArray(PE.plan.posList)&&PE.plan.posList.length===8);
 
+// ---- the engraved staff (Verovio loads as a module, which a file:// page cannot do: here it must fail politely and the simple staff must come back)
+ck('engraved: a button next to the instrument button, off by default',!!$('pzEngBtn')&&!PW.eng&&$('pzEngBox').hidden);
+$('pzEngBtn').click(); ck('engraved: switching it on shows the engraved box and hides the simple staff',PW.eng&&!$('pzEngBox').hidden&&$('pzStaff').hidden&&$('pzEngBtn').getAttribute('aria-pressed')==='true');
+$('pzEngBtn').click(); ck('engraved: switching it off brings the simple staff back with its notes',!PW.eng&&$('pzEngBox').hidden&&!$('pzStaff').hidden&&$('pzStaff').querySelectorAll('.nh').length===8);
+
 // ---- Wait mode through the engine: a pause between notes, the repeated A needs it
 peSetMode('wait'); pick('pzBpm',100); $('pzRepeat').checked=false; peReset(); PE.running=true; var t=0,i;
 for(i=0;i<8;i++){ t=play(t,PE.seq[i],i%2?3:-2,20); ck('wait: note '+(i+1)+' ('+PE.tl[i].noteName+') advanced',PE.pos===i+1||(i===7&&!PE.running)); t=quiet(t,12) }

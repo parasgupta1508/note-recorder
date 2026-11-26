@@ -83,3 +83,12 @@
 .pl-repo{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)} .pl-repo .check{flex:1 1 230px;min-width:0}
 .pl-repo small{display:block;color:var(--mut);font-size:12px;word-break:break-all} .pl-repo select{min-height:36px;width:auto;max-width:100%} .pl-repo .sec{min-height:36px;padding:4px 12px}
 .pl-add{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px} .pl-add input{flex:1 1 230px;min-width:0} .pl-add select{width:auto;max-width:100%}
+
+/* ---------- the engraved staff (Verovio, js/app/piece-engrave.js) ---------- */
+#pzEngBox[hidden],#pzEngMsg:empty{display:none}
+#pzEngBtn{min-height:36px;min-width:42px;padding:2px 10px;font-size:19px;line-height:1;flex:0 0 auto} #pzEngBtn[hidden]{display:none} #pzEngBtn.on{background:var(--acc)}
+.engbox{position:relative;max-height:440px;overflow:auto;border-radius:10px;background:#0d1429;color:#eef2ff;scrollbar-width:thin}
+#pzEng svg{display:block;width:100%;height:auto;color:#eef2ff;fill:currentColor}
+.engcur{position:absolute;display:none;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--sv-cy,#22d3ee);box-shadow:0 0 8px var(--sv-cy,#22d3ee);pointer-events:none;z-index:2}
+#pzEng g.note.pg-ok,#pzEng g.note.pg-ok *{fill:var(--ok);stroke:var(--ok)} #pzEng g.note.pg-close,#pzEng g.note.pg-close *{fill:var(--warn);stroke:var(--warn)} #pzEng g.note.pg-bad,#pzEng g.note.pg-bad *{fill:var(--bad);stroke:var(--bad)}
+#pzEng g.note.pg-cur,#pzEng g.note.pg-cur *{fill:#22d3ee;stroke:#22d3ee} #pzEng g.note.pg-cur.pg-ok *{fill:var(--ok);stroke:var(--ok)}

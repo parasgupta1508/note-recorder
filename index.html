@@ -174,9 +174,10 @@
             <button type="button" data-v="board" aria-pressed="false" title="The neck or keys with the finger to place next">Fingerboard</button>
             <button type="button" data-v="roll" aria-pressed="false" title="Bars on a pitch grid scrolling to a playhead">Piano roll</button></div>
             <label class="field" id="pzShowW" hidden><span>Show</span><select id="pzShow"><option value="scale">Piece notes</option><option value="all">All notes</option></select></label>
+            <button id="pzEngBtn" class="sec" type="button" aria-pressed="false" title="Engraved notation: the score drawn like printed music (Verovio; about 2.4 MB the first time)">🎼</button>
             <button id="pzNeckBtn" class="sec" type="button" aria-pressed="false" aria-label="Show the instrument under the notation" title="Show or hide the instrument under the notation"></button>
             <button id="pzFs" class="sec" type="button" aria-label="Full screen" title="Full screen (Esc to leave)">⛶</button></div>
-          <div id="pzStaff" class="staffbox"></div><div id="pzTab" class="tabbox" hidden></div><div id="pzNeck" class="neckbox"></div><div id="pzRoll" class="rollbox" hidden></div>
+          <div id="pzStaff" class="staffbox"></div><div id="pzEngBox" class="engbox" hidden><div id="pzEng"></div><div id="pzEngCur" class="engcur"></div></div><div id="pzEngMsg" class="hint2" role="status"></div><div id="pzTab" class="tabbox" hidden></div><div id="pzNeck" class="neckbox"></div><div id="pzRoll" class="rollbox" hidden></div>
         </div>
         <div class="pl-bar"><i id="pzProgFill"></i></div>
         <div class="pl-foot">
@@ -604,6 +605,7 @@
 <script src="js/app/scale-visual.js"></script>
 <script src="js/app/scale-history.js"></script>
 <script src="js/app/piece-visual.js"></script>
+<script src="js/app/piece-engrave.js"></script>
 <script src="js/app/piece-engine.js"></script>
 <script src="js/app/piece-practice.js"></script>
 <script src="js/app/recorder.js"></script>

@@ -6,10 +6,10 @@
 
 const PW = { key: '', nodes: [], where: [], rows: [], geo: [], hints: [], places: [], neckDot: null, dotAt: [], raf: 0, curRow: -1, view: 'staff', showNeck: true, hw: null, hwNodes: [], hwCur: 0, hwKey: '', neckKey: '', staffKey: '', glide: null, glideT: 0, demoT0: null, playX: 84, sw: 0, paintIdx: -2 };
 const PW_LG = 10, PW_ST = PW_LG / 2, PW_SP = 54, PW_PPB = 72;   // staff line gap, pixels per step, space per note, pixels per beat in Tab and Roll
-const PW_VIEWS = ['staff', 'tab', 'board', 'roll'], PW_VIEW_KEY = 'tuner-pzview', PW_NECK_KEY = 'tuner-pzneck';
+const PW_VIEWS = ['staff', 'tab', 'board', 'roll'], PW_VIEW_KEY = 'tuner-pzview', PW_NECK_KEY = 'tuner-pzneck', PW_ENG_KEY = 'tuner-pzeng';
 const pwSharp = n => n.replace('#', '♯').replace(/^([A-G])b/, '$1♭');
 const pwFont = '"Noto Music","Segoe UI Symbol","Apple Symbols",serif';
-try { const v = localStorage.getItem(PW_VIEW_KEY); if (PW_VIEWS.includes(v)) PW.view = v; const n = localStorage.getItem(PW_NECK_KEY); if (n != null) PW.showNeck = n === '1'; } catch {}
+try { const v = localStorage.getItem(PW_VIEW_KEY); if (PW_VIEWS.includes(v)) PW.view = v; const n = localStorage.getItem(PW_NECK_KEY); if (n != null) PW.showNeck = n === '1'; PW.eng = localStorage.getItem(PW_ENG_KEY) === '1'; } catch {}
 
 const pwStrings = inst => (PRESETS[inst] && PRESETS[inst].strings || []).map(nameToMidi);
 const pwBowed = inst => ruleFor(inst).fingering === 'bowed', pwTabOk = inst => !!ruleFor(inst).fingering;
@@ -186,7 +186,8 @@ function pwPaint() {
   const grade = i => demo ? (i < idx ? 'ok' : 'pend') : (i < PE.pos && PE.grades[i] ? (PW_GRADE[PE.grades[i]] || 'bad') : 'pend');   // colour = how it was played, glow = where the clock is
   const cls = i => `${grade(i)}${i === idx ? ' cur' : ''}`;
   PW.paintIdx = idx;
-  if (v === 'staff') PW.nodes.forEach((g, i) => g.setAttribute('class', `nh ${cls(i)}`));
+  if (v === 'staff' && PW.eng) pgPaint(idx, grade);   // the engraved staff (piece-engrave.js)
+  else if (v === 'staff') PW.nodes.forEach((g, i) => g.setAttribute('class', `nh ${cls(i)}`));
   if (v === 'tab' || v === 'roll') PW.hwNodes.forEach((g, i) => g && g.setAttribute('class', `hn ${cls(i)}`));
   if (v === 'staff' || v === 'board') {
     if (PW.neckDot) {
@@ -242,6 +243,7 @@ function pwFrame() {
     if (busy || Math.abs(PW.hwCur) > 1) PW.raf = requestAnimationFrame(pwFrame);
     return;
   }
+  if (v === 'staff' && PW.eng) { pgCursor(pwPosF()); if (busy) PW.raf = requestAnimationFrame(pwFrame); return; }
   const f = v === 'staff' ? pwPosF() : null, el = PW.curEl; if (!el || !PW.where.length) return;
   if (f == null) { el.style.display = 'none'; PW.bandEl.style.display = 'none'; return; }
   const fc = Math.max(0, f), i = Math.floor(fc), a = PW.where[i], b = PW.where[Math.min(PW.where.length - 1, i + 1)];
@@ -260,11 +262,13 @@ function pwRender() {
   document.querySelectorAll('#pzView button').forEach(b => { const ok = b.dataset.v !== 'tab' || pwTabOk(inst), on = b.dataset.v === v; b.hidden = !ok; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); const narrow = vis.clientWidth < 440; if (b.dataset.v === 'board') b.textContent = inst === 'chromatic' ? 'Keys' : narrow ? 'Neck' : pwBowed(inst) ? 'Fingerboard' : 'Fretboard'; if (b.dataset.v === 'roll') b.textContent = narrow ? 'Roll' : 'Piano roll'; });
   $('pzVisTitle').textContent = p.title;
   $('pzShowW').hidden = v !== 'board' || inst === 'chromatic';
-  $('pzStaff').hidden = v !== 'staff'; $('pzTab').hidden = v !== 'tab'; $('pzNeck').hidden = !(v === 'board' || (v === 'staff' && PW.showNeck));
+  const eng = v === 'staff' && PW.eng; $('pzStaff').hidden = v !== 'staff' || eng; $('pzEngBox').hidden = !eng; $('pzEngBtn').hidden = v !== 'staff'; $('pzEngBtn').classList.toggle('on', !!PW.eng); $('pzEngBtn').setAttribute('aria-pressed', String(!!PW.eng));
+  $('pzTab').hidden = v !== 'tab'; $('pzNeck').hidden = !(v === 'board' || (v === 'staff' && PW.showNeck));
   { const nb = $('pzNeckBtn'); nb.hidden = v !== 'staff'; nb.textContent = inst === 'chromatic' ? '🎹' : inst === 'guitar' ? '🎸' : inst === 'ukulele' ? '🪕' : '🎻'; nb.classList.toggle('on', !!PW.showNeck); nb.setAttribute('aria-pressed', PW.showNeck ? 'true' : 'false'); } $('pzRoll').hidden = v !== 'roll';
   const base = [p.tl.map(n => n.midi).join(), inst, p.pc, p.pos, p.bow, p.timeSig.join('/'), W, p.key].join('|');
   if (base !== PW.key) { PW.key = base; pwPlan(); PW.staffKey = PW.neckKey = PW.hwKey = ''; }
-  if (v === 'staff' && PW.staffKey !== base) { PW.staffKey = base; pwBuildStaff(W); }
+  if (v === 'staff' && !eng && PW.staffKey !== base) { PW.staffKey = base; pwBuildStaff(W); }
+  if (eng) pgRender(W);
   const nk = base + '|' + v + '|' + $('pzShow').value; if ((v === 'board' || (v === 'staff' && PW.showNeck)) && PW.neckKey !== nk) { PW.neckKey = nk; pwBuildNeck(W, v === 'board'); }
   const hk = base + '|' + v + '|' + PE.bpm; if ((v === 'tab' || v === 'roll') && PW.hwKey !== hk) { PW.hwKey = hk; (v === 'tab' ? pwBuildTab : pwBuildRoll)(W); PW.hwCur = 0; }
   pwPaint(); if (!PE.running && PE.demo < 0) pwProgress(0);
@@ -273,6 +277,7 @@ function pwRender() {
 }
 document.querySelectorAll('#pzView button').forEach(b => b.onclick = () => { PW.view = b.dataset.v; try { localStorage.setItem(PW_VIEW_KEY, PW.view); } catch {} pwRender(); });
 $('pzShow').onchange = pwRender;
+$('pzEngBtn').onclick = () => { PW.eng = !PW.eng; try { localStorage.setItem(PW_ENG_KEY, PW.eng ? '1' : '0'); } catch {} PW.key = ''; pwRender(); };
 $('pzNeckBtn').onclick = () => { PW.showNeck = !PW.showNeck; try { localStorage.setItem(PW_NECK_KEY, PW.showNeck ? '1' : '0'); } catch {} pwRender(); };
 if (window.ResizeObserver) new ResizeObserver(() => { if (tab === 'piece' && PE.plan) pwRender(); }).observe($('pzVis'));
 

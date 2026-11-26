@@ -72,6 +72,15 @@ function fitOctaveShift(midis, range) {
   return best;
 }
 
+// The score with only one part left (for the engraved view, which draws every part it is given). Plain text work, so it needs no XML parser.
+function ppPartXml(text, partId) {
+  const keep = (m, q, id) => id === partId ? m : '';
+  return String(text)
+    .replace(/<part\s+id=(["'])(.*?)\1[^>]*>[\s\S]*?<\/part>/g, keep)
+    .replace(/<score-part\s+id=(["'])(.*?)\1[^>]*>[\s\S]*?<\/score-part>/g, keep)
+    .replace(/<part-group\b[^>]*\/>|<part-group\b[^>]*>[\s\S]*?<\/part-group>/g, '');
+}
+
 // ---- key and bars ---------------------------------------------------------------------------------------------------------------------------------------
 // key: { fifths, minor } from the score. pc is the tonic of the MAJOR key with the same signature (what the notation code wants), flats: written with flats.
 function keyInfo(key) {
