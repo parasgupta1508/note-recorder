@@ -242,7 +242,7 @@ function ppShowLib(show) {
   $('pzLib').hidden = !show; $('pzPlayer').hidden = show;
   if (show) { $('pzLibBack').hidden = !ppActive() && !PP.parsed; plRefresh(false); plLoadLocal(); plRender(); } else ppBusy('');
 }
-function ppEnter() { if (!$('pzLib').hidden) { plRefresh(false); plLoadLocal(); plRender(); } peUi(); }   // the screen was opened
+function ppEnter() { if (!$('pzLib').hidden) { plRefresh(false); plLoadLocal(); plRender(); ppInstallBuiltins(); } peUi(); }   // the screen was opened
 $('pzLibSearch').oninput = () => { PLV.q = $('pzLibSearch').value; plRender(); };
 $('pzLibInst').onclick = e => { const b = e.target.closest('button[data-i]'); if (b) { PLV.inst = b.dataset.i; plRender(); } };
 $('pzLibRepo').onchange = () => { PLV.lib = $('pzLibRepo').value; plRender(); };
@@ -277,6 +277,23 @@ $('ppSave').onclick = async () => {
     peMsg(`Saved. Find it in Pieces, under ${piece.categoryPath.join(' › ')}, and in Open a piece under My pieces & built-in.`, 'ok');
   } catch (e) { peMsg('Could not save on this device: ' + (e.message || e), 'bad'); }
 };
+
+// ----- built-in pieces: data/builtin/index.json lists scores that ship with the app. Each is put into the Pieces library (marked builtin) the first time, so it appears under the Built-in filter
+// there and in "My pieces & built-in" here, and works offline. A piece the player deletes is not put back (the ids already installed are remembered). -----
+const PL_BI_KEY = 'tuner-builtin-installed';
+async function ppInstallBuiltins() {
+  try {
+    const done = new Set(JSON.parse(localStorage.getItem(PL_BI_KEY) || '[]')), res = await fetch('data/builtin/index.json'); if (!res.ok) return;
+    const todo = (await res.json()).filter(b => !done.has(b.id)); if (!todo.length) return;
+    for (const b of todo) {
+      const r = await fetch('data/builtin/' + encodeURIComponent(b.file)); if (!r.ok) continue;
+      const bytes = new Uint8Array(await r.arrayBuffer()), text = /\.mxl$/i.test(b.file) ? await mxlToXml(bytes, ppInflate) : ppDecode(bytes), piece = pieceFromMusicXml(text, { title: b.title, instrument: b.instrument });
+      Object.assign(piece, { id: b.id, title: b.title, instrument: b.instrument, categoryPath: b.categoryPath || ['Built-in'], builtin: true, favourite: false, verified: true, pack: null, xml: text });
+      await LIBDB.put([piece]); done.add(b.id);
+    }
+    localStorage.setItem(PL_BI_KEY, JSON.stringify([...done])); if (typeof PC !== 'undefined') PC.lib = await LIBDB.all(); plLoadLocal();
+  } catch {}
+}
 
 // ----- a local file (button, or drop it on the list) -----
 $('ppPick').onclick = () => $('ppFile').click();

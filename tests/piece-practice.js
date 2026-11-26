@@ -141,4 +141,13 @@ const xml = score(), one = lib.ppPartXml(xml, 'P3'), onep = lib.parseMusicXml(on
 ok(onep.parts.length === 1 && onep.parts[0].id === 'P3' && onep.parts[0].notes.length === px.parts[2].notes.length && (one.match(/<score-part /g) || []).length === 1 && !/<part id="P1"/.test(one), 'engraved: a score cut down to one part keeps the notes of that part and its part-list entry');
 ok(lib.ppPartXml("<score-partwise><part-list><part-group type='start' number='1'/><score-part id='A'><part-name>x</part-name></score-part><score-part id='B'></score-part><part-group type='stop' number='1'/></part-list><part id='A'><measure number='1'/></part><part id='B'><measure number='1'/></part></score-partwise>", 'B') === "<score-partwise><part-list><score-part id='B'></score-part></part-list><part id='B'><measure number='1'/></part></score-partwise>", 'engraved: single-quoted ids work and part groups are dropped');
 
-console.log(fail ? `\n${fail} FAILED` : '\nall piece practice checks pass'); process.exit(fail ? 1 : 0);
+// ---- built-in pieces shipped with the app
+(async () => {
+  const fs = require('fs'), path = require('path'), zlib = require('zlib'), dir = path.join(__dirname, '..', 'data', 'builtin'), list = JSON.parse(fs.readFileSync(path.join(dir, 'index.json'), 'utf8'));
+  ok(list.length >= 1 && list.every(b => b.id.startsWith('builtin:') && b.title && ['violin', 'guitar', 'piano', 'ukulele'].includes(b.instrument) && fs.existsSync(path.join(dir, b.file))) && new Set(list.map(b => b.id)).size === list.length, 'built-in: every listed piece has a file, a title, an instrument and a unique id');
+  for (const b of list) {
+    const bytes = fs.readFileSync(path.join(dir, b.file)), text = /\.mxl$/i.test(b.file) ? await lib.mxlToXml(bytes, d => zlib.inflateRawSync(Buffer.from(d))) : bytes.toString('utf8'), x = lib.parseMusicXml(text), sm = lib.summariseParts(x);
+    ok(x.parts.length >= 1 && x.parts[0].bars.length > 0 && sm.some(p => p.exact), `built-in: ${b.title} parses (${x.parts[0].notes.length} notes) and its instrument is recognised`);
+  }
+  console.log(fail ? `\n${fail} FAILED` : '\nall piece practice checks pass'); process.exit(fail ? 1 : 0);
+})();
