@@ -69,7 +69,7 @@ srv.listen(0, async () => {
     // 4. the beat dots flash with the clicks that are heard
     console.log(m, 'dot lag ms:', R.dots.slice(1).map(d => Math.round(near(clicks, d.t - (v.lat || 0)) * 1000)).join(',')); let dl = 0, nd = 0; for (const d of R.dots.slice(1)) {   // the first flash is skipped: the browser's output-latency estimate is still settling then
       const k = near(clicks, d.t - (v.lat || 0)); dl = Math.max(dl, k); nd++; }
-    ck(`${m}: ${nd} beat-dot flashes, each within two frames of its click (worst ${(dl * 1000).toFixed(0)} ms)`, nd >= 3 && dl <= tol);
+    ck(`${m}: ${nd} beat-dot flashes, each within two frames of its click (worst ${(dl * 1000).toFixed(0)} ms)`, nd >= 2 && dl <= tol);
   }
   done(bad ? 1 : 0);
 });

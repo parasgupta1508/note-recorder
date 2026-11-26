@@ -22,7 +22,7 @@ srv.listen(0, async () => {
   const sizes = [['laptop', 1366, 800, 1], ['tablet', 820, 1100, 1], ['phone', 390, 844, 2]];
   for (const [sn, w, h, dpr] of sizes) {
     await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: dpr, mobile: w < 600 });
-    await send('Page.navigate', { url: `http://localhost:${port}/index.html` }); await wait(1500);
+    await send('Page.navigate', { url: `http://localhost:${port}/index.html` }); await wait(1500); await ev(`SV.showNeck = true`);   // the instrument under the staff is shown in these pictures
     for (const [inst, view, span, kind] of jobs) {
       await ev(`showTab('scale'); document.getElementById('firstRun').classList.add('hide'); (function(){var s=document.getElementById('scInst'); s.value='${inst}'; s.dispatchEvent(new Event('change')); var sp=document.getElementById('scSpan'); sp.value='${span || 1}'; sp.dispatchEvent(new Event('change')); var ty=document.getElementById('scType'); ty.value='${kind === 'minor' ? 'harmonicMinor' : 'major'}'; ty.dispatchEvent(new Event('change')); SV.view='${view}'; demoIdx=${view === 'roll' || view === 'tab' ? 5 : 3}; SV.key=''; svRender();})()`);
       await wait(700);

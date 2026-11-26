@@ -162,3 +162,6 @@
 /* the live readout under the display is off; one slim message line remains */
 .player .livecard,#scRange{display:none!important}
 .sc-msg{text-align:center;font-size:14px;color:var(--sv-dim);min-height:0} #scMsg:empty{display:none}
+
+/* piano keys: names on the keys of the scale */
+.neckbox .kn{fill:#6b7799;font-weight:600} .neckbox .kn.sc{fill:#0b4a5e;font-weight:800} .neckbox .kn.blkn{fill:#e6fbff;font-weight:700}

@@ -98,11 +98,12 @@ function svBuildStaff(W) {
 function svBuildNeck(W, big) {
   const p = sc.plan, inst = p.inst, tl = p.tl, strings = stringsOf(inst), box = $('scNeck'), showAll = big && $('scShow').value === 'all', inScale = new Set(tl.map(n => n.midi % 12));
   if (inst === 'chromatic') {   // piano keys
-    const lo = Math.min(...tl.map(n => n.midi)), hi = Math.max(...tl.map(n => n.midi)), kb = visKeys(lo - 1, hi + 1), kw = Math.min(big ? 34 : 26, (W - 8) / kb.units), H = big ? 120 : 62, inMidi = new Set(tl.map(n => n.midi));
+    // the keys fill the width (up to a sensible key size, then centred), tall enough to read, with the note name on every key of the scale
+    const lo = Math.min(...tl.map(n => n.midi)), hi = Math.max(...tl.map(n => n.midi)), kb = visKeys(lo - 1, hi + 1), kw = Math.min(big ? 72 : 60, (W - 8) / kb.units), H = big ? 170 : 110, ox = Math.max(4, (W - kb.units * kw) / 2), inMidi = new Set(tl.map(n => n.midi));
     let out = '';
-    for (const k of kb.keys.filter(k => !k.black)) out += `<rect class="pk${inMidi.has(k.midi) ? ' sc' : ''}" data-m="${k.midi}" x="${4 + k.x * kw}" y="2" width="${kw - 1}" height="${H}" rx="2"/>` + (big ? `<text class="kn" x="${4 + k.x * kw + kw / 2}" y="${H - 4}" text-anchor="middle" font-size="9">${k.midi % 12 === 0 ? 'C' + (Math.floor(k.midi / 12) - 1) : ''}</text>` : '');
-    for (const k of kb.keys.filter(k => k.black)) out += `<rect class="pk blk${inMidi.has(k.midi) ? ' sc' : ''}" data-m="${k.midi}" x="${4 + k.x * kw}" y="2" width="${k.w * kw}" height="${H * 0.62}" rx="2"/>`;
-    box.innerHTML = `<svg viewBox="0 0 ${Math.max(W, 8 + kb.units * kw)} ${H + 6}" role="img" aria-label="Keyboard">${out}</svg>` + (big ? '<div id="svRead" class="sv-read mut" aria-live="polite"></div>' : ''); SV.neckDot = null; return;
+    for (const k of kb.keys.filter(k => !k.black)) out += `<rect class="pk${inMidi.has(k.midi) ? ' sc' : ''}" data-m="${k.midi}" x="${ox + k.x * kw}" y="2" width="${kw - 1.5}" height="${H}" rx="4"/>` + (inMidi.has(k.midi) || k.midi % 12 === 0 ? `<text class="kn${inMidi.has(k.midi) ? ' sc' : ''}" x="${ox + k.x * kw + (kw - 1.5) / 2}" y="${H - 8}" text-anchor="middle" font-size="${big ? 13 : 12}">${svSharp(midiName(k.midi))}</text>` : '');
+    for (const k of kb.keys.filter(k => k.black)) out += `<rect class="pk blk${inMidi.has(k.midi) ? ' sc' : ''}" data-m="${k.midi}" x="${ox + k.x * kw}" y="2" width="${k.w * kw}" height="${H * 0.6}" rx="3"/>` + (inMidi.has(k.midi) ? `<text class="kn blkn" x="${ox + k.x * kw + k.w * kw / 2}" y="${H * 0.6 - 7}" text-anchor="middle" font-size="${big ? 11 : 10}">${svSharp(midiName(k.midi).replace(/-?\d+$/, ''))}</text>` : '');
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H + 6}" role="img" aria-label="Keyboard">${out}</svg>` + (big ? '<div id="svRead" class="sv-read mut" aria-live="polite"></div>' : ''); SV.neckDot = null; return;
   }
   const bowed = svIsBowed(inst), places = SV.places, rowsN = strings.length, vp = VIOLIN_POSITIONS[p.pos] ? VIOLIN_POSITIONS[p.pos][1] : VIOLIN_POSITIONS[1][1];
   const maxOff = Math.max(5, ...places.filter(Boolean).map(q => q.offset)), total = bowed ? Math.max(big ? 9 : 8, maxOff + 2) : Math.min(15, Math.max(big ? 8 : 5, maxOff + 1));
