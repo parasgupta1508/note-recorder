@@ -22,21 +22,26 @@ const XML_STEP = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 function parseMusicXml(text) {
   const doc = xmlParse(text), score = xKid(doc, 'score-partwise');
   if (!score) throw new Error(xKid(doc, 'score-timewise') ? 'This MusicXML is time-wise; export it as part-wise (the usual kind) and try again.' : 'This is not a MusicXML score.');
-  const names = {}; const pl = xKid(score, 'part-list');
-  if (pl) for (const sp of xKids(pl, 'score-part')) names[sp.attrs.id] = xText(sp, 'part-name') || xText(sp, 'part-abbreviation') || sp.attrs.id;
+  const names = {}, instr = {}; const pl = xKid(score, 'part-list');   // instr: what the score says the part is played on ({ inst: <instrument-name>, program: General MIDI 1-128 or 0 })
+  if (pl) for (const sp of xKids(pl, 'score-part')) {
+    names[sp.attrs.id] = xText(sp, 'part-name') || xText(sp, 'part-abbreviation') || sp.attrs.id;
+    instr[sp.attrs.id] = { inst: xText(xKid(sp, 'score-instrument') || { kids: [] }, 'instrument-name'), program: +xText(xKid(sp, 'midi-instrument') || { kids: [] }, 'midi-program') || 0 };
+  }
   const title = xText(xKid(score, 'work') || { kids: [] }, 'work-title') || xText(score, 'movement-title') || '';
-  const tempoEv = []; let timeSig = null;                       // tempo marks as { q: quarter position, bpm }
+  const tempoEv = []; let timeSig = null, keySig = null;                       // tempo marks as { q: quarter position, bpm }
   const raw = [];
   for (const part of xKids(score, 'part')) {
-    let div = 1, cur = 0, transpose = 0, measureNo = 0; const notes = [], open = new Map();   // positions are in divisions
+    let div = 1, cur = 0, transpose = 0, measureNo = 0, staves = 1; const notes = [], open = new Map(), bars = [];   // positions are in divisions; bars: the quarter position where each measure starts
     let barStart = 0;
     for (const meas of xKids(part, 'measure')) {
-      measureNo++; barStart = cur; let maxCur = cur, last = null; const bar = measureNo;
+      measureNo++; barStart = cur; bars.push(barStart / div); let maxCur = cur, last = null; const bar = measureNo;
       for (const el of meas.kids) {
         if (el.name === 'attributes') {
           const d = xText(el, 'divisions'); if (d) div = Math.max(1, +d);
           const tr = xKid(el, 'transpose'); if (tr) transpose = (+xText(tr, 'chromatic') || 0) + 12 * (+xText(tr, 'octave-change') || 0);
           const ts = xKid(el, 'time'); if (ts && !timeSig) timeSig = [+xText(ts, 'beats') || 4, +xText(ts, 'beat-type') || 4];
+          const ky = xKid(el, 'key'); if (ky && !keySig) keySig = { fifths: Math.max(-7, Math.min(7, +xText(ky, 'fifths') || 0)), minor: xText(ky, 'mode') === 'minor' };
+          const sv = +xText(el, 'staves'); if (sv > 0) staves = Math.min(4, sv);
         } else if (el.name === 'direction') {
           const snd = xKid(el, 'sound'); let bpm = snd && snd.attrs.tempo ? +snd.attrs.tempo : 0;
           if (!bpm) { const met = xKid(xKid(el, 'direction-type') || { kids: [] }, 'metronome'); if (met) { const pm = +xText(met, 'per-minute'), unit = xText(met, 'beat-unit'); if (pm) bpm = pm * ({ whole: 4, half: 2, quarter: 1, eighth: 0.5, '16th': 0.25 }[unit] || 1) * (xKid(met, 'beat-unit-dot') ? 1.5 : 1); } }
@@ -50,9 +55,10 @@ function parseMusicXml(text) {
           const pitch = xKid(el, 'pitch');
           if (pitch && !xKid(el, 'rest')) {
             const alter = +xText(pitch, 'alter') || 0, midi = 12 * ((+xText(pitch, 'octave')) + 1) + XML_STEP[xText(pitch, 'step')] + alter + transpose;
-            const ties = xKids(el, 'tie').map(t => t.attrs.type), key = midi, q = at / div;
+            const ties = xKids(el, 'tie').map(t => t.attrs.type), key = midi, q = at / div, oct = +xText(pitch, 'octave');
+            const nm = !transpose && Math.abs(alter) <= 1 && XML_STEP[xText(pitch, 'step')] != null ? xText(pitch, 'step') + (alter > 0 ? '#' : alter < 0 ? 'b' : '') + oct : '';   // the spelling as written (Db4, not C#4); not kept for a transposing part
             if (ties.includes('stop') && open.has(key)) { const n = open.get(key); n.q2 = q + dur / div; if (!ties.includes('start')) open.delete(key); }
-            else { const n = { midi, q, q2: q + dur / div, bar }; notes.push(n); if (ties.includes('start')) open.set(key, n); }
+            else { const n = { midi, q, q2: q + dur / div, bar, name: nm }; notes.push(n); if (ties.includes('start')) open.set(key, n); }
           }
           if (!isChord) { last = cur; cur += dur; }
         }
@@ -60,15 +66,16 @@ function parseMusicXml(text) {
       }
       cur = Math.max(cur, maxCur);
     }
-    raw.push({ id: part.attrs.id, name: names[part.attrs.id] || part.attrs.id, notes });
+    raw.push({ id: part.attrs.id, name: names[part.attrs.id] || part.attrs.id, notes, bars, staves, transposes: transpose !== 0, ...(instr[part.attrs.id] || { inst: '', program: 0 }) });
   }
   // quarter positions -> seconds through the tempo map (first mark wins at the same position; default 120)
   tempoEv.sort((a, b) => a.q - b.q); const map = [{ q: 0, bpm: tempoEv.length && tempoEv[0].q === 0 ? tempoEv[0].bpm : 120 }];
   for (const t of tempoEv) if (t.q > 0 && t.bpm !== map[map.length - 1].bpm) map.push(t);
   const secs = q => { let s = 0, lq = 0, bpm = map[0].bpm; for (const t of map) { if (t.q > q) break; s += (t.q - lq) * 60 / bpm; lq = t.q; bpm = t.bpm; } return s + (q - lq) * 60 / bpm; };
-  const parts = raw.map(p => ({ id: p.id, name: p.name, notes: p.notes.filter(n => n.midi >= 0 && n.midi <= 127).map(n => ({ midi: n.midi, start: secs(n.q), dur: (secs(n.q2) - secs(n.q)) * 1000, q: n.q, bar: n.bar })).sort((a, b) => a.start - b.start || a.midi - b.midi) })).filter(p => p.notes.length);
+  const parts = raw.map(p => ({ id: p.id, name: p.name, inst: p.inst, program: p.program, staves: p.staves, bars: p.bars, transposes: p.transposes,
+    notes: p.notes.filter(n => n.midi >= 0 && n.midi <= 127).map(n => ({ midi: n.midi, start: secs(n.q), dur: (secs(n.q2) - secs(n.q)) * 1000, q: n.q, dq: n.q2 - n.q, bar: n.bar, ...(n.name ? { name: n.name } : {}) })).sort((a, b) => a.start - b.start || a.midi - b.midi) })).filter(p => p.notes.length);
   if (!parts.length) throw new Error('No notes were found in this score.');
-  return { title, parts, bpm: map[0].bpm, timeSig: timeSig || [4, 4] };
+  return { title, parts, bpm: map[0].bpm, timeSig: timeSig || [4, 4], key: keySig || { fifths: 0, minor: false } };
 }
 
 // ---- .mxl is a zip. zipEntries lists the files; the caller inflates them (DecompressionStream in the browser, zlib in Node).

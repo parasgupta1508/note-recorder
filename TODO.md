@@ -33,3 +33,15 @@
 ## Scales: two places today
 
 - [ ] **Scales can be learned and practised in two places:** the built-in scale pieces in the Practice menu (the library packs, for example for violin) and the separate Scale drill. Decide with the owner whether to merge them, or keep both with clear roles. Questions to ask: which one is the main way to practise a scale; should progress from both count towards the same "Full scale" measure in Progress; should the Practice menu's scales open the Scale drill instead of a second player.
+
+## Piece practice follow-ups
+
+- [ ] Try it on a real violin, guitar and piano piece with the microphone (so far only synthetic frames and the structure of real GitHub files were checked). Check the staff, the fingerings and how Tempo-locked feels on a piece with fast notes.
+- [ ] Expand repeats (`<repeat>`, endings) and keep grace notes: the parser skips both (`js/core/musicxml.js`).
+- [ ] Staff: beams, ties and slurs, a bass clef and a grand staff for piano, and spacing in proportion to note length (today every note gets the same width).
+- [ ] Violin hand position: `ppPositions` picks the lowest position that reaches each note and stays while it can; use the score's own fingering marks (`<fingering>`) when they exist.
+- [ ] Wait mode with accompaniment (today the other parts play in Tempo mode and "Hear piece" only).
+- [ ] Offer "Save to my library" for a piece opened from GitHub (today nothing is stored by design).
+- [ ] Let a piece open from the Pieces tab with a "Practise with scoring" button, so the two screens share one list.
+- [ ] Per-piece progress in the Progress tab (runs already carry `sid` and the piece label).
+- [ ] The local checkout of `main` was 18 commits behind GitHub and holds an unfinished experiment (Recorder views Staff/Tab/Fingerboard/Roll: `js/core/fingerboard.js`, `instrument-views.js` missing). The Scale drills now have these displays, so decide whether that experiment is still wanted before it is merged or deleted.

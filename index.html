@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/lab.css">
 <link rel="stylesheet" href="css/scale.css">
+<link rel="stylesheet" href="css/piece.css">
 </head>
 <body>
 <header class="appbar"><div class="in">
@@ -134,6 +135,7 @@
     <div class="stack">
       <!-- one player card: what is played, the display, the controls, the live meter -->
       <div class="player" id="scPlayer">
+        <div class="seg sm pp-mode" id="ppMode" role="group" aria-label="What to practise"><button type="button" data-m="scale" class="on" aria-pressed="true">Scales</button><button type="button" data-m="piece" aria-pressed="false" title="Practise a piece from a MusicXML file, with the same displays and marking as a scale">Pieces</button></div>
         <div class="pl-head">
           <div class="pl-id"><b>SCALE NOTATION</b><span id="scVisTitle" class="pl-chip"></span></div>
           <div class="pl-tools">
@@ -147,13 +149,39 @@
         </div>
         <!-- what to play: root, scale, span, bowing or position, beats (the instrument is in the header) -->
         <div class="pl-sel">
-          <label class="field"><span>Root</span><select id="scRoot"></select></label>
-          <label class="field"><span>Scale</span><select id="scType"></select></label>
-          <label class="field"><span>Span</span><select id="scSpan"><option value="1">1 octave</option><option value="2">2 octaves</option><option value="3">3 octaves</option></select></label>
+          <label class="field sc-only"><span>Root</span><select id="scRoot"></select></label>
+          <label class="field sc-only"><span>Scale</span><select id="scType"></select></label>
+          <label class="field sc-only"><span>Span</span><select id="scSpan"><option value="1">1 octave</option><option value="2">2 octaves</option><option value="3">3 octaves</option></select></label>
           <label class="field" id="scBowWrap"><span>Bowing</span><select id="scBow"></select></label>
           <label class="field" id="scPosWrap"><span>Position</span><select id="scPos"></select></label>
           <label class="field"><span>Beats</span><select id="scSig"><option value="2">2/2</option><option value="3">3/4</option><option value="4" selected>4/4</option></select></label>
         </div>
+        <!-- Piece practice: where the music comes from, which part, which bars (js/app/piece-practice.js) -->
+        <div class="pp-panel" id="ppPanel" hidden>
+          <div id="ppSource" class="pp-source">
+            <div class="pp-drop" id="ppDrop" tabindex="0" role="button" aria-label="Choose a MusicXML file, or drop one here">
+              <b>Drop a MusicXML file here</b><span>.musicxml, .xml or .mxl (compressed)</span>
+              <div class="pp-btns"><button type="button" id="ppPick" class="sec">Choose file…</button><button type="button" id="ppBrowse" class="sec">Browse GitHub library</button></div>
+              <input type="file" id="ppFile" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml" hidden>
+            </div>
+            <form class="pp-url" id="ppUrlForm"><input id="ppUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="GitHub link (repo, folder or file)" title="Paste a link to a public GitHub repository, a folder in one, or a .mxl / .musicxml file" aria-label="GitHub link"><button class="sec" type="submit">Open</button></form>
+            <div class="hint2">The file is read into this page only. It is not uploaded and not saved.</div>
+          </div>
+          <div id="ppLoaded" hidden>
+            <div class="pp-head"><b id="ppTitle"></b><span id="ppBadge" class="pl-chip"></span><button type="button" id="ppChange" class="sec mini">Change piece</button></div>
+            <div id="ppParts" class="pp-parts" role="radiogroup" aria-label="Available parts" hidden></div>
+            <div class="pp-opts">
+              <label class="field"><span>Bars</span><div class="pp-bars"><input id="ppFrom" type="number" min="1" inputmode="numeric" aria-label="First bar"> <i>to</i> <input id="ppTo" type="number" min="1" inputmode="numeric" aria-label="Last bar"> <small id="ppOf"></small></div></label>
+              <label class="field" id="ppLineW"><span>Chords</span><select id="ppLine"><option value="top">Play the top notes</option><option value="bottom">Play the bottom notes</option></select></label>
+              <label class="field"><span>Octave</span><select id="ppOct"><option value="auto">Fit the instrument</option><option value="0">As written</option><option value="-12">Down an octave</option><option value="12">Up an octave</option></select></label>
+            </div>
+            <details id="ppBackW" class="pp-back" hidden><summary>Accompaniment (the other parts)</summary>
+              <label class="check"><input type="checkbox" id="ppBack"> Play the other parts while I play</label><div id="ppBackList"></div><div class="hint2" id="ppBackNote"></div></details>
+            <div class="hint2" id="ppInfo"></div>
+          </div>
+          <div class="hint2" id="ppMsg" role="status" aria-live="polite"></div>
+        </div>
+
         <!-- the four displays, drawn by js/app/scale-visual.js; the note chips below stay for screen readers -->
         <div class="visual" id="scVis">
           <div class="vis-bar"><div class="seg" id="scView" role="group" aria-label="Display">
@@ -458,6 +486,19 @@
   <form id="frForm"><input id="frName" maxlength="24" autocomplete="off" aria-label="Player name"><button type="submit">Start</button></form>
   <p id="frMsg" class="hint2" role="alert"></p></div></div>
 
+<dialog id="ppGh" class="pp-gh" aria-labelledby="ppGhTitle">
+  <div class="pp-gh-in">
+    <div class="pp-gh-head"><b id="ppGhTitle">GitHub library</b><button id="ppGhClose" class="sec" type="button" aria-label="Close">✕</button></div>
+    <div class="hint2">Public repositories only. A score is read straight into this page when you pick it: nothing is downloaded to your device or stored by this app. Check a score's licence before sharing it.</div>
+    <div id="ppGhPresets" class="pp-presets"></div>
+    <form id="ppGhForm" class="pp-url"><input id="ppGhUrl" type="text" autocomplete="off" spellcheck="false" placeholder="owner/repo, or a github.com link" aria-label="Repository"><button class="sec" type="submit">Open</button></form>
+    <button id="ppGhOther" class="sec mini" type="button" hidden>← Other libraries</button>
+    <div id="ppGhBar" class="pp-gh-bar" hidden><input id="ppGhSearch" type="search" placeholder="Search this library" aria-label="Search this library"><label class="check"><input type="checkbox" id="ppGhXml"> also list .xml files</label></div>
+    <div id="ppGhCrumb" class="pp-crumb"></div>
+    <div id="ppGhList" class="pp-list" role="list"></div>
+    <div id="ppGhMsg" class="hint2" role="status" aria-live="polite"></div>
+  </div>
+</dialog>
 <script src="js/core/pitch.js"></script>
 <script src="js/core/music.js"></script>
 <script src="js/core/instruments.js"></script>
@@ -473,6 +514,8 @@
 <script src="js/core/midi.js"></script>
 <script src="js/core/musicxml.js"></script>
 <script src="js/core/piece.js"></script>
+<script src="js/core/piece-practice.js"></script>
+<script src="js/core/github-library.js"></script>
 <script src="js/core/library.js"></script>
 <script src="js/core/compare.js"></script>
 <script src="js/core/schema.js"></script>
@@ -501,6 +544,7 @@
 <script src="js/app/scale-grade.js"></script>
 <script src="js/app/scale-visual.js"></script>
 <script src="js/app/scale-history.js"></script>
+<script src="js/app/piece-practice.js"></script>
 <script src="js/app/recorder.js"></script>
 <script src="js/app/chart.js"></script>
 <script src="js/app/audio.js"></script>

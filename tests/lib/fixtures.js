@@ -55,4 +55,33 @@ function zipOf(files) {
   return Uint8Array.from([...out, ...cd, ...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cd.length), ...u32(off), ...u16(0)]);
 }
 const mxl = () => zipOf([['META-INF/container.xml', Buffer.from('<?xml version="1.0"?><container><rootfiles><rootfile full-path="score.xml"/></rootfiles></container>')], ['score.xml', Buffer.from(musicXml())]]);
-module.exports = { midi, musicXml, mxl, zipOf };
+// A small original score for the piece-practice tests: D major, 4/4, quarter = 100. Violin plus four other parts (guitar, piano with chords and two staves, cello, an unnamed guitar).
+// opts.solo: the violin part alone (a single-instrument file).
+const note = (step, oct, dur, type, extra = '', alter = 0) => `<note>${extra.includes('<chord/>') ? '<chord/>' : ''}<pitch><step>${step}</step>${alter ? `<alter>${alter}</alter>` : ''}<octave>${oct}</octave></pitch><duration>${dur}</duration><type>${type}</type>${extra.replace('<chord/>', '')}</note>`;
+const rest = (dur, type) => `<note><rest/><duration>${dur}</duration><type>${type}</type></note>`;
+function etudeXml(opts = {}) {
+  const xml = `<?xml version="1.0"?><score-partwise version="3.1"><work><work-title>Etude</work-title></work>
+<part-list>
+ <score-part id="P1"><part-name>Violin</part-name><score-instrument id="P1-I1"><instrument-name>Violin</instrument-name></score-instrument><midi-instrument id="P1-I1"><midi-program>41</midi-program></midi-instrument></score-part>
+ <score-part id="P2"><part-name>Acoustic Guitar</part-name></score-part>
+ <score-part id="P3"><part-name>Piano</part-name></score-part>
+ <score-part id="P4"><part-name>Cello</part-name></score-part>
+ <score-part id="P5"><part-name>Part 5</part-name><midi-instrument id="x"><midi-program>26</midi-program></midi-instrument></score-part>
+</part-list>
+<part id="P1">
+<measure number="1"><attributes><divisions>1</divisions><key><fifths>2</fifths><mode>major</mode></key><time><beats>4</beats><beat-type>4</beat-type></time></attributes><direction><sound tempo="100"/></direction>${note('D', 5, 1, 'quarter')}${note('F', 5, 1, 'quarter', '', 1)}${note('A', 5, 1, 'quarter')}${note('A', 5, 1, 'quarter')}</measure>
+<measure number="2">${rest(1, 'quarter')}${note('B', 5, 1, 'quarter', '', -1)}${note('A', 5, 2, 'half')}</measure>
+<measure number="3">${note('G', 5, 4, 'whole')}</measure>
+<measure number="4">${note('D', 5, 4, 'whole')}</measure>
+</part>
+<part id="P2"><measure number="1"><attributes><divisions>1</divisions></attributes>${note('E', 3, 4, 'whole')}</measure></part>
+<part id="P3">
+<measure number="1"><attributes><divisions>1</divisions><staves>2</staves></attributes>${note('G', 4, 2, 'half')}${note('B', 4, 1, 'quarter')}${note('C', 5, 1, 'quarter')}</measure>
+<measure number="2">${note('E', 3, 4, 'whole')}${note('G', 3, 4, 'whole', '<chord/>')}</measure>
+</part>
+<part id="P4"><measure number="1"><attributes><divisions>1</divisions></attributes>${note('C', 3, 4, 'whole')}</measure></part>
+<part id="P5"><measure number="1"><attributes><divisions>1</divisions></attributes>${note('E', 4, 4, 'whole')}</measure></part>
+</score-partwise>`;
+  return opts.solo ? xml.replace(/<score-part id="P[2-5]">[\s\S]*?<\/score-part>\s*/g, '').replace(/<part id="P[2-5]">[\s\S]*?<\/part>\s*/g, '') : xml;
+}
+module.exports = { midi, musicXml, mxl, zipOf, etudeXml };

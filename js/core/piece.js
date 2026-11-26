@@ -51,7 +51,7 @@ function pieceFromMidi(bytes, o = {}) {
 // MusicXML text -> piece.
 function pieceFromMusicXml(text, o = {}) {
   const x = parseMusicXml(text), inst = o.instrument || 'violin';
-  return { id: pieceId(), title: cleanTitle(x.title || o.title || o.name, 'MusicXML piece'), instrument: inst, source: 'musicxml', exact: true, bpm: x.bpm, timeSig: x.timeSig, parts: x.parts.map(p => ({ id: p.id, name: p.name, notes: p.notes })), part: suggestPart(inst, x.parts), created: Date.now() };
+  return { id: pieceId(), title: cleanTitle(x.title || o.title || o.name, 'MusicXML piece'), instrument: inst, source: 'musicxml', exact: true, bpm: x.bpm, timeSig: x.timeSig, key: x.key, parts: x.parts.map(p => ({ id: p.id, name: p.name, inst: p.inst, program: p.program, staves: p.staves, bars: p.bars, notes: p.notes })), part: suggestPart(inst, x.parts), created: Date.now() };
 }
 // What the library keeps small and what the player sees.
 const pieceNotes = p => (p.parts[p.part] || p.parts[0]).notes;

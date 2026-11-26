@@ -28,6 +28,7 @@ PRACTICE_INSTRUMENTS.forEach(([k, label]) => $('scInst').add(new Option(label, k
 
 // What the controls ask for, with the instrument's rules applied: start note, effective span, warnings, and the timeline.
 function planNow() {
+  if (typeof ppActive === 'function' && ppActive()) return ppPlan();   // a piece instead of a scale (piece-practice.js): the same plan shape, so everything below the plan is shared
   const inst = $('scInst').value, pc = +$('scRoot').value, type = $('scType').value, bow = $('scBow').value, pos = $('scPos').value, bpm = Math.max(30, Math.min(240, +$('scBpm').value || 80));
   const plan = planScale(inst, pc, +$('scSpan').value, pos);
   const tl = buildTimeline({ start: plan.start, type, span: plan.span, bpm, rootPc: pc, slur: slurSize(inst, bow), flats: useFlats ? true : null });
@@ -35,7 +36,7 @@ function planNow() {
 }
 const currentPlan = planNow;
 const techLabel = (inst, bow, pos) => { const c = controls(inst), l = o => o ? (o.options.find(x => x.value === (o === c.bowing ? bow : pos)) || { label: '' }).label : ''; return [l(c.bowing), l(c.position)].filter(Boolean).join(' · '); };
-const scaleLabel = () => sc.label || (sc.label = (() => { const p = planNow(); return `${p.tl[0].noteName.replace(/-?\d+$/, '')} ${SCALE_DEFS[p.type].label} · ${p.span} oct` + (techLabel(p.inst, p.bow, p.pos) ? ` · ${techLabel(p.inst, p.bow, p.pos)}` : ''); })());
+const scaleLabel = () => sc.label || (sc.label = (() => { const p = planNow(); if (p.type === 'piece') return p.label; return `${p.tl[0].noteName.replace(/-?\d+$/, '')} ${SCALE_DEFS[p.type].label} · ${p.span} oct` + (techLabel(p.inst, p.bow, p.pos) ? ` · ${techLabel(p.inst, p.bow, p.pos)}` : ''); })());
 const nameParts = n => n.match(/^([A-G][#b]?)(-?\d+)$/);
 const noteHtml = n => { const m = nameParts(n); return m ? `${m[1].replace('#', '♯').replace(/b$/, '♭')}<small>${m[2]}</small>` : n; };
 const stringsOf = inst => (PRESETS[inst] && PRESETS[inst].strings || []).map(nameToMidi);
@@ -60,9 +61,11 @@ function renderScale() {
     $('scRange').innerHTML = `${sc.tl[seq.indexOf(lo)].noteName}–${sc.tl[seq.indexOf(hi)].noteName} · ${fl.toFixed(0)}–${fh.toFixed(0)} Hz` + (fl < +$('fmin').value || fh > +$('fmax').value ? ' · <span class="bad-t">outside the detection range — widen it in Settings</span>' : '');
   }
   $('scRow1').className = seq.length > 12 ? 'dense wrap' : seq.length > 9 ? 'dense' : ''; $('scStop').disabled = !(sc.running || demo);
-  $('scRow1').innerHTML = sc.tl.map((n, i) => {
-    const cls = noteCls(i, demo);
-    return `<span class="chip mini ${cls}${n.direction === 'down' ? ' dn' : ''}" title="${n.direction === 'up' ? 'going up' : 'going down'}${sc.grades[i] === 'Skipped' && !demo ? ' · skipped' : ''}">${n.noteName.replace('b', '♭').replace('#', '♯')}</span>`;
+  // a piece can have hundreds of notes: the list (for screen readers) holds a window of them around the one being played
+  const piece = sc.plan && sc.plan.type === 'piece', mid = demo ? demoIdx : sc.pos, w0 = piece && sc.tl.length > 40 ? Math.max(0, Math.min(sc.tl.length - 40, mid - 8)) : 0, w1 = piece ? Math.min(sc.tl.length, w0 + 40) : sc.tl.length;
+  $('scRow1').innerHTML = sc.tl.slice(w0, w1).map((n, k) => {
+    const i = w0 + k, cls = noteCls(i, demo);
+    return `<span class="chip mini ${cls}${n.direction === 'down' ? ' dn' : ''}" title="${piece ? 'bar ' + n.bar : n.direction === 'up' ? 'going up' : 'going down'}${sc.grades[i] === 'Skipped' && !demo ? ' · skipped' : ''}">${n.noteName.replace('b', '♭').replace('#', '♯')}</span>`;
   }).join('');
   const idx = demo ? demoIdx : sc.running ? sc.pos : -1;
   if (idx >= 0 && idx < seq.length) {
@@ -71,7 +74,7 @@ function renderScale() {
     $('scArrow').textContent = n.direction === 'up' ? '↑' : '↓'; $('scFinger').textContent = fh ? fh.text : '';
     if (demo) { neutralLive('Demo playing'); $('scHeard').textContent = 'demo playback'; }
   } else if (complete()) {
-    $('scCur').textContent = '✓'; $('scTarget').textContent = 'Scale complete'; $('scArrow').textContent = ''; $('scFinger').textContent = ''; neutralLive('');
+    $('scCur').textContent = '✓'; $('scTarget').textContent = (sc.plan && sc.plan.type === 'piece' ? 'Piece' : 'Scale') + ' complete'; $('scArrow').textContent = ''; $('scFinger').textContent = ''; neutralLive('');
   } else { $('scCur').textContent = '–'; $('scTarget').textContent = 'Press Start practice'; $('scArrow').textContent = ''; $('scFinger').textContent = ''; neutralLive(); }
   svRender();   // notation, instrument view and cursor (scale-visual.js loads later; this only runs once everything has loaded)
 }
@@ -83,7 +86,7 @@ function liveScaleFrame(f, t) {
   if (!sc.running || demoIdx >= 0) return;
   clockTick(t);
   if (sc.pos >= sc.seq.length) return;
-  if (!f) { if (++silentFrames > 8) { neutralLive(); sc.waitFrames = []; sc.waitOk = 0; } return; }   // a bow change or a breath is a short gap, not an error
+  if (!f) { if (++silentFrames > 8) { neutralLive(); sc.waitFrames = []; sc.waitOk = 0; sc.needGap = false; } return; }   // a bow change or a breath is a short gap, not an error
   const T = scaleTol(), target = sc.seq[sc.pos], rawET = centsOffset(f, target, a4());
   if (isOctaveGlitch(rawET)) return;                         // YIN octave/twelfth glitch: not a pitch the player made
   silentFrames = 0;

@@ -1,6 +1,6 @@
 // Service worker: makes the app installable and usable offline.
 // Bump CACHE whenever you change any file, so installed copies pick up the update.
-const CACHE = 'tuner-v80';
+const CACHE = 'tuner-v81';
 const VENDOR = 'tuner-vendor-v1';   // the Detailed-analysis files live in their own cache, so a new app version does not delete them
 const FILES = [
   './',
@@ -9,6 +9,7 @@ const FILES = [
   './css/app.css',
   './css/lab.css',
   './css/scale.css',
+  './css/piece.css',
   './js/core/pitch.js',
   './js/core/music.js',
   './js/core/instruments.js',
@@ -24,6 +25,8 @@ const FILES = [
   './js/core/midi.js',
   './js/core/musicxml.js',
   './js/core/piece.js',
+  './js/core/piece-practice.js',
+  './js/core/github-library.js',
   './js/core/library.js',
   './js/core/compare.js',
   './js/core/schema.js',
@@ -52,6 +55,7 @@ const FILES = [
   './js/app/scale-grade.js',
   './js/app/scale-visual.js',
   './js/app/scale-history.js',
+  './js/app/piece-practice.js',
   './js/app/recorder.js',
   './js/app/chart.js',
   './js/app/audio.js',
@@ -80,6 +84,7 @@ self.addEventListener('activate', e => {
 // Network first (so updates show up when online), falling back to the cache when offline.
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== self.location.origin) return;   // other sites (GitHub scores, the local helper) go straight to the network: never kept in a cache, never answered with index.html
   if (new URL(e.request.url).pathname.includes('/vendor/')) {   // big, rarely changing: cache first, fill on first use
     e.respondWith(caches.open(VENDOR).then(c => c.match(e.request).then(hit => hit || fetch(e.request).then(res => { if (res.ok) c.put(e.request, res.clone()); return res; }))));
     return;

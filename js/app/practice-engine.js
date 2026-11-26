@@ -15,9 +15,9 @@ function applyLimits() {
 function droneRetune() { if (typeof DRONE !== 'undefined' && DRONE.on) droneSet(droneMidiFor(planNow().start)); }
 
 function resetPractice() {
-  finalizeHold(); clearTimeout(sc.countTimer); clearTimeout(sc.runTimer); sc.runPass = 0; sc.pass = 1; sc.passes = []; clearResult();
+  finalizeHold(); clearTimeout(sc.countTimer); clearTimeout(sc.runTimer); if (typeof ppBackingStop === 'function') ppBackingStop(); sc.runPass = 0; sc.pass = 1; sc.passes = []; clearResult();
   const p = planNow(); sc.plan = p; sc.tl = p.tl; sc.seq = p.tl.map(n => n.midi); sc.bpm = p.bpm; sc.label = null;
-  sc.pos = 0; sc.grades = []; sc.attempts = []; sc.wrong = 0; sc.running = false; sc.slots = []; sc.slotAt = {}; sc.clock = null; sc.waitFrames = []; sc.waitOk = 0; sc.devHist = [];
+  sc.pos = 0; sc.grades = []; sc.attempts = []; sc.wrong = 0; sc.running = false; sc.slots = []; sc.slotAt = {}; sc.clock = null; sc.waitFrames = []; sc.waitOk = 0; sc.needGap = false; sc.devHist = [];
   liveBuf = []; liveC = []; silentFrames = 99; det.cur = null; det.lastMidi = null;
   $('scStart').textContent = 'Start practice'; $('scSum').innerHTML = ''; setMsg('');
 }
@@ -26,6 +26,7 @@ function startCountIn() {
   const c = getCtx(), spb = 60 / sc.bpm, n = sigBeats(), base = c.currentTime + 0.08, wasOn = metroOn;
   sc.clickAfter = wasOn; startMetro(base);
   sc.clock = base + n * spb - t0;
+  if (typeof ppBackingBegin === 'function') ppBackingBegin(base + n * spb);   // a piece's other parts start on the first note
   // The count-in click stops on the AUDIO clock (just after the click on the first note's beat), not by a timer: the audio clock can start late (first use, Bluetooth), and a wall-clock
   // timer then cut the last count-in click off.
   sc.countEnd = wasOn ? null : base + n * spb;
@@ -61,7 +62,7 @@ function startScale() {
 }
 function stopScale() {                       // stops the demo and/or the practice run and returns to "Start practice"
   const was = sc.running || demoIdx >= 0;
-  stopDemo(); clearTimeout(sc.countTimer); stopMetro(); finalizeHold();
+  stopDemo(); clearTimeout(sc.countTimer); stopMetro(); finalizeHold(); if (typeof ppBackingStop === 'function') ppBackingStop();
   sc.running = false; det.cur = null; det.lastMidi = null; liveBuf = []; sc.clock = null;
   $('scStart').textContent = 'Start practice';
   setMsg(was ? 'Stopped — press Start practice to begin again' : '');
@@ -93,13 +94,13 @@ function endPass(note) {
   const wr = sc.attempts.filter(x => x.pass === sc.pass && /^Wrong/.test(x.grade)).length, pct = 100 * n / (tl.length + wr);   // wrong notes count against the pass
   sc.passes.push({ pct }); savePass(pct); queueRun();
   if ($('scRepeat').checked) {                       // loop: the next pass starts one bar after the end of this grid; the scorecard keeps growing
-    if (sc.mode === 'tempo' && sc.clock != null) sc.clock += (tl.length + sigBeats()) * 60 / sc.bpm;
+    if (sc.mode === 'tempo' && sc.clock != null) { sc.clock += (((sc.plan && sc.plan.beats) || tl.length) + sigBeats()) * 60 / sc.bpm; if (typeof ppBackingBegin === 'function') ppBackingBegin(sc.clock + t0); }   // a piece loops after its own length (the bars), a scale after one note per beat
     setMsg(`Pass ${sc.pass} done — ${pct.toFixed(0)}% in tune. ${sc.mode === 'tempo' ? 'Next pass starts after one bar of clicks' : 'Play the first note to start pass ' + (sc.pass + 1)}`, 'ok');
     sc.pass++; sc.pos = 0; sc.grades = []; sc.waitFrames = []; sc.waitOk = 0; renderScale(); renderSummary(); renderCard(); return;
   }
   sc.running = false; $('scStart').textContent = 'Start practice';
   if (sc.mode === 'tempo' && !sc.clickAfter) stopMetro();
-  setMsg(note ? `${note} — ${pct.toFixed(0)}% in tune` : `Scale complete — ${pct.toFixed(0)}% in tune`, 'ok'); renderScale(); renderSummary(); renderCard();
+  setMsg(note ? `${note} — ${pct.toFixed(0)}% in tune` : `${sc.plan && sc.plan.type === 'piece' ? 'Piece' : 'Scale'} complete — ${pct.toFixed(0)}% in tune`, 'ok'); renderScale(); renderSummary(); renderCard();
 }
 function onAttempt(a) {
   if (!sc.running || demoIdx >= 0 || sc.pos >= sc.seq.length) return;
@@ -110,7 +111,9 @@ function onAttempt(a) {
   const rec = { index: sc.pos + 1, expected: tl[sc.pos].noteName, played: midiName(a.midi), hz: a.hz, cents: a.cents, time_s: a.t, pass: sc.pass, direction: tl[sc.pos].direction, timing_ms: null };
   // Re-playing the note just played is a retry: scored as another play of that note, never a skip or a wrong note.
   // If the clock had already skipped it, this is a late play: it replaces the skip.
-  if (sc.pos > 0 && a.midi === seq[sc.pos - 1] && a.midi !== exp) {
+  // (in a piece the note after the next one can be the one just played, as in A B A: if the clock says the sound is nearer to that later note's time, it is that note, not a retry)
+  const kAhead = seq.indexOf(a.midi, sc.pos), laterNote = sc.clock != null && kAhead > sc.pos && kAhead <= sc.pos + 2 && sc.pos > 0 && Math.abs(terr(kAhead)) < Math.abs(terr(sc.pos - 1));
+  if (sc.pos > 0 && a.midi === seq[sc.pos - 1] && a.midi !== exp && !laterNote) {
     const p = sc.pos - 1, g = gradeCents(a.cents - sh, T), late = sc.grades[p] === 'Skipped'; if (!late) slotFor(p).rt++;   // a retry is a restart: the evaluation counts it against continuity
     finalizeHold(); hold = newHold(a, T, p, late ? terr(p) : null); sc.grades[p] = g; liveBuf = []; liveC = []; silentFrames = 99; neutralLive();
     setMsg(`${late ? 'Late: ' : 'Retry '}${midiName(a.midi)} ${scCents(a.cents - sh)} — ${g}`, cls3(g)); renderScale(); return;
@@ -147,6 +150,7 @@ function waitAttempt(a) {
   setMsg(`Heard ${midiName(a.midi)} — waiting for ${n.noteName} (${g.toLowerCase()})`, 'bad');
 }
 function waitFrame(raw, inTol, rule) {
+  if (sc.needGap) return;   // the next note is the same pitch as the one just passed (a piece repeats notes): a pause, then a new note, is needed before it counts
   if (Math.abs(raw) <= 65) { sc.waitFrames.push(raw); if (sc.waitFrames.length > 600) sc.waitFrames.shift(); }
   sc.waitOk = inTol ? sc.waitOk + 1 : 0;
   if (sc.waitOk >= rule.holdFrames) advanceWait(rule);
@@ -159,6 +163,7 @@ function advanceWait(rule) {
   Object.assign(slotFor(i), { k: 'h', c: st.c, a: st.a, s: st.n >= 4 ? st.s : null, e: null, m: med, sp: Math.abs(sc.waitFrames[0] - med) });
   sc.attempts.push({ index: i + 1, expected: n.noteName, played: n.noteName, hz, cents: st.c, time_s: 0, pass: sc.pass, direction: n.direction, timing_ms: null, grade: g });
   sc.grades[i] = g; sc.pos++; sc.waitFrames = []; sc.waitOk = 0; liveBuf = []; liveC = []; silentFrames = 99; neutralLive();
+  sc.needGap = sc.pos < sc.seq.length && sc.seq[sc.pos] === n.midi;
   setMsg(`${n.noteName} ${scCents(st.c - scaleShift())} — ${g}`, cls3(g));
   if (sc.pos >= sc.seq.length) endPass(); else { renderScale(); renderCard(); }
 }
@@ -177,15 +182,16 @@ function renderSummary() {
 
 // ----- Hear scale: plays the same timeline the scoring uses (honours tempo and slurs) -----
 function stopDemo() {
-  refStop();
+  refStop(); if (typeof ppBackingStop === 'function') ppBackingStop();
   const was = demoIdx >= 0; demoIdx = -1; SV.demoT0 = null;
-  $('scDemo').textContent = '▶ Hear scale';
+  $('scDemo').textContent = '▶ Hear ' + (typeof ppActive === 'function' && ppActive() ? 'piece' : 'scale');
   if (was) { det.cur = null; det.lastMidi = null; liveBuf = []; renderScale(); }
 }
 function startDemo() {
   finalizeHold(); const p = planNow(); sc.plan = p; sc.tl = p.tl; sc.seq = p.tl.map(n => n.midi); sc.bpm = p.bpm; sc.label = null;
   const at = getCtx().currentTime + 0.08;    // one time for the first note, the click and the cursor
   if (metroOn) startMetro(at);
+  if (typeof ppBackingBegin === 'function') ppBackingBegin(at, true);   // hear the piece with its other parts (in any mode)
   demoIdx = 0; SV.demoT0 = at; $('scDemo').textContent = '■ Stop demo';   // the audio clock time of the first note: the cursor glides on it
   refPlay(p.tl, { at, onNote: i => { demoIdx = i; renderScale(); }, onEnd: stopDemo });
   renderScale();

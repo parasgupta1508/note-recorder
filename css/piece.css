@@ -1,0 +1,51 @@
+/* Piece practice (js/app/piece-practice.js): the source picker, the part list, the bar range and the GitHub library box. The displays themselves are scale.css. */
+.pp-mode{margin:0 0 8px;align-self:flex-start}
+#scPlayer.piece .sc-only{display:none}
+#scPlayer.pp-pick #scVisTitle,#scPlayer.pp-pick .visual,#scPlayer.pp-pick .pl-bar,#scPlayer.pp-pick .pl-foot,#scPlayer.pp-pick .pl-sel,#scPlayer.pp-pick #scMsg,#scPlayer.pp-pick #scResult{display:none}
+.pp-panel[hidden],.pp-source[hidden],#ppLoaded[hidden],.pp-parts[hidden],.pp-back[hidden],#ppLineW[hidden],.pp-gh-bar[hidden],.pp-head .pl-chip:empty{display:none}
+.pp-panel{display:grid;gap:10px;margin:2px 0 10px}
+
+.pp-drop{display:grid;gap:6px;justify-items:center;text-align:center;padding:16px 12px;border:1.5px dashed var(--line);border-radius:14px;background:rgba(255,255,255,.02);cursor:pointer}
+.pp-drop>span{font-size:13px;color:var(--mut)}
+.pp-drop.over,.pp-drop:focus-visible{border-color:var(--acc);background:rgba(80,140,255,.08);outline:none}
+.pp-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.pp-url{display:flex;gap:8px;margin-top:8px} .pp-url input{flex:1 1 auto;min-width:0}
+
+.pp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pp-head>b{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.pp-head .pl-chip.lock::before{content:"🔒";font-size:11px;color:inherit;margin-right:6px}
+.pp-head .mini{margin-left:auto;min-height:32px;padding:3px 12px;font-size:13px}
+
+.pp-parts{display:grid;gap:6px}
+.pp-parts-h{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.pp-part{display:grid;gap:2px;text-align:left;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:transparent;color:var(--fg);min-height:0}
+.pp-part span{font-size:12.5px;color:var(--mut)}
+.pp-part.on{border-color:var(--acc);background:rgba(80,140,255,.1)}
+.pp-parts.chosen{display:flex;flex-wrap:wrap;gap:6px} .pp-parts.chosen .pp-parts-h{flex:1 1 100%} .pp-parts.chosen .pp-part{padding:5px 12px;border-radius:999px} .pp-parts.chosen .pp-part span{display:none}
+
+.pp-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}
+.pp-bars{display:flex;align-items:center;gap:6px;color:var(--mut)} .pp-bars input{width:64px;min-height:36px;padding:4px 8px;font-size:14px} .pp-bars small{font-size:12px;white-space:nowrap}
+.pp-opts select{min-height:36px;padding:4px 24px 4px 10px;font-size:14px}
+.pp-back{border:1px solid var(--line);border-radius:12px;padding:6px 12px;margin-top:6px} .pp-back summary{cursor:pointer;font-size:14px}
+
+.pp-gh{width:min(640px,calc(100vw - 20px));max-height:calc(100vh - 24px);padding:0;border:1px solid var(--line);border-radius:16px;background:var(--bg,#0c0f15);color:var(--fg)}
+.pp-gh::backdrop{background:rgba(0,0,0,.6)}
+.pp-gh-in{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:14px;max-height:calc(100vh - 26px);overflow:auto}
+.pp-gh-head{display:flex;align-items:center;justify-content:space-between} .pp-gh-head b{font-size:16px} .pp-gh-head button{min-height:34px;padding:2px 12px}
+.pp-presets[hidden],#ppGhOther[hidden]{display:none} #ppGhOther{justify-self:start;min-height:32px;padding:3px 12px;font-size:13px}
+.pp-presets{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+.pp-preset{display:grid;gap:1px;text-align:left;padding:9px 12px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--fg);min-height:0}
+.pp-preset span{font-size:12.5px;color:var(--acc)} .pp-preset small{font-size:12px;color:var(--mut);line-height:1.35}
+.pp-gh-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap} .pp-gh-bar input[type=search]{flex:1 1 180px;min-width:0}
+.pp-crumb{font-size:13px;color:var(--mut);min-height:18px} .pp-crumb .lnk{background:none;border:0;padding:0;min-height:0;color:var(--acc);font-size:13px;text-decoration:underline;cursor:pointer}
+.pp-list{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;max-height:44vh;overflow:auto}
+.pp-file{min-width:0;display:flex;justify-content:space-between;gap:10px;align-items:baseline;text-align:left;padding:8px 12px;border:1px solid transparent;border-radius:10px;background:rgba(255,255,255,.04);color:var(--fg);min-height:0}
+.pp-file b{font-weight:550;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .pp-file span{font-size:12px;color:var(--mut);white-space:nowrap}
+.pp-file:hover,.pp-file:focus-visible{border-color:var(--acc);outline:none} .pp-file.dir{background:transparent;border-color:var(--line)}
+
+/* note lengths on the staff (a piece's half and whole notes are open heads; eighths and sixteenths have flags) */
+.staffbox .nh .hole{fill:var(--sv-bg)} .staffbox .nh .dotn{fill:var(--sv-note)} .staffbox .nh .flag{fill:none;stroke:var(--sv-note);stroke-width:1.7;stroke-linecap:round}
+.staffbox .nh.ok .flag,.staffbox .nh.ok .dotn{stroke:var(--ok)} .staffbox .nh.ok .dotn{fill:var(--ok)}
+.staffbox .nh.close .flag{stroke:var(--warn)} .staffbox .nh.close .dotn{fill:var(--warn)}
+.staffbox .nh.bad .flag{stroke:var(--bad)} .staffbox .nh.bad .dotn{fill:var(--bad)}
+.staffbox .nh.cur.pend .flag{stroke:#fff} .staffbox .nh.cur.pend .dotn{fill:#fff}
