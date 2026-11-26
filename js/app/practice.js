@@ -65,7 +65,7 @@ function renderScale() {
   } else { $('scCur').textContent = '–'; $('scTarget').textContent = 'Press Start practice'; $('scArrow').textContent = ''; $('scFinger').textContent = ''; neutralLive(); }
   svRender();   // notation, instrument view and cursor (scale-visual.js loads later; this only runs once everything has loaded)
 }
-function setMsg(text, cls = 'mut') { $('scMsg').textContent = text; $('scMsg').className = 'center ' + (cls === 'mut' ? 'mut' : cls + '-t'); }
+function setMsg(text, cls = 'mut') { $('scMsg').textContent = text; $('scMsg').className = 'sc-msg ' + (cls === 'mut' ? 'mut' : cls + '-t'); }
 
 // The live meter: cents from the target, smoothed (wide window for vibrato on bowed strings, narrow for frets), +-50 cents across the bar.
 const liveMedian = a => { const s = a.slice().sort((x, y) => x - y); return s[s.length >> 1]; };

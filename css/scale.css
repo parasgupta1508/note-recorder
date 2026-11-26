@@ -158,3 +158,7 @@
 #scResBtn[aria-expanded=true]{background:var(--acc);color:#fff} #scResBtn:disabled{opacity:.45;cursor:default}
 .pl-foot .pl-loop{min-height:30px;padding:2px 10px;font-size:12.5px}
 #instRange:empty{display:none}
+
+/* the live readout under the display is off; one slim message line remains */
+.player .livecard,#scRange{display:none!important}
+.sc-msg{text-align:center;font-size:14px;color:var(--sv-dim);min-height:0} #scMsg:empty{display:none}

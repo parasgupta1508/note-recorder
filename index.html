@@ -188,9 +188,11 @@
 
         <!-- Row 1: all scale notes (screen readers only; the notation shows them) -->
         <div id="scRow1"></div>
-        <div id="scRange" class="hint2 center"></div>
+        <div id="scRange" class="hint2 center" hidden></div>
 
-        <div class="livecard">
+        <div id="scMsg" class="sc-msg" aria-live="polite"></div>
+        <!-- the live note readout and cents meter stay in the page for the code but are not shown: the staff cursor and the note colours already show how it is going -->
+        <div class="livecard" hidden>
           <!-- the target note, what was heard, and the ±50 cents meter -->
           <div class="readout">
             <div class="tgt"><span id="scArrow" class="dirarrow" aria-hidden="true"></span><div id="scCur" class="big">–</div></div>
@@ -201,7 +203,6 @@
               <div id="scVerdict" class="verdict"></div>
             </div>
           </div>
-          <div id="scMsg" class="mut" style="min-height:20px;font-size:14px"></div>
           <div class="srow">
             <div class="dev-bar" id="devBar"><div class="dev-mid"></div><div id="devMarker" class="dev-marker"></div></div>
             <div class="dev-labels"><span>♭ −50¢</span><span id="devRead">–</span><span>+50¢ ♯</span></div>
