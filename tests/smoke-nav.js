@@ -28,7 +28,7 @@ const PAGE_CHECK = `(async () => {
   res.noStart = !document.getElementById('start') && !/start listening/i.test(document.querySelector('header').textContent);
   res.controls = btns.every(b => document.getElementById(b.getAttribute('aria-controls')));
   res.sub = [];
-  for (const [k, parent] of [['scale', 'scale'], ['rec', 'home'], ['lab', 'settings']]) { showTab(k); await wait(300); res.sub.push({ k, shown: shownNow(), lit: btns.filter(x => x.classList.contains('on')).map(x => x.dataset.tab), sel: btns.filter(x => x.getAttribute('aria-selected') === 'true').map(x => x.dataset.tab), parent }); }
+  for (const [k, parent] of [['scale', 'scale'], ['rec', 'rec'], ['lab', 'settings']]) { showTab(k); await wait(300); res.sub.push({ k, shown: shownNow(), lit: btns.filter(x => x.classList.contains('on')).map(x => x.dataset.tab), sel: btns.filter(x => x.getAttribute('aria-selected') === 'true').map(x => x.dataset.tab), parent }); }
   btns[0].click(); await wait(200); btns[0].focus(); res.kb = [btns[0].dataset.tab];
   for (let i = 1; i < btns.length; i++) { document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); await wait(200); res.kb.push(document.activeElement.dataset.tab + ':' + shownNow().join()); }
   btns[0].click();

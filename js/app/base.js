@@ -25,13 +25,13 @@ async function playTone(hz, dur = 1.2, type = 'triangle', vol = 0.25) {
 }
 
 // ----- tabs -----
-let tab = 'home';
-const TAB_PARENT = { rec: 'home', lab: 'settings' };   // screens reached from another tab keep that tab lit
-const NO_MIC_TABS = ['home', 'pieces', 'analysis'];                  // the microphone is switched off when you go to one of these
+let tab = 'scale';
+const TAB_PARENT = { lab: 'settings' };   // screens reached from another tab keep that tab lit
+const NO_MIC_TABS = ['pieces', 'analysis'];                  // the microphone is switched off when you go to one of these
 function showTab(k) {
   tab = k; const lit = TAB_PARENT[k] || k;
   document.querySelectorAll('nav.tabs button').forEach(x => { const on = x.dataset.tab === lit; x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false'); x.tabIndex = on ? 0 : -1; });
-  for (const t of ['home', 'pieces', 'piece', 'tuner', 'scale', 'analysis', 'rec', 'lab', 'settings']) $('tab-' + t).classList.toggle('hide', t !== tab);
+  for (const t of ['pieces', 'piece', 'tuner', 'scale', 'analysis', 'rec', 'lab', 'settings']) $('tab-' + t).classList.toggle('hide', t !== tab);
   if (tab !== 'piece' && typeof peLeave === 'function') peLeave();   // Piece practice stops when another screen opens
   if (tab === 'piece' && typeof ppEnter === 'function') ppEnter();
   if (tab !== 'scale') { stopDemo(); stopMetro(); finalizeHold(); if (DRONE.on) droneToggle(false); if (sc.running) { sc.running = false; $('scStart').textContent = 'Start practice'; $('scMsg').textContent = 'Paused — press Start practice'; renderScale(); } }

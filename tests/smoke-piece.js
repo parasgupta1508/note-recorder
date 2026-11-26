@@ -20,9 +20,10 @@ showTab('scale'); var scaleRuns=RUNS.length, scalePlan=JSON.stringify(sc.tl.map(
 setGradeMode('strict', true);
 
 // ---- the new main-menu item
-var nav=$('nav-piece'); ck('main menu: Practice, Scale drills, Piece practice, Pieces, Tuner, Progress, Settings, in that order',[].map.call(document.querySelectorAll('nav.tabs button'),function(b){return b.dataset.tab}).join()==='home,scale,piece,pieces,tuner,analysis,settings'&&/Piece practice/.test(nav.textContent)&&/Scale drills/.test($('nav-scale').textContent));
-ck('Scale drills is no longer a button on the Practice screen, which still has Tuner and Free record',!document.querySelector('#tab-home [data-go=scale]')&&!!document.querySelector('#tab-home [data-go=tuner]')&&!!document.querySelector('#tab-home [data-go=rec]'));
-$('nav-scale').click(); ck('the Scale drills menu item opens the Scale drills and lights itself (not Practice)',tab==='scale'&&!$('tab-scale').classList.contains('hide')&&$('nav-scale').classList.contains('on')&&!$('nav-home').classList.contains('on'));
+var nav=$('nav-piece'); ck('main menu: Scale drills, Piece practice, Pieces, Free record, Tuner, Progress, Settings, in that order, and no Practice item',[].map.call(document.querySelectorAll('nav.tabs button'),function(b){return b.dataset.tab}).join()==='scale,piece,pieces,rec,tuner,analysis,settings'&&!$('nav-home')&&!$('tab-home')&&/Piece practice/.test(nav.textContent)&&/Free record/.test($('nav-rec').textContent));
+ck('the Scale drills is the first screen (nothing else is showing), and Tuner, Free record and Pieces are menu items, not cards on a Practice screen',!$('tab-scale').classList.contains('hide')===(tab==='scale')&&!document.querySelector('[data-go]'));
+$('nav-scale').click(); ck('the Scale drills menu item opens the Scale drills and lights itself',tab==='scale'&&!$('tab-scale').classList.contains('hide')&&$('nav-scale').classList.contains('on'));
+$('nav-rec').click(); ck('the Free record menu item opens the recorder and lights itself',tab==='rec'&&!$('tab-rec').classList.contains('hide')&&$('nav-rec').classList.contains('on')); showTab('scale');
 showTab('piece');
 nav.click(); ck('opening it shows its own screen and hides the Scale drills',tab==='piece'&&!$('tab-piece').classList.contains('hide')&&$('tab-scale').classList.contains('hide')&&nav.classList.contains('on'));
 ck('it is not inside the Scale drills screen',!$('tab-scale').contains($('tab-piece'))&&!$('tab-piece').contains($('tab-scale')));

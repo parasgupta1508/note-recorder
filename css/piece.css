@@ -67,7 +67,7 @@
 .staffbox .nh.bad .flag{stroke:var(--bad)} .staffbox .nh.bad .dotn{fill:var(--bad)}
 .staffbox .nh.cur.pend .flag{stroke:#fff} .staffbox .nh.cur.pend .dotn{fill:#fff}
 
-/* ---------- the main menu has seven items now (app.css counted five columns) ---------- */
+/* ---------- the main menu has seven items (Scale drills, Piece practice, Pieces, Free record, Tuner, Progress, Settings) (app.css counted five columns) ---------- */
 .tabs{grid-template-columns:repeat(7,1fr)}
 @media (max-width:719px){.tabs button{font-size:11px;padding:6px 0}} @media (max-width:380px){.tabs button{font-size:10px}}
 @media (min-width:720px){.tabs{grid-template-columns:repeat(7,auto)} .tabs button{padding:8px 11px;font-size:13px;gap:6px}}
