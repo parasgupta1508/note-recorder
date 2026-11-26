@@ -45,7 +45,7 @@ function svBuildStaff(W) {
   let y = 6, out = '';
   SV.geo = []; SV.where = new Array(tl.length); SV.rows = rows;
   rows.forEach((row, r) => {
-    const ext = visRowExtent(row), top = y + 28 + SV_ST * (ext.hi - VIS_TOP), yS = s => top + (VIS_TOP - s) * SV_ST, bottom = yS(VIS_BOTTOM), end = yS(Math.min(ext.lo, VIS_BOTTOM)) + 30;
+    const ext = visRowExtent(row), top = y + 36 + SV_ST * (ext.hi - VIS_TOP), yS = s => top + (VIS_TOP - s) * SV_ST, bottom = yS(VIS_BOTTOM), base = yS(Math.min(ext.lo, VIS_BOTTOM)), bowed = svIsBowed(inst), end = base + (bowed ? 56 : 32);
     SV.geo.push({ top, bottom, y0: y, y1: end });
     for (let k = 0; k < 5; k++) out += `<line class="sl" x1="4" x2="${W - 4}" y1="${top + k * SV_LG}" y2="${top + k * SV_LG}"/>`;
     out += `<line class="sl" x1="4" x2="4" y1="${top}" y2="${bottom}"/>`;
@@ -67,15 +67,24 @@ function svBuildStaff(W) {
       if (n.acc) out += `<text class="acc" x="${n.x - 14}" y="${cy + 5}" font-size="17" font-family='${svFont}'>${{ '#': '♯', b: '♭', n: '♮' }[n.acc]}</text>`;
       out += `<line class="stem" x1="${sx}" y1="${cy}" x2="${sx}" y2="${sy}"/><ellipse class="head" cx="${n.x}" cy="${cy}" rx="5.6" ry="4.1" transform="rotate(-20 ${n.x} ${cy})"/></g>`;
       const f = hints[n.i] ? svFingerLabel(inst, hints[n.i], tl[n.i].midi, strings) : '';
-      out += `<text class="nm" x="${n.x}" y="${end - 20}" text-anchor="middle" font-size="9.5">${svNoteName(n.i)}</text>`;
-      if (f !== '') out += `<text class="fing" x="${n.x}" y="${end - 6}" text-anchor="middle" font-size="12">${f}</text>`;
+      out += `<text class="nm" x="${n.x}" y="${base + 22}" text-anchor="middle" font-size="10">${svNoteName(n.i)}</text>`;
+      if (f !== '') out += `<text class="fing" x="${n.x}" y="${y + 12}" text-anchor="middle" font-size="12">${f}</text>`;
+    }
+    if (bowed) {
+      let a = 0; const ns = row.notes;
+      while (a < ns.length) {
+        let b = a; const q = SV.places[ns[a].i]; while (b + 1 < ns.length && SV.places[ns[b + 1].i] && q && SV.places[ns[b + 1].i].row === q.row) b++;
+        if (q && b > a) { const x1 = ns[a].x - 10, x2 = ns[b].x + 10, nm = midiName(strings[strings.length - 1 - q.row]).replace(/-?\d+$/, '');
+          out += `<path class="sbr" d="M${x1} ${base + 31} v4 H${x2} v-4"/><text class="sbt" x="${(x1 + x2) / 2}" y="${base + 48}" text-anchor="middle" font-size="11">${svSharp(nm)} string</text>`; }
+        a = b + 1;
+      }
     }
     y = end + 6;
   });
-  out += `<line id="svCur" class="cur" x1="0" x2="0" y1="0" y2="0" style="display:none"/>`;
+  out = `<rect id="svBand" class="bandhl" x="-14" width="28" y="0" height="0" rx="4" style="display:none"/>` + out + `<line id="svCur" class="cur" x1="0" x2="0" y1="0" y2="0" style="display:none"/>`;
   $('scStaff').innerHTML = `<svg viewBox="0 0 ${W} ${y}" role="img" aria-label="Scale notation: ${tl.length} notes">${out}</svg>`;
   SV.nodes = [...$('scStaff').querySelectorAll('g.nh')].reduce((a, g) => (a[+g.dataset.i] = g, a), []);
-  SV.curEl = $('svCur'); SV.curRow = -1;
+  SV.curEl = $('svCur'); SV.bandEl = $('svBand'); SV.curRow = -1;
 }
 
 // ================= Neck and keys =================
@@ -185,8 +194,17 @@ function svCursorAt() {
   if (sc.mode === 'tempo' && sc.clock != null && typeof ctx !== 'undefined' && ctx) return Math.max(0, Math.min(sc.tl.length - 1, ((ctx.currentTime - t0 - sc.clock) * 1000) / (60000 / sc.bpm)));
   return sc.pos;
 }
+const svClock = ms => { const s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+function svProgress(now) {   // the bar under the display: time through the scale in Tempo-locked mode and in Hear scale, notes played in Wait mode
+  const n = sc.tl.length, beat = 60000 / sc.bpm, total = n * beat, wait = demoIdx < 0 && sc.mode === 'wait';
+  let frac = 0, txt;
+  if (wait) { frac = n ? Math.min(1, (sc.running ? sc.pos : 0) / n) : 0; txt = `${sc.running ? Math.min(sc.pos, n) : 0} / ${n} notes`; }
+  else { const t = Math.max(0, Math.min(total, now == null ? 0 : now + (demoIdx >= 0 ? 0 : 0))); frac = total ? t / total : 0; txt = `${svClock(t)} / ${svClock(total)}`; }
+  $('scProgFill').style.width = (frac * 100).toFixed(1) + '%'; $('scTime').textContent = txt;
+}
 function svFrame() {
   SV.raf = 0; if (!sc.plan) return;
+  if (sc.running || demoIdx >= 0) { const b = 60000 / sc.bpm; svProgress(demoIdx >= 0 ? demoIdx * b : sc.mode === 'tempo' && sc.clock != null && typeof ctx !== 'undefined' && ctx ? (ctx.currentTime - t0 - sc.clock) * 1000 : null); }
   const v = svEffective(sc.plan.inst), busy = sc.running || demoIdx >= 0;
   if (v === 'tab' || v === 'roll') {
     if (!SV.hw) return;
@@ -196,12 +214,12 @@ function svFrame() {
     return;
   }
   const f = v === 'staff' ? svCursorAt() : null, el = SV.curEl; if (!el || !SV.where.length) return;
-  if (f == null) { el.style.display = 'none'; return; }
+  if (f == null) { el.style.display = 'none'; SV.bandEl.style.display = 'none'; return; }
   const i = Math.floor(f), a = SV.where[i], b = SV.where[Math.min(SV.where.length - 1, i + 1)];
   if (!a) return;
   const x = b && b.r === a.r ? a.x + (b.x - a.x) * (f - i) : a.x, g = SV.geo[a.r];
-  if (SV.curRow !== a.r) { el.setAttribute('y1', g.top - 14); el.setAttribute('y2', g.bottom + 14); SV.curRow = a.r; }
-  el.style.display = ''; el.setAttribute('transform', `translate(${x.toFixed(1)} 0)`);
+  if (SV.curRow !== a.r) { el.setAttribute('y1', g.top - 14); el.setAttribute('y2', g.bottom + 14); SV.bandEl.setAttribute('y', g.top - 14); SV.bandEl.setAttribute('height', g.bottom - g.top + 28); SV.curRow = a.r; }
+  el.style.display = ''; SV.bandEl.style.display = ''; el.setAttribute('transform', `translate(${x.toFixed(1)} 0)`); SV.bandEl.setAttribute('transform', `translate(${x.toFixed(1)} 0)`);
   SV.raf = requestAnimationFrame(svFrame);   // keeps running while a run or a demo is on; svRender restarts it
 }
 
@@ -211,7 +229,7 @@ function svRender() {
   const W = Math.max(260, Math.floor(vis.clientWidth ? vis.clientWidth - 16 : box.clientWidth || 340));
   // the buttons: Tab is offered only where there are strings; the keyboard is the Fingerboard of a piano
   document.querySelectorAll('#scView button').forEach(b => { const ok = b.dataset.v !== 'tab' || svTabOk(inst), on = b.dataset.v === v; b.hidden = !ok; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); if (b.dataset.v === 'board') b.textContent = inst === 'chromatic' ? 'Keys' : svIsBowed(inst) ? 'Fingerboard' : 'Fretboard'; });
-  $('scVisTitle').textContent = scaleLabel().split(' · ').slice(0, 2).join(' · ') + ' · ' + ruleFor(inst).label;
+  $('scVisTitle').textContent = `${svSharp(p.tl[0].noteName.replace(/-?\d+$/, ''))} ${SCALE_DEFS[p.type].label} — ${p.span} ${p.span > 1 ? 'Octaves' : 'Octave'}`;
   $('scShowW').hidden = v !== 'board' || inst === 'chromatic';
   $('scStaff').hidden = v !== 'staff'; $('scTab').hidden = v !== 'tab'; $('scNeck').hidden = !(v === 'staff' || v === 'board'); $('scRoll').hidden = v !== 'roll';
   const base = [p.tl.map(n => n.midi).join(), inst, p.pc, p.type, p.pos, p.bow, sigBeats(), W, useFlats].join('|');
@@ -219,9 +237,9 @@ function svRender() {
   if (v === 'staff' && SV.staffKey !== base) { SV.staffKey = base; svBuildStaff(W); }
   const nk = base + '|' + v + '|' + $('scShow').value; if ((v === 'staff' || v === 'board') && SV.neckKey !== nk) { SV.neckKey = nk; svBuildNeck(W, v === 'board'); }
   const hk = base + '|' + v + '|' + sc.bpm; if ((v === 'tab' || v === 'roll') && SV.hwKey !== hk) { SV.hwKey = hk; (v === 'tab' ? svBuildTab : svBuildRoll)(W); SV.hwCur = 0; }
-  svPaint();
+  svPaint(); if (!sc.running && demoIdx < 0) svProgress(0);
   if (!SV.raf && (sc.running || demoIdx >= 0 || ((v === 'tab' || v === 'roll') && SV.hw))) SV.raf = requestAnimationFrame(svFrame);
-  else if (v === 'staff' && !sc.running && demoIdx < 0 && SV.curEl) SV.curEl.style.display = 'none';
+  else if (v === 'staff' && !sc.running && demoIdx < 0 && SV.curEl) { SV.curEl.style.display = 'none'; SV.bandEl.style.display = 'none'; }
 }
 document.querySelectorAll('#scView button').forEach(b => b.onclick = () => { SV.view = b.dataset.v; try { localStorage.setItem(SV_VIEW_KEY, SV.view); } catch {} svRender(); });
 $('scShow').onchange = () => svRender();

@@ -132,45 +132,76 @@
   <h2 class="pg-h">Scale drills</h2>
   <div class="sc-grid">
     <div class="stack">
-      <div class="actions">
-        <button id="scStart">Start practice</button>
-        <button id="scDemo" class="sec">▶ Hear scale</button>
-        <button id="scStop" class="sec">Stop</button>
-      </div>
-      <div class="tempo">
-        <label class="field bpm"><span>Tempo (BPM)</span><div class="stepper"><button id="bpmDn" class="sec" aria-label="Slower">−</button><input id="scBpm" type="number" value="80" min="30" max="240" inputmode="numeric"><button id="bpmUp" class="sec" aria-label="Faster">+</button></div></label>
-        <label class="field"><span>Beats</span><select id="scSig"><option value="2">2/2</option><option value="3">3/4</option><option value="4" selected>4/4</option></select></label>
-        <div class="tbtns">
-          <button id="metro" class="sec" aria-label="Metronome">♩ Click</button>
-          <button id="drone" class="sec" aria-label="Tonic drone" title="Plays the scale's first note as a quiet continuous drone. Use headphones so the microphone does not hear it.">𝅘𝅥 Drone</button>
+      <!-- one player card: what is played, the display, the controls, the live meter -->
+      <div class="player" id="scPlayer">
+        <div class="pl-head">
+          <div class="pl-id"><b>SCALE NOTATION</b><span id="scVisTitle" class="pl-chip"></span></div>
+          <div class="pl-tools">
+            <label class="pl-pick" title="Instrument"><select id="scInst" aria-label="Instrument"></select></label>
+            <div class="pl-bpm" title="Tempo"><button id="bpmDn" class="sec" aria-label="Slower">−</button><input id="scBpm" type="number" value="80" min="30" max="240" inputmode="numeric" aria-label="Tempo in BPM"><span>BPM</span><button id="bpmUp" class="sec" aria-label="Faster">+</button></div>
+            <button id="metro" class="sec" aria-label="Metronome" title="Click track">♩ Click</button>
+            <button id="drone" class="sec" aria-label="Tonic drone" title="Plays the scale's first note as a quiet continuous drone. Use headphones so the microphone does not hear it.">𝅘𝅥 Drone</button>
+          </div>
         </div>
-      </div>
-      <div class="seg" id="scMode" role="group" aria-label="Practice mode">
-        <button type="button" data-mode="tempo" class="on" title="The target follows the BPM: a count-in bar, then each note is due on its beat">⏱ Tempo-locked</button>
-        <button type="button" data-mode="wait" title="The target waits for you and moves on when the note is held in tune">⏸ Wait for note</button>
-      </div>
-      <div class="beats" id="beats" aria-hidden="true"></div>
-      <!-- what to play: instrument, root, scale, span, bowing or position (always visible) -->
-      <div class="grid sc-sel">
-          <label class="field"><span>Instrument</span><select id="scInst"></select></label>
+        <!-- what to play: root, scale, span, bowing or position, beats (the instrument is in the header) -->
+        <div class="pl-sel">
           <label class="field"><span>Root</span><select id="scRoot"></select></label>
           <label class="field"><span>Scale</span><select id="scType"></select></label>
           <label class="field"><span>Span</span><select id="scSpan"><option value="1">1 octave</option><option value="2">2 octaves</option><option value="3">3 octaves</option></select></label>
           <label class="field" id="scBowWrap"><span>Bowing</span><select id="scBow"></select></label>
           <label class="field" id="scPosWrap"><span>Position</span><select id="scPos"></select></label>
+          <label class="field"><span>Beats</span><select id="scSig"><option value="2">2/2</option><option value="3">3/4</option><option value="4" selected>4/4</option></select></label>
+        </div>
+        <!-- the four displays, drawn by js/app/scale-visual.js; the note chips below stay for screen readers -->
+        <div class="visual" id="scVis">
+          <div class="vis-bar"><div class="seg" id="scView" role="group" aria-label="Display">
+            <button type="button" data-v="staff" class="on" aria-pressed="true" title="Standard sheet music with a moving cursor">Staff</button>
+            <button type="button" data-v="tab" aria-pressed="false" title="One line per string with the fret or finger number">Tab</button>
+            <button type="button" data-v="board" aria-pressed="false" title="The neck or keys with the finger to place next">Fingerboard</button>
+            <button type="button" data-v="roll" aria-pressed="false" title="Bars on a pitch grid scrolling to a playhead">Piano roll</button></div>
+            <label class="field" id="scShowW" hidden><span>Show</span><select id="scShow"><option value="scale">Scale notes</option><option value="all">All notes</option></select></label></div>
+          <div id="scStaff" class="staffbox"></div><div id="scTab" class="tabbox" hidden></div><div id="scNeck" class="neckbox"></div><div id="scRoll" class="rollbox" hidden></div>
+        </div>
+        <div class="pl-bar"><i id="scProgFill"></i></div>
+        <div class="pl-foot">
+          <div class="pl-btns">
+            <button id="scStart">Start practice</button>
+            <button id="scDemo" class="sec">▶ Hear scale</button>
+            <button id="scStop" class="sec">Stop</button>
+          </div>
+          <span id="scTime" class="pl-time">0:00 / 0:00</span>
+        </div>
+        <div class="seg" id="scMode" role="group" aria-label="Practice mode">
+          <button type="button" data-mode="tempo" class="on" title="The target follows the BPM: a count-in bar, then each note is due on its beat">⏱ Tempo-locked</button>
+          <button type="button" data-mode="wait" title="The target waits for you and moves on when the note is held in tune">⏸ Wait for note</button>
+        </div>
+        <div class="beats" id="beats" aria-hidden="true"></div>
+
+        <!-- Row 1: all scale notes (screen readers only; the notation shows them) -->
+        <div id="scRow1"></div>
+        <div id="scRange" class="hint2 center"></div>
+
+        <div class="livecard">
+          <!-- the target note, what was heard, and the ±50 cents meter -->
+          <div class="readout">
+            <div class="tgt"><span id="scArrow" class="dirarrow" aria-hidden="true"></span><div id="scCur" class="big">–</div></div>
+            <div class="rd-text">
+              <div id="scTarget" class="mut">Press Start practice</div>
+              <div id="scFinger" class="fing"></div>
+              <div id="scHeard">&nbsp;</div>
+              <div id="scVerdict" class="verdict"></div>
+            </div>
+          </div>
+          <div id="scMsg" class="mut" style="min-height:20px;font-size:14px"></div>
+          <div class="srow">
+            <div class="dev-bar" id="devBar"><div class="dev-mid"></div><div id="devMarker" class="dev-marker"></div></div>
+            <div class="dev-labels"><span>♭ −50¢</span><span id="devRead">–</span><span>+50¢ ♯</span></div>
+          </div>
+          <div class="srow center" id="scAcc">Waiting for note…</div>
+        </div>
       </div>
-      <!-- the four displays, drawn by js/app/scale-visual.js; the note chips further down stay for screen readers -->
-      <div class="visual" id="scVis">
-        <div class="vis-bar"><div class="seg" id="scView" role="group" aria-label="Display">
-          <button type="button" data-v="staff" class="on" aria-pressed="true" title="Standard sheet music with a moving cursor">Staff</button>
-          <button type="button" data-v="tab" aria-pressed="false" title="One line per string with the fret or finger number">Tab</button>
-          <button type="button" data-v="board" aria-pressed="false" title="The neck or keys with the finger to place next">Fingerboard</button>
-          <button type="button" data-v="roll" aria-pressed="false" title="Bars on a pitch grid scrolling to a playhead">Piano roll</button></div>
-          <label class="field" id="scShowW" hidden><span>Show</span><select id="scShow"><option value="scale">Scale notes</option><option value="all">All notes</option></select></label></div>
-        <div id="scVisTitle" class="vis-title mut"></div>
-        <div id="scStaff" class="staffbox"></div><div id="scTab" class="tabbox" hidden></div><div id="scNeck" class="neckbox"></div><div id="scRoll" class="rollbox" hidden></div>
-      </div>
-      <!-- the result of the run, shown here so it is the first thing seen when a scale ends -->
+
+      <!-- the result of the run, the first thing seen when a scale ends -->
       <div id="scResult" class="result" hidden aria-live="polite"></div>
 
       <details id="scOpts"><summary>More options · random scale, strict, repeat, export</summary>
@@ -184,42 +215,20 @@
         <div class="opt-h">Export this run</div>
         <div class="row"><button id="scCsv" class="sec">CSV</button><button id="scJson" class="sec">JSON</button></div>
       </details>
-
-      <!-- Row 1: all scale notes -->
-      <div id="scRow1"></div>
-      <div id="scRange" class="hint2 center"></div>
-
-      <div class="livecard">
-        <!-- Row 2: current expected note -->
-        <div class="readout">
-          <div class="tgt"><span id="scArrow" class="dirarrow" aria-hidden="true"></span><div id="scCur" class="big">–</div></div>
-          <div id="scTarget" class="center mut">Press Start practice</div>
-          <div id="scFinger" class="center fing"></div>
-          <div id="scHeard" class="center">&nbsp;</div>
-          <div id="scVerdict" class="verdict"></div>
-          <div id="scMsg" class="center mut" style="min-height:20px;font-size:14px"></div>
-        </div>
-        <!-- Row 3: deviation bar (±50 cents) -->
-        <div class="srow">
-          <div class="dev-bar" id="devBar"><div class="dev-mid"></div><div id="devMarker" class="dev-marker"></div></div>
-          <div class="dev-labels"><span>♭ −50¢</span><span id="devRead">–</span><span>+50¢ ♯</span></div>
-        </div>
-        <!-- Row 4: live accuracy for the current note -->
-        <div class="srow center" id="scAcc">Waiting for note…</div>
-      </div>
     </div>
 
     <div class="stack">
       <div id="scSum"></div>
       <!-- per-note scorecard: which notes are weak / strong, built up over repeated passes -->
-      <div>
-        <div class="cardbar"><b>Note scorecard</b>
+      <details id="scCardBox" class="cardbox" open>
+        <summary>Note scorecard</summary>
+        <div class="cardbar"><b>Details by note</b>
           <div class="cb-row"><select id="cardView" aria-label="Period"><option value="sess">This session</option><option value="all">All-time (saved)</option></select>
           <button id="cardReset" class="sec">Reset</button><button id="cardCsv" class="sec">Export</button></div></div>
         <div id="cardTrend" class="mut" style="margin-top:8px"></div>
         <div id="cardTable" class="scroll tbl" style="margin-top:8px"></div>
         <div class="mut" style="font-size:13px;margin-top:6px">Rows follow the chosen scale; going up and going down are scored separately. Tap a heading to sort. Green in tune, blue flat, red sharp, purple wrong note.</div>
-      </div>
+      </details>
     </div>
   </div>
 </section>

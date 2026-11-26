@@ -84,3 +84,31 @@
 .sv-read{font-size:14px;padding:2px 4px;min-height:20px;color:var(--fg)}
 .neckbox .kn{fill:#444}
 .vis-bar .seg{flex:1 1 100%;display:flex} .vis-bar .seg button{flex:1 1 0;min-width:0;padding:7px 4px;font-size:13px;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- the player card (one clean card: what is played, the display, the controls, the live meter) ---------- */
+.player{background:var(--surface2);border:1px solid var(--line);border-radius:18px;padding:12px;display:grid;gap:10px;min-width:0}
+.pl-head{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+.pl-id{display:flex;align-items:center;gap:10px;flex-wrap:wrap} .pl-id b{font-size:13px;letter-spacing:.09em;color:var(--mut);font-weight:650}
+.pl-chip{background:#12303a;border:1px solid #1d5560;color:#9aeaf5;border-radius:8px;padding:3px 10px;font-size:13.5px} .pl-chip:empty{display:none} .pl-chip::before{content:"●";margin-right:6px;font-size:9px;color:#33d1e6;vertical-align:1px}
+.pl-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pl-pick select{min-height:36px;padding:4px 26px 4px 10px;border-radius:10px;font-size:14px;width:auto}
+.pl-bpm{display:flex;align-items:center;gap:4px;background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:2px 4px}
+.pl-bpm input{width:48px;text-align:center;background:transparent;border:0;font-weight:650;padding:4px 0;min-height:0} .pl-bpm span{color:var(--mut);font-size:12px} .pl-bpm button{padding:2px 10px;min-height:32px;font-size:17px}
+.pl-tools>button{min-height:36px;padding:4px 12px;font-size:13.5px}
+.pl-sel{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px}
+.player .visual{border:0;background:#0f1320;border-radius:12px;padding:8px}
+.pl-bar{height:4px;border-radius:2px;background:var(--raise);overflow:hidden;margin:-2px 0 0} .pl-bar i{display:block;height:100%;width:0;background:var(--acc)}
+.pl-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pl-btns{display:flex;gap:8px;flex-wrap:wrap} .pl-btns button{min-height:40px;padding:6px 16px;white-space:nowrap}
+.pl-time{font-variant-numeric:tabular-nums;color:var(--mut);font-size:13.5px}
+.player .livecard{background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;padding:10px 0 0}
+#tab-scale .readout{flex-direction:row;align-items:center;justify-content:flex-start;gap:14px;padding:0}
+#tab-scale .readout .big{font-size:46px;text-align:left} #tab-scale .tgt{padding-left:24px} #tab-scale .dirarrow{font-size:22px;left:0}
+.rd-text{display:grid;font-size:14px;min-width:0;text-align:left} .rd-text .verdict{font-size:17px;min-height:22px;text-align:left} .rd-text .fing{min-height:0;font-size:14px;text-align:left}
+#tab-scale #scMsg{text-align:left} #tab-scale #scHeard{text-align:left}
+.bandhl{fill:#27d1ea;opacity:.14} .staffbox .sbr{fill:none;stroke:var(--mut);stroke-width:1} .staffbox .sbt{fill:var(--mut)}
+.cardbox>summary{cursor:pointer;font-weight:650;padding:6px 0;margin-bottom:6px}
+.cardbox .cardbar>b{display:none}
+/* the player needs room: one column until the screen is wide, then the scorecard sits beside it */
+.sc-grid{grid-template-columns:minmax(0,1fr)}
+@media (min-width:1100px){ .sc-grid{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)} }
