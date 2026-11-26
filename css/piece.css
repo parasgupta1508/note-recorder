@@ -17,7 +17,7 @@
 #tab-piece .rollbox .hn rect{fill:url(#pwBlue)} #tab-piece .rollbox .hn.ok rect{fill:url(#pwOk)} #tab-piece .rollbox .hn.close rect{fill:url(#pwClose)} #tab-piece .rollbox .hn.bad rect{fill:url(#pwBad)} #tab-piece .rollbox .hn.cur.pend rect{fill:url(#pwCurG)}
 
 /* ---------- nothing chosen yet: only the source picker (and the part list) ---------- */
-#pzPlayer.pp-pick #pzVisTitle,#pzPlayer.pp-pick .pl-sel,#pzPlayer.pp-pick .visual,#pzPlayer.pp-pick .pl-bar,#pzPlayer.pp-pick .pl-foot,#pzPlayer.pp-pick #pzResult,#pzPlayer.pp-pick #pzMsg{display:none}
+#pzPlayer.pp-pick #pzVisTitle,#pzPlayer.pp-pick .pp-opt,#pzPlayer.pp-pick .pl-tools,#pzPlayer.pp-pick .visual,#pzPlayer.pp-pick .pl-bar,#pzPlayer.pp-pick .pl-foot,#pzPlayer.pp-pick #pzResult,#pzPlayer.pp-pick #pzMsg{display:none}
 .pp-source[hidden],#ppLoaded[hidden],.pp-parts[hidden],.pp-back[hidden],#ppLineW[hidden],.pp-gh-bar[hidden],.pp-head .pl-chip:empty{display:none}
 .pp-panel{display:grid;gap:10px;margin:2px 0 6px}
 
@@ -109,3 +109,14 @@
 .pc-filters .chip.tag{color:var(--acc)} .pt-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)} .pt-row .sec{min-height:34px;padding:2px 12px}
 
 .pc-item{flex-wrap:wrap} .pc-item>.pc-tagmenu{flex:1 1 100%}
+
+/* ---------- Piece practice: a slim top (title and instrument, tools), the rest under Options ---------- */
+#pzVisTitle{display:none}
+.pz-id{flex-wrap:nowrap;min-width:0} .pz-id>b{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .pz-id .mini{min-height:34px;padding:2px 12px;margin:0;flex:0 0 auto}
+.pz-id .pl-chip{flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+.pp-opt{margin:0;border:0;padding:0} .pp-opt>summary{cursor:pointer;color:var(--mut);font-size:13px;padding:4px 0;list-style:none;display:flex;align-items:center;gap:6px} .pp-opt>summary::-webkit-details-marker{display:none}
+.pp-opt>summary::before{content:"▸";font-size:11px;transition:transform .15s} .pp-opt[open]>summary::before{transform:rotate(90deg)} .pp-opt>*:not(summary){margin-top:8px}
+.pp-opt .pp-opts{margin-top:8px} #pzPlayer.fs .pp-opt{display:none}
+
+/* the card is a grid: its children must be allowed to shrink, or a long title widens the whole card on a phone */
+#pzPlayer>*{min-width:0} .pz-id{flex:1 1 220px;max-width:100

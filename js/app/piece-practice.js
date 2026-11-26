@@ -114,13 +114,14 @@ function ppRender() {
   $('ppTitle').textContent = PP.title;
   if (chosen) {
     const s = PP.sum[PP.idx], ts = x.timeSig.join('/'), kn = keyInfo(x.key).label, p = ppPlan();
-    $('ppBadge').textContent = solo ? `${s.exact ? 'Detected instrument: ' : 'Detected: '}${s.label} Solo${s.exact ? '' : ' (scored like a piano)'}` : `Playing: ${s.label}`;
+    $('ppBadge').textContent = solo ? `${s.label} solo${s.exact ? '' : ' (piano scoring)'}` : s.label;
     $('ppBadge').className = 'pl-chip' + (solo && s.exact ? ' lock' : '');
-    $('ppBadge').title = solo && s.exact ? 'The score has one instrument, so the app set the scoring for it' : s.exact ? 'Chosen from the score\'s part list' : 'This instrument is not one the drills know, so the piano scoring (no vibrato allowance) is used. You can change the instrument above.';
+    $('ppBadge').title = solo && s.exact ? 'Detected instrument: the score has one instrument, so the app set the scoring for it' : s.exact ? 'Chosen from the score\'s part list' : 'This instrument is not one the drills know, so the piano scoring (no vibrato allowance) is used. You can change the instrument above.';
     $('ppFrom').value = p.from; $('ppTo').value = p.to; $('ppFrom').max = $('ppTo').max = PP.last; $('ppOf').textContent = `of ${PP.last}`;
     $('ppLine').value = PP.line; $('ppOct').value = PP.oct; $('ppLineW').hidden = !s.polyphonic;
     $('ppInfo').innerHTML = `${ppEsc(kn)} · ${ts} · ♩ = ${Math.round(x.bpm)} in the score · ${p.tl.length} notes in bars ${p.from}–${p.to}` + (p.warnings.length ? '<br>' + p.warnings.map(w => `<span class="warn-t">${ppEsc(w)}</span>`).join(' ') : '');
-  } else { $('ppBadge').textContent = ''; $('ppInfo').textContent = ''; }
+    $('ppOptSum').textContent = `Options · ${kn} · ${ts} · bars ${p.from}–${p.to} · ${p.tl.length} notes` + (p.warnings.length ? ' · ⚠' : '');
+  } else { $('ppBadge').textContent = ''; $('ppInfo').textContent = ''; $('ppOptSum').textContent = 'Options'; }
   // Case B: the list of parts in the file
   $('ppParts').hidden = solo; $('ppParts').classList.toggle('chosen', chosen);
   if (!solo) $('ppParts').innerHTML = `<div class="pp-parts-h">${chosen ? 'Parts in this file' : 'Which part will you play?'}</div>` + PP.sum.map(s => `<button type="button" role="radio" aria-checked="${s.i === PP.idx}" class="pp-part${s.i === PP.idx ? ' on' : ''}" data-i="${s.i}"><b>P${s.i + 1}: ${ppEsc(s.name)}</b><span>${ppEsc(s.label)}${s.exact ? '' : ' · piano scoring'} · ${s.notes} notes · ${midiName(s.lo)}–${midiName(s.hi)}${s.polyphonic ? ' · chords' : ''}</span></button>`).join('');
@@ -181,7 +182,7 @@ function ppBuildPiece() {
 }
 function ppSaveUi() {
   const b = $('ppSave'); if (!b) return;
-  b.hidden = !PP.parsed || PP.src === 'mine'; b.disabled = !!PP.saved; b.textContent = PP.saved ? 'Saved ✓' : 'Save to my pieces';
+  b.hidden = !PP.parsed || PP.src === 'mine'; b.disabled = !!PP.saved; b.textContent = PP.saved ? 'Saved ✓' : 'Save';
   b.title = PP.saved ? 'This piece is in your Pieces library on this device' : 'Keep this piece on this device, in the Pieces library, so it opens without the internet';
 }
 $('ppSave').onclick = async () => {

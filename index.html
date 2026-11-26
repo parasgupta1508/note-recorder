@@ -120,8 +120,9 @@
         <div class="hint2" id="ppMsg" role="status" aria-live="polite"></div>
       </div>
       <div class="player" id="pzPlayer">
+        <!-- one slim line: back, the piece and its instrument on the left; instrument, loop, tempo and click on the right. Everything else is under Options. -->
         <div class="pl-head">
-          <div class="pl-id"><b>PIECE NOTATION</b><span id="pzVisTitle" class="pl-chip"></span></div>
+          <div class="pl-id pz-id"><button type="button" id="ppChange" class="sec mini" aria-label="Back to Pieces" title="Back to Pieces">←</button><b id="ppTitle"></b><span id="ppBadge" class="pl-chip"></span><span id="pzVisTitle" hidden></span><button type="button" id="ppSave" class="sec mini" hidden aria-label="Save to my pieces">Save</button></div>
           <div class="pl-tools">
             <label class="pl-pick" title="Instrument"><select id="pzInst" aria-label="Instrument"></select></label>
             <label class="pl-loop" title="Keep going: start the piece again after each pass and keep scoring"><input type="checkbox" id="pzRepeat" checked><span>🔁 Loop</span></label>
@@ -130,27 +131,25 @@
           </div>
         </div>
 
-        <!-- where the music comes from, which part, which bars (js/app/piece-practice.js) -->
-        <div class="pp-panel" id="ppPanel">
-          <div id="ppLoaded" hidden>
-            <div class="pp-head"><b id="ppTitle"></b><span id="ppBadge" class="pl-chip"></span><button type="button" id="ppSave" class="sec mini" hidden>Save to my pieces</button><button type="button" id="ppChange" class="sec mini">← Pieces</button></div>
-            <div id="ppParts" class="pp-parts" role="radiogroup" aria-label="Available parts" hidden></div>
+        <div id="ppLoaded" hidden>
+          <div id="ppParts" class="pp-parts" role="radiogroup" aria-label="Available parts" hidden></div>
+          <details class="pp-opt" id="ppOptW"><summary id="ppOptSum">Options</summary>
             <div class="pp-opts">
               <label class="field"><span>Bars</span><div class="pp-bars"><input id="ppFrom" type="number" min="1" inputmode="numeric" aria-label="First bar"> <i>to</i> <input id="ppTo" type="number" min="1" inputmode="numeric" aria-label="Last bar"> <small id="ppOf"></small></div></label>
               <label class="field" id="ppLineW"><span>Chords</span><select id="ppLine"><option value="top">Play the top notes</option><option value="bottom">Play the bottom notes</option></select></label>
               <label class="field"><span>Octave</span><select id="ppOct"><option value="auto">Fit the instrument</option><option value="0">As written</option><option value="-12">Down an octave</option><option value="12">Up an octave</option></select></label>
             </div>
+            <div class="pl-sel">
+              <label class="field" id="pzBowWrap"><span>Bowing</span><select id="pzBow"></select></label>
+              <label class="field" id="pzPosWrap"><span>Position</span><select id="pzPos"></select></label>
+              <label class="field"><span>Beats</span><select id="pzSig"><option value="2">2/2</option><option value="3">3/4</option><option value="4" selected>4/4</option></select></label>
+            </div>
             <details id="ppBackW" class="pp-back" hidden><summary>Accompaniment (the other parts)</summary>
               <label class="check"><input type="checkbox" id="ppBack"> Play the other parts while I play</label><div id="ppBackList"></div><div class="hint2" id="ppBackNote"></div></details>
             <div class="hint2" id="ppInfo"></div>
-          </div>
+          </details>
         </div>
 
-        <div class="pl-sel">
-          <label class="field" id="pzBowWrap"><span>Bowing</span><select id="pzBow"></select></label>
-          <label class="field" id="pzPosWrap"><span>Position</span><select id="pzPos"></select></label>
-          <label class="field"><span>Beats</span><select id="pzSig"><option value="2">2/2</option><option value="3">3/4</option><option value="4" selected>4/4</option></select></label>
-        </div>
         <div class="visual" id="pzVis">
           <div class="vis-bar"><div class="seg" id="pzView" role="group" aria-label="Display">
             <button type="button" data-v="staff" class="on" aria-pressed="true" title="Standard sheet music with a moving cursor">Staff</button>

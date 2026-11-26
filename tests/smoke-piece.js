@@ -39,7 +39,7 @@ ck('several parts: the list of available parts is shown and no part is chosen ye
 ck('the part list names the instrument it found',/P1: Violin/.test($('ppParts').textContent)&&/Guitar/.test($('ppParts').textContent)&&/Cello[^]*piano scoring/.test($('ppParts').textContent));
 ck('nothing can be started before a part is chosen',!ppActive()&&$('pzStart').disabled&&$('pzDemo').disabled);
 $('ppParts').querySelector('button[data-i="0"]').click();
-ck('choosing the violin part loads it: instrument, badge, notes',ppActive()&&$('pzInst').value==='violin'&&!$('pzInst').disabled&&/Playing: Violin/.test($('ppBadge').textContent)&&PE.tl.length===8&&!$('pzPlayer').classList.contains('pp-pick')&&!$('pzStart').disabled);
+ck('choosing the violin part loads it: instrument, badge, notes',ppActive()&&$('pzInst').value==='violin'&&!$('pzInst').disabled&&/Violin/.test($('ppBadge').textContent)&&PE.tl.length===8&&!$('pzPlayer').classList.contains('pp-pick')&&!$('pzStart').disabled);
 ck('tempo and beats come from the score',+$('pzBpm').value===100&&$('pzSig').value==='4'&&PE.bpm===100);
 ck('violin controls: bowing and position',!$('pzBowWrap').hidden&&!$('pzPosWrap').hidden&&$('pzBow').options.length===4&&$('pzPos').options.length===5);
 ck('default display is the Staff with the instrument under it',PW.view==='staff'&&PW.showNeck&&!$('pzStaff').hidden&&!$('pzNeck').hidden);
@@ -55,7 +55,7 @@ ck('no element id is shared with another screen (the Scale drills elements and S
 ck('violin hand position per note',Array.isArray(PE.plan.posList)&&PE.plan.posList.length===8);
 
 // ---- pieces saved in the Pieces library join the Open a piece list; a score can be saved into it
-ck('save: a button to keep the opened score, shown for a score that came from a file or GitHub',!$('ppSave').hidden&&!$('ppSave').disabled&&/Save to my pieces/.test($('ppSave').textContent));
+ck('save: a button to keep the opened score, shown for a score that came from a file or GitHub',!$('ppSave').hidden&&!$('ppSave').disabled&&/^Save$/.test($('ppSave').textContent));
 var bp=ppBuildPiece(); ck('save: the library piece has the title, instrument, category, chosen part and the score text',!!bp&&bp.title==='Etude'&&bp.instrument==='violin'&&bp.categoryPath.join()==='My imports'&&bp.part===0&&bp.source==='musicxml'&&bp.parts.length===5&&/<score-partwise/.test(bp.xml)&&bp.verified===true&&!bp.builtin);
 ck('save: folders become the category (composer, work), without the generic "scores" folder',JSON.stringify(ppFolders('scores/Haydn,_Joseph/String_Quartet_No.1/sq1.mxl'))==='["Haydn, Joseph","String Quartet No.1"]'&&ppFolders('a.mxl').length===0);
 var lp=pieceFromMusicXml(${multi},{title:'Saved Etude',instrument:'violin'}); lp.title='Saved Etude'; lp.id='t-etude'; lp.categoryPath=['Composer']; PC.lib=[lp];
@@ -133,7 +133,7 @@ ppChoosePart(0); ck('violin: still one treble staff',$('pzStaff').querySelectorA
 
 // ---- a file with one instrument: locked badge, loaded at once
 open(${solo},'solo.musicxml');
-ck('one instrument: loaded at once, instrument set and locked, badge says so',ppActive()&&PP.sum.length===1&&$('pzInst').value==='violin'&&$('pzInst').disabled&&/Detected instrument: Violin Solo/.test($('ppBadge').textContent)&&$('ppParts').hidden);
+ck('one instrument: loaded at once, instrument set and locked, badge says so',ppActive()&&PP.sum.length===1&&$('pzInst').value==='violin'&&$('pzInst').disabled&&/Violin solo/.test($('ppBadge').textContent)&&/Detected instrument/.test($('ppBadge').title)&&$('ppParts').hidden);
 ck('one instrument: the violin scoring applies (vibrato allowance and bowed fingering)',ruleFor($('pzInst').value).wobble===40&&ruleFor($('pzInst').value).fingering==='bowed');
 ck('one instrument: no accompaniment to offer',$('ppBackW').hidden);
 
