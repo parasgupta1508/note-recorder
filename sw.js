@@ -27,6 +27,7 @@ const FILES = [
   './js/core/piece.js',
   './js/core/piece-practice.js',
   './js/core/github-library.js',
+  './js/core/piece-library.js',
   './js/core/piece-visual.js',
   './js/core/library.js',
   './js/core/compare.js',

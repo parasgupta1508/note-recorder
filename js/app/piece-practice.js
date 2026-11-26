@@ -1,4 +1,4 @@
-// Piece practice screen: where the music comes from (a local MusicXML file, or GitHub read straight into memory), which instrument and part, which bars, and the accompaniment.
+// Piece practice screen: where the music comes from (the GitHub libraries chosen in Settings, a pasted link, or a local MusicXML file), which instrument and part, which bars, and the accompaniment.
 // The file is parsed by js/core/musicxml.js, the chosen part becomes a timeline (js/core/piece-practice.js), and the engine (piece-engine.js) and the displays (piece-visual.js)
 // play and draw it. This screen is separate from the Scale drills and does not change them.
 // Part of the app. Scripts in js/app load in the order listed in index.html and share one scope.
@@ -97,7 +97,7 @@ function ppLoadParsed(x, name, src) {
   PP.parsed = x; PP.id++; PP.src = src; PP.title = cleanTitle(x.title || name, 'MusicXML piece'); PP.sum = summariseParts(x); PP.line = 'top'; PP.oct = 'auto'; PP.backing = false; PP.backOff = new Set();
   PP.bpm0 = Math.max(30, Math.min(240, Math.round(x.bpm) || 80)); $('pzBpm').value = PP.bpm0; $('pzSig').value = String(ppSigBeats(x.timeSig));
   PP.idx = -1; ppMemo = { k: '', plan: null }; PE.plan = null; PE.tl = []; PE.seq = [];
-  $('ppSource').hidden = true;
+  ppShowLib(false);
   if (PP.sum.length === 1) ppChoosePart(0); else { $('pzInst').disabled = false; ppRender(); }
 }
 function ppChoosePart(i) {
@@ -156,83 +156,116 @@ $('pzBpmDn').onclick = () => { $('pzBpm').value = Math.max(30, (+$('pzBpm').valu
 $('pzBpmUp').onclick = () => { $('pzBpm').value = Math.min(240, (+$('pzBpm').value || PP.bpm0) + 5); ppChanged(); };
 $('ppBack').onchange = () => { PP.backing = $('ppBack').checked; if (!PP.backing) ppBackingStop(); else peMsg('Accompaniment is on: use headphones so the microphone does not hear it'); };
 $('ppBackList').onchange = e => { const b = e.target.closest('input[data-b]'); if (!b) return; if (b.checked) PP.backOff.delete(+b.dataset.b); else PP.backOff.add(+b.dataset.b); };
-$('ppChange').onclick = () => { $('ppSource').hidden = !$('ppSource').hidden; };
 
-// ================= sources: a local file =================
+// ================= Open a piece: the player's GitHub libraries, with search and an instrument filter =================
+// The list of libraries is saved on this device (Settings > Piece libraries). The scores and the file lists are read from GitHub into memory when this screen opens and are never saved.
+const PL_KEY = 'tuner-piece-libs-v1';
+let PLS = (() => { try { const raw = localStorage.getItem(PL_KEY); return raw ? plNormalize(JSON.parse(raw)) : plDefaults(); } catch { return plDefaults(); } })();
+const plSave = () => { try { localStorage.setItem(PL_KEY, JSON.stringify(PLS)); } catch {} };
+const PLC = {};                                   // library id -> { state: 'loading' | 'ok' | 'error', files, truncated, skipped, error }   (memory only)
+const PLV = { q: '', inst: 'all', lib: 'all' };   // what the list is showing
+const PL_SHOW = 200;                              // rows drawn at once (search to narrow a long list)
+function plSummary() { const n = PLS.filter(r => r.on).length; return `${n} librar${n === 1 ? 'y' : 'ies'} on`; }
+async function plLoadOne(r, force) {
+  const c = PLC[r.id]; if (!force && c && (c.state === 'ok' || c.state === 'loading')) return;
+  PLC[r.id] = { state: 'loading' }; plRender();
+  try {
+    const tree = JSON.parse(new TextDecoder().decode(await ppFetch(ghTreeUrl(r)))), m = ghMusicFiles(tree, { prefix: r.prefix, includeXml: r.includeXml });
+    PLC[r.id] = { state: 'ok', files: m.files, truncated: m.truncated, skipped: m.skipped };
+  } catch (e) { PLC[r.id] = { state: 'error', error: e.message }; }
+  plRender();
+}
+const plRefresh = force => Promise.all(PLS.filter(r => r.on).map(r => plLoadOne(r, force)));
+const plAll = () => PLS.filter(r => r.on && PLC[r.id] && PLC[r.id].state === 'ok').flatMap(r => plEntries(r, PLC[r.id].files));
+function plRender() {
+  if ($('pzLib').hidden) return;
+  const on = PLS.filter(r => r.on), all = plAll(), loading = on.filter(r => PLC[r.id] && PLC[r.id].state === 'loading'), failed = on.filter(r => PLC[r.id] && PLC[r.id].state === 'error');
+  if (PLV.lib !== 'all' && !on.some(r => r.id === PLV.lib)) PLV.lib = 'all';
+  const cnt = plCounts(all, { q: PLV.q, lib: PLV.lib }), shown = plFilter(all, PLV).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+  $('pzLibCount').textContent = all.length ? `${all.length} piece${all.length === 1 ? '' : 's'}` : '';
+  $('pzLibInst').innerHTML = [['all', 'All'], ...PL_INSTRUMENTS, ['unknown', 'Not stated']].filter(([k]) => k === 'all' || cnt[k] > 0 || PLV.inst === k)
+    .map(([k, n]) => `<button type="button" data-i="${k}" class="${PLV.inst === k ? 'on' : ''}" aria-pressed="${PLV.inst === k}">${n} <small>${cnt[k]}</small></button>`).join('');
+  $('pzLibRepo').innerHTML = `<option value="all">All libraries</option>` + on.map(r => `<option value="${ppEsc(r.id)}"${PLV.lib === r.id ? ' selected' : ''}>${ppEsc(r.title)}${PLC[r.id] && PLC[r.id].state === 'ok' ? ' (' + PLC[r.id].files.length + ')' : ''}</option>`).join('');
+  $('pzLibRepo').hidden = on.length < 2;
+  const bits = [];
+  if (!on.length) bits.push('No library is switched on. Open ⚙ Libraries to add a GitHub repository of scores.');
+  if (loading.length) bits.push(`Reading ${loading.map(r => r.title).join(', ')}…`);
+  for (const r of failed) bits.push(`${r.title}: ${PLC[r.id].error}`);
+  if (all.length && !loading.length && !failed.length) bits.push(shown.length ? 'Tap a piece to open it.' : 'No piece matches. Try fewer words or another instrument.');
+  const trunc = on.filter(r => PLC[r.id] && PLC[r.id].truncated).map(r => r.title);
+  if (trunc.length) bits.push(`${trunc.join(', ')}: GitHub cut the list short (a very large repository); add a folder of it as its own library to see the rest.`);
+  $('pzLibStatus').innerHTML = bits.map(b => `<div class="${failed.some(r => b.startsWith(r.title + ':')) ? 'bad-t' : ''}">${ppEsc(b)}</div>`).join('');
+  const tag = e => e.inst ? (PL_INSTRUMENTS.find(x => x[0] === e.inst) || [0, ''])[1] : '';
+  $('pzLibList').innerHTML = shown.slice(0, PL_SHOW).map(e => `<button type="button" class="pp-file" role="listitem" data-l="${ppEsc(e.libId)}" data-p="${ppEsc(e.path)}"><b>${ppEsc(e.label)}</b><span>${tag(e) ? `<em>${tag(e)}</em> · ` : ''}${ppEsc(e.lib)} · ${ppKb(e.size)}</span></button>`).join('')
+    + (shown.length > PL_SHOW ? `<div class="hint2">Showing ${PL_SHOW} of ${shown.length}: type in the search box to narrow it down.</div>` : '');
+}
+async function plOpen(libId, path) {
+  const r = PLS.find(x => x.id === libId); if (!r) return;
+  const f = (PLC[libId] && PLC[libId].files || []).find(x => x.path === path); if (!f) return;
+  ppBusy(`Reading ${f.label} (${ppKb(f.size)})…`);
+  try { await ppOpenBytes(await ppFetch(ghRawUrl(r, f.path)), f.name, `github:${r.owner}/${r.repo}`); } catch (e) { ppBusy(e.message, true); }
+}
+// The library screen and the player are two views of this tab.
+function ppShowLib(show) {
+  $('pzLib').hidden = !show; $('pzPlayer').hidden = show;
+  if (show) { $('pzLibBack').hidden = !ppActive() && !PP.parsed; plRefresh(false); plRender(); } else ppBusy('');
+}
+function ppEnter() { if (!$('pzLib').hidden) { plRefresh(false); plRender(); } peUi(); }   // the screen was opened
+$('pzLibSearch').oninput = () => { PLV.q = $('pzLibSearch').value; plRender(); };
+$('pzLibInst').onclick = e => { const b = e.target.closest('button[data-i]'); if (b) { PLV.inst = b.dataset.i; plRender(); } };
+$('pzLibRepo').onchange = () => { PLV.lib = $('pzLibRepo').value; plRender(); };
+$('pzLibList').onclick = e => { const b = e.target.closest('button[data-p]'); if (b) plOpen(b.dataset.l, b.dataset.p); };
+$('pzLibRefresh').onclick = () => plRefresh(true);
+$('pzLibBack').onclick = () => ppShowLib(false);
+$('ppChange').onclick = () => { if (PE.running || PE.demo >= 0) peStop(); ppShowLib(true); };
+$('pzLibSettings').onclick = () => { showTab('settings'); if (typeof setLay !== 'undefined' && setLay !== 'classic') { setCur = 'piecelibs'; renderSet(); } const g = document.querySelector('.set-group[data-g=piecelibs]'); if (g) g.scrollIntoView(); else scrollTo(0, 0); };
+
+// ----- a local file (button, or drop it on the list) -----
 $('ppPick').onclick = () => $('ppFile').click();
 $('ppFile').onchange = async () => { const f = $('ppFile').files[0]; $('ppFile').value = ''; await ppOpenFile(f); };
-{ const d = $('ppDrop');
+{ const d = $('pzLib');
   d.addEventListener('dragover', e => { e.preventDefault(); d.classList.add('over'); }); d.addEventListener('dragleave', () => d.classList.remove('over'));
-  d.addEventListener('drop', async e => { e.preventDefault(); d.classList.remove('over'); await ppOpenFile(e.dataTransfer.files[0]); });
-  d.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === d) { e.preventDefault(); $('ppFile').click(); } }); }
+  d.addEventListener('drop', async e => { e.preventDefault(); d.classList.remove('over'); await ppOpenFile(e.dataTransfer.files[0]); }); }
 
-// ================= sources: GitHub (read straight into memory; nothing is saved) =================
-const GHB = { spec: null, tree: null, all: [], dir: '', query: '', prefix: '', includeXml: false, seq: 0 };
-const ghbMsg = (t, bad) => { $('ppGhMsg').textContent = t; $('ppGhMsg').className = 'hint2' + (bad ? ' bad-t' : ''); };
-function ghbPresets() {
-  $('ppGhPresets').innerHTML = GH_PRESETS.map(p => `<button type="button" class="pp-preset" data-id="${p.id}"><b>${ppEsc(p.title)}</b><span>${ppEsc(p.owner)}/${ppEsc(p.repo)}</span><small>${ppEsc(p.note)}</small></button>`).join('');
-}
-async function ghbLoad(spec, o = {}) {
-  const my = ++GHB.seq; GHB.spec = spec; GHB.prefix = o.prefix || ''; GHB.includeXml = !!o.includeXml; GHB.query = ''; GHB.dir = ''; GHB.tree = null; GHB.all = [];
-  $('ppGhPresets').hidden = true; $('ppGhOther').hidden = false;   // the catalogue list makes room for the scores (it comes back with "Other libraries")
-  $('ppGhBar').hidden = true; $('ppGhSearch').value = ''; $('ppGhXml').checked = GHB.includeXml; $('ppGhList').innerHTML = ''; $('ppGhCrumb').textContent = ''; ghbMsg(`Reading the list of ${spec.owner}/${spec.repo}…`);
-  try {
-    const tree = JSON.parse(new TextDecoder().decode(await ppFetch(ghTreeUrl(spec)))); if (my !== GHB.seq) return;
-    GHB.tree = tree; ghbBuild();
-  } catch (e) { if (my === GHB.seq) ghbMsg(e.message, true); }
-}
-function ghbBuild() {
-  const r = ghMusicFiles(GHB.tree, { prefix: GHB.prefix, includeXml: GHB.includeXml }); GHB.all = r.files;
-  $('ppGhBar').hidden = false;
-  if (!r.files.length) { ghbMsg(`No MusicXML files (.mxl, .musicxml${GHB.includeXml ? ', .xml' : ''}) found${GHB.prefix ? ' in ' + GHB.prefix : ''}.` + (r.truncated ? ' GitHub cut this list short because the repository is very large: paste a link to a folder instead.' : ''), true); $('ppGhList').innerHTML = ''; return; }
-  ghbMsg(`${r.files.length} score${r.files.length === 1 ? '' : 's'}` + (r.skipped ? ` · ${r.skipped} over 25 MB left out` : '') + (r.truncated ? ' · the list is incomplete (very large repository): paste a link to a folder to see the rest' : '') + ' · tap one to practise it');
-  ghbRender();
-}
-function ghbRender() {
-  const q = GHB.query.trim(), box = $('ppGhList'); let html = '';
-  const row = f => `<button type="button" class="pp-file" role="listitem" data-p="${ppEsc(f.path)}"><b>${ppEsc(f.label)}</b><span>${ppEsc(f.ext)} · ${ppKb(f.size)}${q && f.dir ? ' · ' + ppEsc(f.dir) : ''}</span></button>`;
-  if (q) { const hits = ghSearch(GHB.all, q); $('ppGhCrumb').textContent = `${hits.length} match${hits.length === 1 ? '' : 'es'}`; html = hits.slice(0, 200).map(row).join('') + (hits.length > 200 ? '<div class="hint2">Showing the first 200: type more to narrow it down.</div>' : ''); }
-  else {
-    const l = ghCollapse(GHB.all, GHB.dir); GHB.dir = l.dir;
-    const parts = l.dir ? l.dir.split('/') : [];
-    $('ppGhCrumb').innerHTML = `<button type="button" class="lnk" data-d="">${ppEsc(GHB.spec.repo)}</button>` + parts.map((p, i) => ` / <button type="button" class="lnk" data-d="${ppEsc(parts.slice(0, i + 1).join('/'))}">${ppEsc(p)}</button>`).join('');
-    // a folder that holds a single score is shown as that score (a dataset with one folder per piece would otherwise need a click to open each)
-    html = l.dirs.map(d => d.count === 1 ? row(GHB.all.find(f => f.path.startsWith(d.path + '/'))) : `<button type="button" class="pp-file dir" role="listitem" data-d="${ppEsc(d.path)}"><b>📁 ${ppEsc(d.name.replace(/_/g, ' '))}</b><span>${d.count} scores</span></button>`).join('') + l.files.map(row).join('');
-  }
-  box.innerHTML = html || '<div class="hint2">Nothing here.</div>';
-}
-async function ghbPick(path) {
-  const f = GHB.all.find(x => x.path === path); if (!f) return;
-  ghbMsg(`Reading ${f.name} (${ppKb(f.size)})…`);
-  try {
-    const bytes = await ppFetch(ghRawUrl(GHB.spec, f.path));
-    if (await ppOpenBytes(bytes, f.name, `github:${GHB.spec.owner}/${GHB.spec.repo}`)) { ghbMsg(''); $('ppGh').close(); } else ghbMsg($('ppMsg').textContent, true);
-  } catch (e) { ghbMsg(e.message, true); }
-}
-// what was pasted: a file opens at once; a repository or a folder opens the browser on it
-async function ppLink(text, fromDialog) {
-  const s = ghParseUrl(text), say = fromDialog ? ghbMsg : ppBusy;
-  if (!s) { say('Paste a link to a GitHub repository, a folder in one, or a .mxl / .musicxml file (for example github.com/owner/repo).', true); return; }
+// ----- a pasted link: one score opens at once; a repository or folder is added to the libraries -----
+async function ppLink(text) {
+  const s = ghParseUrl(text);
+  if (!s) { ppBusy('Paste a link to a GitHub repository, a folder in one, or a .mxl / .musicxml file (for example github.com/owner/repo).', true); return; }
   if (s.kind === 'file') {
-    if (!GH_MUSIC_EXT.concat('xml').includes(ghExt(s.path))) { say('That link is not a MusicXML file (.mxl, .musicxml or .xml).', true); return; }
-    const name = s.path.split('/').pop(); say(`Reading ${name}…`);
-    try { const ok = await ppOpenBytes(await ppFetch(ghRawUrl(s, s.path)), name, `github:${s.owner}/${s.repo}`); if (ok && $('ppGh').open) $('ppGh').close(); } catch (e) { say(e.message, true); }
+    if (!GH_MUSIC_EXT.concat('xml').includes(ghExt(s.path))) { ppBusy('That link is not a MusicXML file (.mxl, .musicxml or .xml).', true); return; }
+    const name = s.path.split('/').pop(); ppBusy(`Reading ${name}…`);
+    try { await ppOpenBytes(await ppFetch(ghRawUrl(s, s.path)), name, `github:${s.owner}/${s.repo}`); } catch (e) { ppBusy(e.message, true); }
     return;
   }
-  if (!$('ppGh').open) $('ppGh').showModal();
-  $('ppGhUrl').value = `${s.owner}/${s.repo}`; await ghbLoad(s, { prefix: s.kind === 'dir' ? s.path : '', includeXml: s.kind === 'dir' });
+  const r = plAdd(PLS, text, 'any');
+  if (r.error) { ppBusy(r.error, true); return; }
+  PLS = r.list; plSave(); plRenderSettings(); ppBusy(`Added ${r.added.title} to your libraries (Settings > Piece libraries).`); $('ppUrl').value = ''; plLoadOne(r.added, true);
 }
-$('ppUrlForm').onsubmit = e => { e.preventDefault(); const v = $('ppUrl').value; if (v.trim()) ppLink(v, false); };
-$('ppGhForm').onsubmit = e => { e.preventDefault(); ppLink($('ppGhUrl').value, true); };
-$('ppBrowse').onclick = () => { ghbPresets(); $('ppGhPresets').hidden = false; $('ppGhOther').hidden = true; $('ppGh').showModal(); };
-$('ppGhOther').onclick = () => { GHB.seq++; $('ppGhPresets').hidden = false; $('ppGhOther').hidden = true; $('ppGhBar').hidden = true; $('ppGhList').innerHTML = ''; $('ppGhCrumb').textContent = ''; ghbMsg(''); };
-$('ppGhClose').onclick = () => $('ppGh').close();
-$('ppGh').addEventListener('click', e => { if (e.target === $('ppGh')) $('ppGh').close(); });   // a click on the dimmed area outside the box
-$('ppGhPresets').onclick = e => { const b = e.target.closest('button[data-id]'); if (!b) return; const p = GH_PRESETS.find(x => x.id === b.dataset.id); $('ppGhUrl').value = `${p.owner}/${p.repo}`; ghbLoad({ owner: p.owner, repo: p.repo, ref: '', path: '', kind: 'repo' }, { prefix: p.prefix, includeXml: p.includeXml }); };
-$('ppGhSearch').oninput = () => { GHB.query = $('ppGhSearch').value; ghbRender(); };
-$('ppGhXml').onchange = () => { GHB.includeXml = $('ppGhXml').checked; if (GHB.tree) ghbBuild(); };
-$('ppGhCrumb').onclick = e => { const b = e.target.closest('button[data-d]'); if (b) { GHB.dir = b.dataset.d; ghbRender(); } };
-$('ppGhList').onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.p) ghbPick(b.dataset.p); else if (b.dataset.d != null) { GHB.dir = b.dataset.d; ghbRender(); } };
+$('ppUrlForm').onsubmit = e => { e.preventDefault(); const v = $('ppUrl').value; if (v.trim()) ppLink(v); };
+
+// ----- Settings > Piece libraries: add, remove, switch off, say what instrument a library is for -----
+PL_INSTRUMENTS.forEach(([k, n]) => $('plAddInst').add(new Option(n, k)));
+function plRenderSettings() {
+  $('plRepos').innerHTML = PLS.length ? PLS.map(r => `<div class="pl-repo"><label class="check"><input type="checkbox" data-on="${ppEsc(r.id)}" ${r.on ? 'checked' : ''} aria-label="Use ${ppEsc(r.title)}"><span><b>${ppEsc(r.title)}</b><small>github.com/${ppEsc(r.owner)}/${ppEsc(r.repo)}${r.prefix ? ' · folder ' + ppEsc(r.prefix) : ''}</small></span></label>`
+    + `<select data-inst="${ppEsc(r.id)}" aria-label="Instrument of ${ppEsc(r.title)}"><option value="any">Any instrument</option>${PL_INSTRUMENTS.map(([k, n]) => `<option value="${k}"${r.inst === k ? ' selected' : ''}>${n}</option>`).join('')}</select>`
+    + `<button type="button" class="sec" data-rm="${ppEsc(r.id)}">Remove</button></div>`).join('') : '<p class="hint2">No libraries. Add one below, or restore the suggested ones.</p>';
+  if (typeof renderSet === 'function') renderSet();
+}
+$('plRepos').onchange = e => {
+  const on = e.target.closest('input[data-on]'), inst = e.target.closest('select[data-inst]');
+  if (on) { const r = PLS.find(x => x.id === on.dataset.on); if (r) r.on = on.checked; }
+  else if (inst) { const r = PLS.find(x => x.id === inst.dataset.inst); if (r) r.inst = inst.value; }
+  else return;
+  plSave(); if (typeof renderSet === 'function') renderSet(); plRender();
+};
+$('plRepos').onclick = e => { const b = e.target.closest('button[data-rm]'); if (!b) return; PLS = PLS.filter(r => r.id !== b.dataset.rm); delete PLC[b.dataset.rm]; plSave(); plRenderSettings(); plRender(); };
+$('plAddForm').onsubmit = e => {
+  e.preventDefault(); const r = plAdd(PLS, $('plAddUrl').value, $('plAddInst').value), m = $('plAddMsg');
+  if (r.error) { m.textContent = r.error; m.className = 'hint2 bad-t'; return; }
+  PLS = r.list; plSave(); $('plAddUrl').value = ''; m.textContent = `Added ${r.added.title}. Its pieces show in Piece practice.`; m.className = 'hint2 ok-t'; plRenderSettings();
+};
+$('plReset').onclick = () => { if (!confirm('Put back the suggested libraries? Libraries you added are removed from the list.')) return; PLS = plDefaults(); for (const k in PLC) delete PLC[k]; plSave(); plRenderSettings(); plRender(); };
+plRenderSettings();
 
 // ================= the other parts, as sound =================
 // While a piece runs in Tempo mode (or "Hear piece"), the parts the player is not playing are played by the app's own synth, scheduled just ahead on the audio clock.
@@ -261,4 +294,4 @@ function ppBackingPump() {
 }
 function ppBackingStop() { clearInterval(PPB.timer); PPB.timer = 0; PPB.i = PPB.events.length; PPB.nodes.forEach(o => { try { o.stop(); } catch {} }); PPB.nodes = []; }
 
-ppFillControls(); ppRender(); peUi();
+ppFillControls(); $('pzPlayer').hidden = true; ppRender(); peUi();   // the library is the first view; it reads GitHub when the screen is opened (ppEnter)

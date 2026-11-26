@@ -114,4 +114,21 @@ ok(top2.dirs.map(d => d.name).join() === 'Bach,scores' && top2.dirs[0].count ===
 ok(/60 requests/.test(lib.ghExplain(403, '0', '1700000000')) && /public/.test(lib.ghExplain(404)) && /internet/.test(lib.ghExplain(0)), 'github: errors say what to do');
 ok(lib.GH_PRESETS.length === 3 && lib.GH_PRESETS.every(p => lib.ghParseUrl(`${p.owner}/${p.repo}`)), 'github: the three suggested catalogues are valid');
 
+
+// ---- the libraries the player chooses, and the search over their scores
+const defs = lib.plDefaults();
+ok(defs.length === 3 && defs.every(d => d.on && d.id && lib.ghParseUrl(d.owner + '/' + d.repo)) && defs[1].inst === 'chromatic', 'libraries: three suggested ones, ASAP marked as piano');
+ok(lib.plNormalize([{ owner: 'a', repo: 'b' }, { owner: 'a', repo: 'b' }, { owner: '../x', repo: 'b' }, null, { owner: 'c', repo: 'd', inst: 'tuba', on: false, prefix: 'x/../y' }]).map(r => r.id + ':' + r.inst + ':' + r.on).join() === 'a/b:any:true,c/d:any:false', 'libraries: stored data is cleaned (duplicates, bad names, unknown instrument, a path with ".." dropped)');
+const a1 = lib.plAdd(defs, 'https://github.com/foo/bar-scores', 'violin');
+ok(a1.added && a1.added.id === 'foo/bar-scores' && a1.added.inst === 'violin' && a1.list.length === 4 && !a1.added.includeXml, 'libraries: a repository link is added with its instrument');
+const a2 = lib.plAdd(a1.list, 'https://github.com/foo/bar-scores/tree/main/violin/easy', 'any');
+ok(a2.added && a2.added.prefix === 'violin/easy' && a2.added.ref === 'main' && a2.added.includeXml, 'libraries: a folder link is added as its own library (with .xml files)');
+ok(lib.plAdd(a1.list, 'foo/bar-scores').error && lib.plAdd(a1.list, 'nonsense').error && lib.plAdd(a1.list, 'https://github.com/a/b/blob/main/x.mxl').error, 'libraries: a duplicate, a non-link and a single file are refused with a reason');
+ok(lib.plGuess('Bach/Violin_Partita.mxl', '') === 'violin' && lib.plGuess('x/Solo Piano Arrg.mxl', 'any') === 'chromatic' && lib.plGuess('Etude.mxl', 'any') === '' && lib.plGuess('Etude.mxl', 'guitar') === 'guitar' && lib.plGuess('Bass Guitar.mxl', '') === 'guitar', 'libraries: the instrument is guessed from words in the name, else the library own setting');
+const ents = [].concat(lib.plEntries({ id: 'L1', title: 'Lib One', inst: 'chromatic' }, [{ path: 'a/Moonlight_Sonata.mxl', label: 'Moonlight Sonata', size: 5 }, { path: 'a/Violin_Romance.mxl', label: 'Violin Romance', size: 5 }]), lib.plEntries({ id: 'L2', title: 'Lib Two', inst: 'any' }, [{ path: 'b/Canon.mxl', label: 'Canon', size: 5 }, { path: 'b/Guitar_Study.mxl', label: 'Guitar Study', size: 5 }]));
+ok(ents.map(e => e.inst).join() === 'chromatic,violin,,guitar', 'search: every entry gets an instrument (or none)');
+ok(lib.plFilter(ents, { q: 'sonata' }).length === 1 && lib.plFilter(ents, { q: 'lib two' }).length === 2 && lib.plFilter(ents, { q: 'study guitar' }).length === 1, 'search: every word must match (name, folder or library)');
+ok(lib.plFilter(ents, { inst: 'violin' }).length === 1 && lib.plFilter(ents, { inst: 'unknown' }).length === 1 && lib.plFilter(ents, { lib: 'L2' }).length === 2 && lib.plFilter(ents, { inst: 'chromatic', lib: 'L2' }).length === 0, 'filter: by instrument, by "not stated", by library, and together');
+const cn = lib.plCounts(ents, {}); ok(cn.all === 4 && cn.chromatic === 1 && cn.violin === 1 && cn.guitar === 1 && cn.unknown === 1 && lib.plCounts(ents, { q: 'lib two' }).chromatic === 0, 'filter: the numbers on the filter buttons follow the search');
+
 console.log(fail ? `\n${fail} FAILED` : '\nall piece practice checks pass'); process.exit(fail ? 1 : 0);

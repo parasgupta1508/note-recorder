@@ -115,6 +115,26 @@
   <h2 class="pg-h">Piece practice</h2>
   <div class="sc-grid">
     <div class="stack">
+      <!-- Open a piece: every score in the player's GitHub libraries, with search and an instrument filter (js/app/piece-practice.js; the libraries are chosen in Settings) -->
+      <div class="player pz-lib" id="pzLib">
+        <div class="pl-head">
+          <div class="pl-id"><b>OPEN A PIECE</b><span id="pzLibCount" class="pl-chip"></span></div>
+          <div class="pl-tools">
+            <button id="pzLibBack" class="sec" type="button" hidden>← Back to the piece</button>
+            <button id="ppPick" class="sec" type="button" title="Open a .musicxml, .xml or .mxl file from this device">📁 From this device</button>
+            <button id="pzLibRefresh" class="sec" type="button" title="Read the lists from GitHub again" aria-label="Refresh the lists">↻</button>
+            <button id="pzLibSettings" class="sec" type="button" title="Add or remove GitHub libraries">⚙ Libraries</button>
+          </div>
+        </div>
+        <input id="pzLibSearch" type="search" placeholder="Search pieces: title, composer, folder…" aria-label="Search pieces" autocomplete="off">
+        <div class="pz-filters"><div class="seg" id="pzLibInst" role="group" aria-label="Filter by instrument"></div><select id="pzLibRepo" aria-label="Library"></select></div>
+        <div class="hint2" id="pzLibStatus" role="status" aria-live="polite"></div>
+        <div id="pzLibList" class="pp-list" role="list"></div>
+        <form class="pp-url" id="ppUrlForm"><input id="ppUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Open one score from a GitHub link…" title="Paste a link to a .mxl / .musicxml file. A link to a repository or folder is added to your libraries." aria-label="GitHub link"><button class="sec" type="submit">Open</button></form>
+        <div class="hint2" id="ppMsg" role="status" aria-live="polite"></div>
+        <div class="hint2">Pieces are read into this page when you open them. They are not uploaded and not saved. The instrument filter goes by words in the file name and the library's own setting; the exact instrument is read from the score when it opens.</div>
+        <input type="file" id="ppFile" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml" hidden>
+      </div>
       <div class="player" id="pzPlayer">
         <div class="pl-head">
           <div class="pl-id"><b>PIECE NOTATION</b><span id="pzVisTitle" class="pl-chip"></span></div>
@@ -128,17 +148,8 @@
 
         <!-- where the music comes from, which part, which bars (js/app/piece-practice.js) -->
         <div class="pp-panel" id="ppPanel">
-          <div id="ppSource" class="pp-source">
-            <div class="pp-drop" id="ppDrop" tabindex="0" role="button" aria-label="Choose a MusicXML file, or drop one here">
-              <b>Drop a MusicXML file here</b><span>.musicxml, .xml or .mxl (compressed)</span>
-              <div class="pp-btns"><button type="button" id="ppPick" class="sec">Choose file…</button><button type="button" id="ppBrowse" class="sec">Browse GitHub library</button></div>
-              <input type="file" id="ppFile" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml,application/vnd.recordare.musicxml+xml,application/xml,text/xml" hidden>
-            </div>
-            <form class="pp-url" id="ppUrlForm"><input id="ppUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="GitHub link (repo, folder or file)" title="Paste a link to a public GitHub repository, a folder in one, or a .mxl / .musicxml file" aria-label="GitHub link"><button class="sec" type="submit">Open</button></form>
-            <div class="hint2">The file is read into this page only. It is not uploaded and not saved.</div>
-          </div>
           <div id="ppLoaded" hidden>
-            <div class="pp-head"><b id="ppTitle"></b><span id="ppBadge" class="pl-chip"></span><button type="button" id="ppChange" class="sec mini">Change piece</button></div>
+            <div class="pp-head"><b id="ppTitle"></b><span id="ppBadge" class="pl-chip"></span><button type="button" id="ppChange" class="sec mini">Open another piece</button></div>
             <div id="ppParts" class="pp-parts" role="radiogroup" aria-label="Available parts" hidden></div>
             <div class="pp-opts">
               <label class="field"><span>Bars</span><div class="pp-bars"><input id="ppFrom" type="number" min="1" inputmode="numeric" aria-label="First bar"> <i>to</i> <input id="ppTo" type="number" min="1" inputmode="numeric" aria-label="Last bar"> <small id="ppOf"></small></div></label>
@@ -149,7 +160,6 @@
               <label class="check"><input type="checkbox" id="ppBack"> Play the other parts while I play</label><div id="ppBackList"></div><div class="hint2" id="ppBackNote"></div></details>
             <div class="hint2" id="ppInfo"></div>
           </div>
-          <div class="hint2" id="ppMsg" role="status" aria-live="polite"></div>
         </div>
 
         <div class="pl-sel">
@@ -480,6 +490,11 @@
     </div>
     <p class="hint2" id="sgNote" style="margin:8px 0 0"></p>
     <div class="row" style="margin-top:8px"><button type="button" class="sec" id="sgReset">Reset this instrument</button></div></div>
+  <div class="set-group" data-g="piecelibs"><h3>Piece libraries</h3><p>Public GitHub repositories of MusicXML scores. Their pieces appear in Piece practice, where you can search and filter them. Only this list is saved on this device, never the scores.</p>
+    <div id="plRepos"></div>
+    <form id="plAddForm" class="pl-add"><input id="plAddUrl" type="text" autocomplete="off" spellcheck="false" placeholder="owner/repo, or a link to a repository or a folder" aria-label="GitHub repository or folder"><select id="plAddInst" aria-label="Instrument these pieces are for"><option value="any">Any instrument</option></select><button type="submit" class="sec">Add library</button></form>
+    <p class="hint2" id="plAddMsg" role="status" aria-live="polite"></p>
+    <div class="row"><button type="button" class="sec" id="plReset">Restore the suggested libraries</button></div></div>
   <div class="set-group" data-g="mic"><h3>Microphone</h3><p>Watch the Input bar at the top while you play: it turns green when your sound is loud enough to be analysed.</p>
     <label class="field"><span>Input device</span><select id="micDev"><option value="">Default microphone</option></select></label>
     <div class="row" style="margin-top:12px"><button id="calib" class="sec">Calibrate microphone</button><span class="hint2" id="calibMsg">Takes 7 seconds. Sets the noise gate and input level for your room.</span></div>
@@ -541,19 +556,6 @@
   <form id="frForm"><input id="frName" maxlength="24" autocomplete="off" aria-label="Player name"><button type="submit">Start</button></form>
   <p id="frMsg" class="hint2" role="alert"></p></div></div>
 
-<dialog id="ppGh" class="pp-gh" aria-labelledby="ppGhTitle">
-  <div class="pp-gh-in">
-    <div class="pp-gh-head"><b id="ppGhTitle">GitHub library</b><button id="ppGhClose" class="sec" type="button" aria-label="Close">✕</button></div>
-    <div class="hint2">Public repositories only. A score is read straight into this page when you pick it: nothing is downloaded to your device or stored by this app. Check a score's licence before sharing it.</div>
-    <div id="ppGhPresets" class="pp-presets"></div>
-    <form id="ppGhForm" class="pp-url"><input id="ppGhUrl" type="text" autocomplete="off" spellcheck="false" placeholder="owner/repo, or a github.com link" aria-label="Repository"><button class="sec" type="submit">Open</button></form>
-    <button id="ppGhOther" class="sec mini" type="button" hidden>← Other libraries</button>
-    <div id="ppGhBar" class="pp-gh-bar" hidden><input id="ppGhSearch" type="search" placeholder="Search this library" aria-label="Search this library"><label class="check"><input type="checkbox" id="ppGhXml"> also list .xml files</label></div>
-    <div id="ppGhCrumb" class="pp-crumb"></div>
-    <div id="ppGhList" class="pp-list" role="list"></div>
-    <div id="ppGhMsg" class="hint2" role="status" aria-live="polite"></div>
-  </div>
-</dialog>
 <script src="js/core/pitch.js"></script>
 <script src="js/core/music.js"></script>
 <script src="js/core/instruments.js"></script>
@@ -571,6 +573,7 @@
 <script src="js/core/piece.js"></script>
 <script src="js/core/piece-practice.js"></script>
 <script src="js/core/github-library.js"></script>
+<script src="js/core/piece-library.js"></script>
 <script src="js/core/piece-visual.js"></script>
 <script src="js/core/library.js"></script>
 <script src="js/core/compare.js"></script>

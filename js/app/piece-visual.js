@@ -33,21 +33,34 @@ function pwBuildStaff(W) {
   const hints = PW.hints, glyph = typeof clefGlyphs === 'function' && clefGlyphs();
   let y = 6, out = '', pre = '';   // pre: clef, key and time signature, drawn in their own layer that stays put while the notes scroll
   PW.geo = []; PW.where = new Array(tl.length); PW.rows = rows;
+  // A piano is written on a grand staff: the treble staff for middle C and above, the bass staff below it. (Everything else: one treble staff.)
+  const grand = inst === 'chromatic', TREB = 28, bassLedgers = step => { const l = []; for (let e = 16; e >= step; e -= 2) l.push(e); return l; };   // 28 = C4; the bass staff's lines are G2 (18) to A3 (26)
   rows.forEach((row, r) => {
-    const ext = visRowExtent(row), top = y + 46 + PW_ST * (ext.hi - VIS_TOP), yS = s => top + (VIS_TOP - s) * PW_ST, bottom = yS(VIS_BOTTOM), base = yS(Math.min(ext.lo, VIS_BOTTOM)), bowed = pwBowed(inst), end = base + (bowed ? 66 : 40);
-    PW.geo.push({ top, bottom, y0: y, y1: end });
-    for (let k = 0; k < 5; k++) out += `<line class="sl" x1="4" x2="${SW - 4}" y1="${top + k * PW_LG}" y2="${top + k * PW_LG}"/>`;
-    for (let k = 0; k < 5; k++) pre += `<line class="sl" x1="4" x2="${left}" y1="${top + k * PW_LG}" y2="${top + k * PW_LG}"/>`;
-    pre += `<line class="sl" x1="4" x2="4" y1="${top}" y2="${bottom}"/>`;
+    const bowed = pwBowed(inst), nT = grand ? row.notes.filter(n => n.step >= TREB) : row.notes, nB = grand ? row.notes.filter(n => n.step < TREB) : [];
+    const exT = { hi: Math.max(VIS_TOP, ...nT.map(n => n.step)), lo: Math.min(VIS_BOTTOM, ...nT.map(n => n.step)) };
+    const top = y + 46 + PW_ST * (exT.hi - VIS_TOP), yS = s => top + (VIS_TOP - s) * PW_ST, bottom = yS(VIS_BOTTOM);
+    let bYS = null, bBottom = bottom, base = yS(Math.min(exT.lo, VIS_BOTTOM));
+    if (grand) {
+      const exB = { hi: Math.max(26, ...nB.map(n => n.step)), lo: Math.min(18, ...nB.map(n => n.step)) }, bTop = base + 34 + PW_ST * (exB.hi - 26);   // room between the staves for middle C's ledger line
+      bYS = s => bTop + (26 - s) * PW_ST; bBottom = bYS(18); base = bYS(Math.min(exB.lo, 18));
+    }
+    const end = base + (bowed ? 66 : 40);
+    PW.geo.push({ top, bottom: bBottom, y0: y, y1: end });
+    const lines = (t, x2) => { let o = ''; for (let k = 0; k < 5; k++) o += `<line class="sl" x1="4" x2="${x2}" y1="${t + k * PW_LG}" y2="${t + k * PW_LG}"/>`; return o; };
+    out += lines(top, SW - 4); pre += lines(top, left);
+    if (grand) { out += lines(bYS(26), SW - 4); pre += lines(bYS(26), left); }
+    pre += `<line class="sl" x1="4" x2="4" y1="${top}" y2="${bBottom}"/>`;   // the line at the left joins both staves of a grand staff
     pre += glyph ? `<text class="clef" x="8" y="${yS(32) + 9}" font-family='${pwFont}' font-size="${PW_LG * 5.4}">\u{1D11E}</text>` : `<text class="clef" x="10" y="${yS(32) + 11}" font-family="serif" font-size="38" font-style="italic" font-weight="700">G</text>`;
-    sig.marks.forEach((m, k) => { pre += `<text class="ks" x="${46 + k * 13}" y="${yS(m.step) + 8}" font-size="26" font-family='${pwFont}'>${sig.kind === 'flat' ? '♭' : '♯'}</text>`; });
-    { const ts = p.timeSig || [4, 4], tx = 50 + 13 * sig.n + 8; pre += `<text class="ts" x="${tx}" y="${yS(36) + 6}" text-anchor="middle" font-size="${PW_LG * 2.2}" font-weight="700">${ts[0]}</text><text class="ts" x="${tx}" y="${yS(36) + 6 + PW_LG * 2}" text-anchor="middle" font-size="${PW_LG * 2.2}" font-weight="700">${ts[1]}</text>`; }
-    row.bars.forEach(x => { out += `<line class="bar" x1="${x}" x2="${x}" y1="${top}" y2="${bottom}"/>`; });
+    if (grand) pre += glyph ? `<text class="clef" x="8" y="${bYS(24) + 3}" font-family='${pwFont}' font-size="${PW_LG * 4.6}">\u{1D122}</text>` : `<text class="clef" x="10" y="${bYS(24) + 12}" font-family="serif" font-size="34" font-style="italic" font-weight="700">F</text>`;
+    sig.marks.forEach((m, k) => { pre += `<text class="ks" x="${46 + k * 13}" y="${yS(m.step) + 8}" font-size="26" font-family='${pwFont}'>${sig.kind === 'flat' ? '♭' : '♯'}</text>`; if (grand) pre += `<text class="ks" x="${46 + k * 13}" y="${bYS(m.step - 14) + 8}" font-size="26" font-family='${pwFont}'>${sig.kind === 'flat' ? '♭' : '♯'}</text>`; });
+    { const ts = p.timeSig || [4, 4], tx = 50 + 13 * sig.n + 8, tsAt = (f, s0) => `<text class="ts" x="${tx}" y="${f(s0) + 6}" text-anchor="middle" font-size="${PW_LG * 2.2}" font-weight="700">${ts[0]}</text><text class="ts" x="${tx}" y="${f(s0) + 6 + PW_LG * 2}" text-anchor="middle" font-size="${PW_LG * 2.2}" font-weight="700">${ts[1]}</text>`;
+      pre += tsAt(yS, 36); if (grand) pre += tsAt(bYS, 24); }
+    row.bars.forEach(x => { out += `<line class="bar" x1="${x}" x2="${x}" y1="${top}" y2="${bBottom}"/>`; });
     for (const n of row.notes) {
-      const cy = yS(n.step), up = n.step < 34, sx = up ? n.x + 6.4 : n.x - 6.4, sy = up ? cy - 33 : cy + 33;
+      const onB = grand && n.step < TREB, ys = onB ? bYS : yS, cy = ys(n.step), up = n.step < (onB ? 22 : 34), sx = up ? n.x + 6.4 : n.x - 6.4, sy = up ? cy - 33 : cy + 33;
       PW.where[n.i] = { r, x: n.x, y: cy };
       out += `<g class="nh" data-i="${n.i}"><circle class="halo" cx="${n.x}" cy="${cy}" r="14"/>`;
-      for (const l of n.ledgers) out += `<line class="led" x1="${n.x - 12}" x2="${n.x + 12}" y1="${yS(l)}" y2="${yS(l)}"/>`;
+      for (const l of onB ? bassLedgers(n.step) : n.ledgers) out += `<line class="led" x1="${n.x - 12}" x2="${n.x + 12}" y1="${ys(l)}" y2="${ys(l)}"/>`;
       if (n.acc) out += `<text class="acc" x="${n.x - 19}" y="${cy + 7}" font-size="22" font-family='${pwFont}'>${{ '#': '♯', b: '♭', n: '♮' }[n.acc]}</text>`;
       // how long the note lasts: an open head for a half or whole note, no stem for a whole note, flags for eighths and sixteenths, a dot for a dotted value
       const dq = tl[n.i].dq, whole = dq >= 3.5, hollow = dq >= 1.75, nf = dq == null ? 0 : dq <= 0.375 ? 2 : dq <= 0.75 ? 1 : 0, dotted = dq != null && [0.75, 1.5, 3, 6].some(v => Math.abs(dq - v) < 0.06);

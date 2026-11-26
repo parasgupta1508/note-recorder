@@ -71,3 +71,15 @@
 .tabs{grid-template-columns:repeat(6,1fr)}
 @media (max-width:719px){.tabs button{font-size:12px}} @media (max-width:380px){.tabs button{font-size:10.5px;padding:6px 0}}
 @media (min-width:720px){.tabs{grid-template-columns:repeat(6,auto)}}
+
+/* ---------- Open a piece (the library view) and Settings > Piece libraries ---------- */
+#pzLib[hidden],#pzPlayer[hidden]{display:none}
+.pz-lib{display:grid;grid-template-columns:minmax(0,1fr);gap:10px} .pz-lib.over{outline:2px dashed var(--acc);outline-offset:-4px}
+#pzLibSearch{width:100%;min-height:44px;padding:8px 14px;font-size:15px;border-radius:12px}
+.pz-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center} .pz-filters select{min-height:36px;padding:4px 24px 4px 10px;font-size:14px;max-width:100%;width:auto}
+.pz-filters .seg{display:flex;flex-wrap:wrap;gap:4px} .pz-filters .seg button{min-height:36px;padding:5px 12px} .pz-filters .seg button small{opacity:.65;margin-left:3px;font-size:11.5px}
+#pzLibList{max-height:62vh} #pzLibStatus:empty{display:none}
+.pp-file em{font-style:normal;color:var(--acc)}
+.pl-repo{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)} .pl-repo .check{flex:1 1 230px;min-width:0}
+.pl-repo small{display:block;color:var(--mut);font-size:12px;word-break:break-all} .pl-repo select{min-height:36px;width:auto;max-width:100%} .pl-repo .sec{min-height:36px;padding:4px 12px}
+.pl-add{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px} .pl-add input{flex:1 1 230px;min-width:0} .pl-add select{width:auto;max-width:100%}
