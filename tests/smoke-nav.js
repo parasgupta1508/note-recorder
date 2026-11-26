@@ -187,7 +187,7 @@ srv.listen(0, async () => {
   say(await ev("(() => { pcSetInst('piano', true); return prof.k === 'piano' && inst === 'chromatic' && document.getElementById('scInst').value === 'chromatic' && [...document.querySelectorAll('#pcList .pc-folder b')].some(b => b.textContent === 'Scales and arpeggios'); })()"), 'instrument switch: Piano does the same (the Tuner becomes chromatic)');
   say(await ev("(() => { pcSetInst('violin', true); return prof.k === 'violin' && inst === 'violin' && document.getElementById('scInst').value === 'violin'; })()"), 'instrument switch: back to Violin');
   await ev("{ const q = document.getElementById('pcSearch'); q.value = 'c major'; q.dispatchEvent(new Event('input')); } 1");
-  say(await ev("document.querySelectorAll('#pcList [data-listen]').length >= 3 && [...document.querySelectorAll('#pcList .pc-item b')].every(b => /^c/i.test(b.textContent) && /major/i.test(b.textContent))"), 'library: search finds the generated C major scales');
+  say(await ev("document.querySelectorAll('#pcList [data-practise]').length >= 3 && document.querySelectorAll('#pcList [data-listen]').length === 0 && [...document.querySelectorAll('#pcList .pc-item b')].every(b => /^c/i.test(b.textContent) && /major/i.test(b.textContent))"), 'library: search finds the generated C major scales (built-in: Practise only, no Listen)');
   await ev("{ const q = document.getElementById('pcSearch'); q.value = ''; q.dispatchEvent(new Event('input')); } PC.f = {}; pcRenderHome(); 1");
   say(errs.length === 0, 'pieces: no script errors' + (errs.length ? ' - ' + errs.join(' | ') : ''));
 

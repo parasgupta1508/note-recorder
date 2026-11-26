@@ -54,7 +54,7 @@ function pcRenderHome() {
   $('pcList').innerHTML = html;
   $('pcPacks').innerHTML = PC.packs.length ? PC.packs.map(p => `<div class="pc-item"><div><b>${pcEsc(p.name)}</b><small>${p.itemCount} pieces</small></div><button type="button" class="sec" data-rmpack="${pcEsc(p.id)}">Remove pack</button></div>`).join('') : '';
 }
-const pcRow = p => `<div class="pc-item"><div><b>${pcEsc(p.title)}</b><small>${pcEsc((p.categoryPath || []).join(' › '))}${p.generator ? '' : ' · ' + pcEsc(p.verified || p.exact ? 'Verified' : 'Draft')}${p.favourite ? ' · ♥' : ''}</small></div><div class="pc-acts"><button type="button" data-listen="${pcEsc(p.id)}">Listen</button><button type="button" class="sec" data-practise="${pcEsc(p.id)}">Practise</button></div></div>`;
+const pcRow = p => `<div class="pc-item"><div><b>${pcEsc(p.title)}</b><small>${pcEsc((p.categoryPath || []).join(' › '))}${p.generator ? '' : ' · ' + pcEsc(p.verified || p.exact ? 'Verified' : 'Draft')}${p.favourite ? ' · ♥' : ''}</small></div><div class="pc-acts">${p.builtin || (typeof plUsable === 'function' && plUsable(p)) ? '' : `<button type="button" data-listen="${pcEsc(p.id)}">Listen</button>`}<button type="button" class="sec" data-practise="${pcEsc(p.id)}">Practise</button></div></div>`;   // no Listen on built-in pieces and MusicXML pieces: Piece practice has Hear piece (and Scale drills Hear scale)
 $('pcList').addEventListener('click', e => {
   const f = e.target.closest('[data-folder]'); if (f) { PC.path.push(f.dataset.folder); pcRenderHome(); return; }
   const l = e.target.closest('[data-listen]'), pr = e.target.closest('[data-practise]');
