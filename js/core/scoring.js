@@ -35,6 +35,17 @@ function holdStats(frames, tol, win = 3) {
   return { c, s, a: f.filter(x => Math.abs(x) <= tol).length / n, n };
 }
 
+// How the listening should be set for a timeline of written notes: the analysis window (samples) and the frames an attempt needs. The ordinary window is 4096 samples (93 ms at 44.1 kHz) and
+// an attempt needs 6 steady frames (100 ms): a note with less than about 200 ms to the next one is then smeared into its neighbours and never found (measured on real scores: under 150 ms
+// found 10% of the time, 150-200 ms 45%, 200 ms and over about 90%). Quick music gets a window of about a third of the shortest gap (never one that cannot hold 2.2 periods of the lowest note)
+// and an attempt of about 45% of it. tl: [{ startMs }]. Returns { win, need, gap } (gap: the shortest gap in ms, or null).
+function listenFor(tl, sr, loHz) {
+  let gap = null; for (let i = 1; i < (tl ? tl.length : 0); i++) { const g = tl[i].startMs - tl[i - 1].startMs; if (g >= 40 && (gap == null || g < gap)) gap = g; }   // under 40 ms is a grace note or a chord's spread, not a gap to follow
+  const slow = { win: 4096, need: 6, gap };
+  if (gap == null || gap >= 300) return slow;
+  const want = Math.max(1024, Math.min(4096, 2 ** Math.floor(Math.log2(gap / 1000 * sr * 0.35)))), floor = 2 ** Math.ceil(Math.log2(2.2 * sr / Math.max(40, loHz || 80)));
+  return { win: Math.min(4096, Math.max(want, floor)), need: Math.max(3, Math.min(6, Math.round(gap * 0.45 / 16.7))), gap };
+}
 // What a held note tells the grader besides its pitch. cl: the pitch detector's clarity for each frame of the note. skip: frames of the attack to leave out.
 // holdClarity -> the median clarity after the attack, or null when there are too few frames. heldRatio -> how long the note really sounded against its written length
 // (1 = all of it); the last frame stands for one frame period (about 1/60 s). Both are null when they cannot be measured.

@@ -76,3 +76,11 @@ Done (see `CLAUDE.md`, "Grader rules"): fault penalty and weakest-link caps, bou
 - [ ] **The recorder's own playback** (`js/app/recorder.js`, `chart.js` note taps and the Tuner string buttons) still use the plain tone. They could use the recordings too.
 - [ ] **Piano pedal and chords:** the piano bank has one velocity layer and no pedal, and a piece's accompaniment plays every note for its written length.
 
+## Real pieces through the speaker test (silent mode, real recordings)
+
+First run on 10 public-domain scores found that **quick notes are lost**: notes with under 150 ms to the next were found 10% of the time. The listening now adapts to the shortest written gap (`listenFor`): Maple Leaf Rag went from 38% to 72% of notes found, Mozart K. 155 from 57% to 82%. Still open:
+
+- [ ] **Notes under about 100 ms apart are still found only about 40% of the time**, and 100-150 ms about 70%. Ideas: onset detection from the level (not only from a steady pitch), a pitch track that keeps the previous note's pitch until the next is confirmed, and trying MPM (`f0-alt.js`) on these takes (it was best in noise).
+- [ ] **Run the full 10-piece set after every change** to the detector or the attempt logic, and add a number to a baseline once it is stable (the speaker test is not a ratchet yet).
+- [ ] **Piece practice still shows the test piece afterwards** (the screen is not put back as it was).
+

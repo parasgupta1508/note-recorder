@@ -46,6 +46,17 @@ ok(lib.holdClarity([0.9, 0.9, 0.97, 0.98, 0.96, 0.97], 2) === 0.97 && lib.holdCl
 ok(Math.abs(lib.heldRatio(1.0, 1.7, 800) - 0.9) < 0.03 && lib.heldRatio(1, 1, 0) === null && lib.heldRatio(1, 5, 500) === 1.5, 'heldRatio: time sounded against written length, capped at 1.5');
 ok(lib.heardShare(40, 1000) > 0.7 && lib.heardShare(12, 1000) < 0.3 && lib.heardShare(500, 1000) === 1 && lib.heardShare(10, 0) === null, 'heardShare: share of a note that was heard');
 
+// ---- the listening fits the shortest written note (real scores: notes with under 150 ms to the next were found 10% of the time with the ordinary settings)
+{
+  const mk = g => Array.from({ length: 10 }, (_, i) => ({ startMs: i * g })), L = (g, lo = 196) => lib.listenFor(mk(g), 44100, lo);
+  ok(L(857).win === 4096 && L(857).need === 6 && L(350).win === 4096 && L(300).need === 6, 'slow music keeps the ordinary window (4096) and 6 frames');
+  ok(L(250).win === 2048 && L(150).win === 2048 && L(125).win === 1024 && L(100).need === 3, 'quick music gets a shorter window (250 ms gaps: 2048; 125 ms: 1024) and fewer frames (3 at 100 ms)');
+  ok(L(125, 60).win === 2048 && L(125, 40).win >= 2048, 'the window never gets too short to hold 2.2 periods of the lowest note (60 Hz: not 1024)');
+  ok(lib.listenFor([], 44100, 100).win === 4096 && lib.listenFor([{ startMs: 0 }], 44100, 100).win === 4096 && lib.listenFor(mk(10), 44100, 100).win === 4096, 'no gap to follow (empty, one note, or only a chord\'s 10 ms spread): ordinary settings');
+  const withGrace = [{ startMs: 0 }, { startMs: 15 }, { startMs: 800 }, { startMs: 1600 }];
+  ok(lib.listenFor(withGrace, 44100, 196).gap === 785, 'a grace note or chord spread under 40 ms is not taken as the gap');
+}
+
 // ---- listening confidence reaches the result
 const slots = (cov, n = 15) => Array.from({ length: n }, (_, i) => ({ index: i, pass: 1, name: 'n' + i, midi: 60 + i, d: 'up', k: 'h', c: 0, m: 0, a: 1, s: 3, e: 0, sp: 0, cov, wrong: 0, rt: 0 }));
 const ev = c => lib.findEngine('scorer', 'strict').evaluate(slots(c), { beatMs: 750, mode: 'tempo', wobbleCap: 40 });

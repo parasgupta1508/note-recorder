@@ -242,6 +242,7 @@ const peRuns = () => { try { const a = JSON.parse(localStorage.getItem(PE_RUNS_K
 // A run keeps a compact per-note list (name, pitch, played, cents, bar) for the newest PE_KEEP_NOTES runs, so the coach can see which bars go wrong again and again; older runs keep only the summary.
 const PE_KEEP_NOTES = 12;
 function peSaveRun(rec) {
+  if (window.stActive) return;   // the speaker test runs the real piece practice on a scratch player: its runs are not kept
   const all = peRuns(); all.push(rec);
   all.slice(0, Math.max(0, all.length - PE_KEEP_NOTES)).forEach(r => { r.notes = []; });
   try { localStorage.setItem(PE_RUNS_KEY, JSON.stringify(all.slice(-120))); } catch { try { all.forEach(r => { r.notes = []; }); localStorage.setItem(PE_RUNS_KEY, JSON.stringify(all.slice(-120))); } catch {} }   // storage full: keep the summaries

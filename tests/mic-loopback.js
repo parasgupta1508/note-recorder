@@ -3,7 +3,7 @@
 //   node tests/mic-loopback.js --mode app           same, but through the REAL tuner screen: checks the note shown, how far off it says it is, and that the in-tune beep fires
 //   node tests/mic-loopback.js --mode listen --sec 10   records the microphone for 10 s while YOU play/sing/whistle, prints the notes heard (any real-sound check)
 //   node tests/mic-loopback.js --mode speaker       the app's own Speaker test: realistic violin / guitar / ukulele performances (vibrato, slurs, plucks, mistakes) are played through the speaker, heard by the REAL microphone,
-//                                                   run through the real Scale drill, and compared with the known truth. --direct (no speaker: the sound goes straight into the app, silent) --set quick (2 takes) | all (7 takes, default) | --inst violin --level weak --vib 0 --bow slur4 --span 2 --bpm 80 --seed 5
+//                                                   run through the real Scale drill, and compared with the known truth. --direct (no speaker: the sound goes straight into the app, silent) --pieces [--piece <file part>] (real scores from tests/_pieces, fetch them with node tools/fetch-test-pieces.js) --set quick (2 takes) | all (7 takes, default) | --inst violin --level weak --vib 0 --bow slur4 --span 2 --bpm 80 --seed 5
 //                                                   --gold  also saves each take as a gold clip (tests/audio/gold/*.wav + .truth.json, git-ignored) for tests/gold.js
 // Options: --score <file.musicxml> (default: every file in tests/samples)  --max <n> notes (default 10, spread over the score's range)  --lo/--hi Hz (listen)  --keep (leave the browser open)
 // Why headed Edge: headless browsers cannot use the microphone. --use-fake-ui-for-media-stream only auto-accepts the permission prompt; the device used is the real default microphone.
@@ -32,6 +32,8 @@ const srv = http.createServer((req, res) => {
     if (u.pathname === '/api/core') { res.setHeader('content-type', 'application/json'); return res.end(JSON.stringify(core)); }
     if (u.pathname === '/api/result') { res.end('ok'); return finish(JSON.parse(buf.toString())); }
     if (u.pathname === '/api/wav') { saveWav(u.searchParams.get('name'), buf, +u.searchParams.get('sr') || 48000); return res.end('ok'); }
+    if (u.pathname === '/api/pieces') { const d = path.join(root, 'tests', '_pieces'), ix = fs.existsSync(path.join(d, 'index.json')) ? JSON.parse(fs.readFileSync(path.join(d, 'index.json'), 'utf8')) : []; res.setHeader('content-type', 'application/json'); return res.end(JSON.stringify(ix)); }
+    if (u.pathname.startsWith('/api/piece/')) { const f = path.join(root, 'tests', '_pieces', path.basename(decodeURIComponent(u.pathname.slice(11)))); if (!fs.existsSync(f)) { res.statusCode = 404; return res.end(); } return res.end(fs.readFileSync(f)); }
     if (u.pathname === '/api/log') { if (MODE === 'speaker') console.log('  ' + buf.toString()); return res.end('ok'); }
     if (u.pathname === '/api/take') { const t = JSON.parse(buf.toString()); TAKES.push(t); fs.writeFileSync(path.join(__dirname, '_mic', u.searchParams.get('name') + '.take.json'), JSON.stringify(t)); return res.end('ok'); }
     let p = path.join(root, decodeURIComponent(u.pathname === '/' ? '/index.html' : u.pathname)); if (!p.startsWith(root) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.statusCode = 404; return res.end('no'); }
@@ -47,13 +49,13 @@ function saveWav(name, buf, sr0) {   // 32-bit float mono WAV; sample rate is ad
 
 srv.listen(0, '127.0.0.1', async () => {
   const port = srv.address().port, prof = fs.mkdtempSync(path.join(os.tmpdir(), 'mic-test-'));
-  const SP = ['inst', 'level', 'vib', 'bow', 'span', 'bpm', 'seed', 'root', 'type', 'grader', 'set', 'direct', 'pos', 'synth'].filter(k => arg(k, null) != null).map(k => `${k}=${encodeURIComponent(arg(k))}`).join('&');
+  const SP = ['inst', 'level', 'vib', 'bow', 'span', 'bpm', 'seed', 'root', 'type', 'grader', 'set', 'direct', 'pos', 'synth', 'pieces', 'piece', 'bpm', 'maxsec'].filter(k => arg(k, null) != null).map(k => `${k}=${encodeURIComponent(arg(k))}`).join('&');
   const q = MODE === 'speaker' ? `/index.html?probe=speaker&${SP}` : MODE === 'app' ? `/index.html?probe=app&notes=${all.join(',')}` : `/tests/mic/loopback.html?mode=${MODE}&notes=${all.join(',')}&sec=${arg('sec', 8)}&lo=${arg('lo', 70)}&hi=${arg('hi', 2000)}`;
   if (MODE === 'speaker') console.log('The app will play realistic instrument sound through the speaker and listen with the microphone. This is audible and takes a few minutes. Raise the speaker volume, use the speaker (not headphones) and keep the room quiet.');
   else if (MODE !== 'listen') console.log(`Playing ${all.length} notes through the speaker (${all.map(nameOf).join(' ')}) - this is audible, about ${Math.ceil(all.length * (MODE === 'app' ? 2.6 : 1.7) + 4)} s.`);
   else console.log(`Listening for ${arg('sec', 8)} s - make some sound once the browser opens.`);
   const br = spawn(exe, ['--user-data-dir=' + prof, '--no-first-run', '--no-default-browser-check', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling', '--disable-features=CalculateNativeWinOcclusion', '--window-size=560,360', 'http://127.0.0.1:' + port + q], { stdio: 'ignore' });
-  const to = setTimeout(() => finish({ error: 'timed out (no result from the browser)' }), (MODE === 'speaker' ? 900 : 90) * 1000);
+  const to = setTimeout(() => finish({ error: 'timed out (no result from the browser)' }), (MODE === 'speaker' ? (arg('pieces', false) ? 3000 : 900) : 90) * 1000);
   const r = await done; clearTimeout(to);
   if (!arg('keep', false)) { spawnSync('taskkill', ['/PID', String(br.pid), '/T', '/F'], { stdio: 'ignore' }); }
   srv.close(); let fail = 0; const say = (ok, m) => { console.log((ok ? 'PASS ' : 'FAIL ') + m); if (!ok) fail++; };

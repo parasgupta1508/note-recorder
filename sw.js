@@ -1,6 +1,6 @@
 // Service worker: makes the app installable and usable offline.
 // Bump CACHE whenever you change any file, so installed copies pick up the update.
-const CACHE = 'tuner-v90';
+const CACHE = 'tuner-v91';
 const SAMPLES = 'tuner-samples-v1';   // the instrument recordings (data/samples/), about 3.6 MB: fetched on first use, then kept, and not deleted by a new app version
 const VENDOR = 'tuner-vendor-v1';   // the Detailed-analysis files live in their own cache, so a new app version does not delete them
 const FILES = [
@@ -60,6 +60,7 @@ const FILES = [
   './js/app/scale-visual.js',
   './js/app/scale-history.js',
   './js/app/speaker-test.js',
+  './js/app/speaker-piece.js',
   './js/app/piece-visual.js',
   './js/app/piece-engrave.js',
   './data/builtin/index.json',
