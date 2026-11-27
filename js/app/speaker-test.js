@@ -59,7 +59,7 @@ async function stRunScenario(sce, hooks = {}) {
     const room = stRms(stCat(tap.chunks.slice(-3)));
     const pre = psRender({ inst: 'violin', sr, tl: [{ index: 0, midi: 69, startMs: 0, durationMs: 800 }], level: 'expert', player: { vibrato: false, scoop: 0 }, seed: 2 });   // a steady bowed A4 whatever the instrument: it is a level check
     const n0 = tap.chunks.length; stPlay(c, pre.samples, sr, c.currentTime + 0.1, bus); await stSleep(1500);
-    const lvl = stRms(stCat(tap.chunks.slice(n0 + 1, n0 + 7)));
+    const lvl = tap.chunks.slice(n0).reduce((m, k) => Math.max(m, stRms(k)), 0);   // the loudest block while the test note sounded (it starts about 0.45 s after playback is asked for)
     if (!S.direct && (lvl < room * 3 || lvl < 0.002)) return { ok: false, tooQuiet: true, error: `TOO QUIET: the microphone barely heard the speaker (room ${room.toExponential(2)}, note ${lvl.toExponential(2)}). Raise the speaker volume, move the microphone closer, and use the speaker, not headphones.`, scenario: S };
     log('Starting the Scale drill …');
     const t1 = Date.now(); startScale();
