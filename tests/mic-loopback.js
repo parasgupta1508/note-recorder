@@ -2,6 +2,9 @@
 //   node tests/mic-loopback.js                      loopback: plays notes from the MusicXML scores in tests/samples through the speaker, reads them back with the microphone (detector only)
 //   node tests/mic-loopback.js --mode app           same, but through the REAL tuner screen: checks the note shown, how far off it says it is, and that the in-tune beep fires
 //   node tests/mic-loopback.js --mode listen --sec 10   records the microphone for 10 s while YOU play/sing/whistle, prints the notes heard (any real-sound check)
+//   node tests/mic-loopback.js --mode speaker       the app's own Speaker test: realistic violin / guitar / ukulele performances (vibrato, slurs, plucks, mistakes) are played through the speaker, heard by the REAL microphone,
+//                                                   run through the real Scale drill, and compared with the known truth. --direct (no speaker: the sound goes straight into the app, silent) --set quick (2 takes) | all (7 takes, default) | --inst violin --level weak --vib 0 --bow slur4 --span 2 --bpm 80 --seed 5
+//                                                   --gold  also saves each take as a gold clip (tests/audio/gold/*.wav + .truth.json, git-ignored) for tests/gold.js
 // Options: --score <file.musicxml> (default: every file in tests/samples)  --max <n> notes (default 10, spread over the score's range)  --lo/--hi Hz (listen)  --keep (leave the browser open)
 // Why headed Edge: headless browsers cannot use the microphone. --use-fake-ui-for-media-stream only auto-accepts the permission prompt; the device used is the real default microphone.
 // Recordings are saved to tests/_mic/*.wav (git-ignored) so a failing run can be listened to and re-analysed.
@@ -21,36 +24,61 @@ const nameOf = m => lib.midiName ? lib.midiName(m) : m;
 // ---- tiny local server (localhost counts as a secure context, so the microphone is allowed)
 const core = [...fs.readFileSync(path.join(root, 'index.html'), 'utf8').matchAll(/src="(js\/core\/[^"]+)"/g)].map(m => m[1]);
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml' };
-let finish; const done = new Promise(r => (finish = r)); fs.mkdirSync(path.join(__dirname, '_mic'), { recursive: true });
+const TAKES = []; let finish; const done = new Promise(r => (finish = r)); fs.mkdirSync(path.join(__dirname, '_mic'), { recursive: true });
 const srv = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x'), body = [];
   req.on('data', d => body.push(d)); req.on('end', () => {
     const buf = Buffer.concat(body);
     if (u.pathname === '/api/core') { res.setHeader('content-type', 'application/json'); return res.end(JSON.stringify(core)); }
     if (u.pathname === '/api/result') { res.end('ok'); return finish(JSON.parse(buf.toString())); }
-    if (u.pathname === '/api/wav') { saveWav(u.searchParams.get('name'), buf); return res.end('ok'); }
+    if (u.pathname === '/api/wav') { saveWav(u.searchParams.get('name'), buf, +u.searchParams.get('sr') || 48000); return res.end('ok'); }
+    if (u.pathname === '/api/log') { if (MODE === 'speaker') console.log('  ' + buf.toString()); return res.end('ok'); }
+    if (u.pathname === '/api/take') { const t = JSON.parse(buf.toString()); TAKES.push(t); fs.writeFileSync(path.join(__dirname, '_mic', u.searchParams.get('name') + '.take.json'), JSON.stringify(t)); return res.end('ok'); }
     let p = path.join(root, decodeURIComponent(u.pathname === '/' ? '/index.html' : u.pathname)); if (!p.startsWith(root) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.statusCode = 404; return res.end('no'); }
     let data = fs.readFileSync(p);
-    if (u.pathname === '/index.html' && u.searchParams.get('probe')) data = Buffer.from(data.toString().replace('</body>', '<script src="/tests/mic/app-probe.js"></script></body>'));
+    if (u.pathname === '/index.html' && u.searchParams.get('probe')) data = Buffer.from(data.toString().replace('</body>', `<script src="/tests/mic/${u.searchParams.get('probe') === 'speaker' ? 'speaker' : 'app'}-probe.js"></script></body>`));
     res.setHeader('content-type', types[path.extname(p)] || 'application/octet-stream'); res.setHeader('cache-control', 'no-store'); res.end(data);
   });
 });
-function saveWav(name, buf) {   // 32-bit float mono WAV; sample rate is added by the caller's note in the log (read it from the result)
-  const sr = 48000, n = buf.length / 4, h = Buffer.alloc(44); h.write('RIFF', 0); h.writeUInt32LE(36 + buf.length, 4); h.write('WAVEfmt ', 8); h.writeUInt32LE(16, 16); h.writeUInt16LE(3, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(sr, 24); h.writeUInt32LE(sr * 4, 28); h.writeUInt16LE(4, 32); h.writeUInt16LE(32, 34); h.write('data', 36); h.writeUInt32LE(buf.length, 40);
+function saveWav(name, buf, sr0) {   // 32-bit float mono WAV; sample rate is added by the caller's note in the log (read it from the result)
+  const sr = sr0 || 48000, n = buf.length / 4, h = Buffer.alloc(44); h.write('RIFF', 0); h.writeUInt32LE(36 + buf.length, 4); h.write('WAVEfmt ', 8); h.writeUInt32LE(16, 16); h.writeUInt16LE(3, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(sr, 24); h.writeUInt32LE(sr * 4, 28); h.writeUInt16LE(4, 32); h.writeUInt16LE(32, 34); h.write('data', 36); h.writeUInt32LE(buf.length, 40);
   fs.writeFileSync(path.join(__dirname, '_mic', name + '.wav'), Buffer.concat([h, buf]));
 }
 
 srv.listen(0, '127.0.0.1', async () => {
   const port = srv.address().port, prof = fs.mkdtempSync(path.join(os.tmpdir(), 'mic-test-'));
-  const q = MODE === 'app' ? `/index.html?probe=app&notes=${all.join(',')}` : `/tests/mic/loopback.html?mode=${MODE}&notes=${all.join(',')}&sec=${arg('sec', 8)}&lo=${arg('lo', 70)}&hi=${arg('hi', 2000)}`;
-  if (MODE !== 'listen') console.log(`Playing ${all.length} notes through the speaker (${all.map(nameOf).join(' ')}) - this is audible, about ${Math.ceil(all.length * (MODE === 'app' ? 2.6 : 1.7) + 4)} s.`);
+  const SP = ['inst', 'level', 'vib', 'bow', 'span', 'bpm', 'seed', 'root', 'type', 'grader', 'set', 'direct', 'pos'].filter(k => arg(k, null) != null).map(k => `${k}=${encodeURIComponent(arg(k))}`).join('&');
+  const q = MODE === 'speaker' ? `/index.html?probe=speaker&${SP}` : MODE === 'app' ? `/index.html?probe=app&notes=${all.join(',')}` : `/tests/mic/loopback.html?mode=${MODE}&notes=${all.join(',')}&sec=${arg('sec', 8)}&lo=${arg('lo', 70)}&hi=${arg('hi', 2000)}`;
+  if (MODE === 'speaker') console.log('The app will play realistic instrument sound through the speaker and listen with the microphone. This is audible and takes a few minutes. Raise the speaker volume, use the speaker (not headphones) and keep the room quiet.');
+  else if (MODE !== 'listen') console.log(`Playing ${all.length} notes through the speaker (${all.map(nameOf).join(' ')}) - this is audible, about ${Math.ceil(all.length * (MODE === 'app' ? 2.6 : 1.7) + 4)} s.`);
   else console.log(`Listening for ${arg('sec', 8)} s - make some sound once the browser opens.`);
-  const br = spawn(exe, ['--user-data-dir=' + prof, '--no-first-run', '--no-default-browser-check', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required', '--window-size=560,360', 'http://127.0.0.1:' + port + q], { stdio: 'ignore' });
-  const to = setTimeout(() => finish({ error: 'timed out after 90 s (no result from the browser)' }), 90000);
+  const br = spawn(exe, ['--user-data-dir=' + prof, '--no-first-run', '--no-default-browser-check', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling', '--disable-features=CalculateNativeWinOcclusion', '--window-size=560,360', 'http://127.0.0.1:' + port + q], { stdio: 'ignore' });
+  const to = setTimeout(() => finish({ error: 'timed out (no result from the browser)' }), (MODE === 'speaker' ? 900 : 90) * 1000);
   const r = await done; clearTimeout(to);
   if (!arg('keep', false)) { spawnSync('taskkill', ['/PID', String(br.pid), '/T', '/F'], { stdio: 'ignore' }); }
   srv.close(); let fail = 0; const say = (ok, m) => { console.log((ok ? 'PASS ' : 'FAIL ') + m); if (!ok) fail++; };
   if (r.error) { console.log('FAIL ' + r.error); process.exit(1); }
+  if (r.mode === 'speaker') {
+    const f1 = (x, d = 1) => x == null ? '-' : x.toFixed(d); let quiet = false;
+    for (const t of TAKES) {
+      if (t.error) { console.log(`${t.tooQuiet ? 'TOO QUIET' : 'FAIL'} ${t.name}: ${t.error}`); if (t.tooQuiet) quiet = true; else fail++; continue; }
+      const p = t.pitch, d = t.detection, g = t.grade, tm = t.timing;
+      console.log(`${t.ok ? 'PASS' : 'FAIL'} ${t.name}`);
+      console.log(`     found ${d.found}/${d.played} played notes | pitch error median ${f1(p.medAbs)}c  p95 ${f1(p.p95Abs)}c  bias ${f1(p.bias)}c  (${p.within5}/${p.n} within 5c) | wrong notes: ${d.wrongFlagged}/${d.wrongTruth} flagged, ${d.falseWrong} false | skipped: ${d.skippedTruth}`);
+      console.log(`     onset lag ${f1(tm.latencyMs, 0)} ms, spread ${f1(tm.spreadMs, 0)} ms | score from sound ${g.measured ? g.measured.total + ' ' + g.measured.band : 'n/a'}  deserved ${g.reference.total} ${g.reference.band}  (pitch ${g.measured ? f1(g.measured.pitch, 0) : '-'}/${f1(g.reference.pitch, 0)}  fluency ${g.measured ? f1(g.measured.fluency, 0) : '-'}/${f1(g.reference.fluency, 0)}  tone ${g.measured ? f1(g.measured.tone, 0) : '-'}/${f1(g.reference.tone, 0)})`);
+      for (const c of t.checks.filter(x => !x.ok)) console.log('     problem: ' + c.msg);
+      if (!t.finished && t.debug) console.log('     debug: ' + JSON.stringify(t.debug));
+      if (!t.ok) fail++;
+      if (process.argv.includes('--gold')) {   // a gold clip: the recording and the notes as played (tests/gold.js reads this format)
+        const dir = path.join(root, 'tests', 'audio', 'gold'); fs.mkdirSync(dir, { recursive: true }); const nm = 'speaker-' + t.file.replace(/^speaker-\d+-/, '') + '-' + (t.scenario.seed || 1);
+        fs.copyFileSync(path.join(__dirname, '_mic', t.file + '.wav'), path.join(dir, nm + '.wav'));
+        fs.writeFileSync(path.join(dir, nm + '.truth.json'), JSON.stringify({ instrument: t.scenario.inst, a4: 440, device: 'speaker-to-microphone', player: 'synthetic ' + t.scenario.level,
+          notes: t.truth.filter(x => x.kind !== 'skipped').map(x => ({ midi: x.playedMidi, start: +(t.beatInWavS + x.startMs / 1000).toFixed(3), dur: Math.round(x.endMs - x.startMs), cents: x.cents })) }, null, 1));
+      }
+    }
+    if (quiet) { console.log('INCONCLUSIVE: the microphone barely heard the speaker. Raise the volume and run again.'); process.exit(2); }
+    console.log(fail ? `${fail} of ${TAKES.length} takes FAILED` : `all ${TAKES.length} takes passed`); console.log('recordings and truth: tests/_mic/speaker-*.wav, *.take.json' + (process.argv.includes('--gold') ? '; gold clips: tests/audio/gold/' : '')); process.exit(fail ? 1 : 0);
+  }
   if (r.mode === 'listen') {
     const v = r.frames.filter(f => f.hz); console.log(`mic: ${r.mic}  ${r.sr} Hz  ${v.length}/${r.frames.length} frames had a clear pitch`);
     let last = null, since = 0; const out = []; for (const f of r.frames) { const m = f.hz ? Math.round(69 + 12 * Math.log2(f.hz / 440)) : null; if (m !== last) { if (last != null) out.push(`${nameOf(last)} ${since.toFixed(1)}-${f.t.toFixed(1)}s`); last = m; since = f.t; } }

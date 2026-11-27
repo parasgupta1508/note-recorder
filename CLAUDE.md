@@ -32,6 +32,7 @@ Each benchmark runs the real code and compares with a saved baseline in `tests/b
 | `node tests/detailed-strings.js` | Detailed path with the real Basic Pitch model in Node (about 5 min; needs `tools/node_modules`) | Any change to `bpToEvents`, `markAttacks`, `refineEvents`, `extractMelody`, `resample`, `BP_PARAMS` |
 | `node tests/pitch-sweep.js` | Raw YIN error per semitone and sample rate | Any change to `yin` |
 | `node tests/resample.js` | The resampler keeps pitch and level and does not alias | Any change to `resample` |
+| `node tests/perf-synth.js` | The performance synthesiser: deterministic, each instrument reads at the pitch its truth says (within 2¢), vibrato rate and depth, slurs, plucks decay, player levels are ordered, the truth-versus-heard comparison | Any change to `perf-synth.js` |
 | `node tests/library.js` | Library model: packs to category tree, search, generated scales, transposition and range, bar grid | Any change to `library.js` |
 | `node tests/piece-import.js` | MIDI / MusicXML / .mxl importers and the input detector (fixtures are built in `tests/lib/fixtures.js`) | Any change to `midi.js`, `musicxml.js`, `piece.js` |
 | `node tests/piece-practice.js` | Piece practice, the pure parts: instrument scan of `<part-list>`, one melodic line, the scale-style timeline, bars, accompaniment events | Any change to the core `piece-practice.js`, `piece-visual.js` or `musicxml.js` |
@@ -46,6 +47,7 @@ Not a ratchet and not part of CI: they need a person at the PC, because the note
 |---|---|
 | `node tests/mic-loopback.js` | Plays the notes of the MusicXML scores in `tests/samples/` through the speaker and reads them back with the app's own detector, next to a synthesised control |
 | `node tests/mic-loopback.js --mode app` | Same through the real Tuner screen: note shown, offset, and whether the in-tune beep fires |
+| `node tests/mic-loopback.js --mode speaker` | The app's own **Speaker test** (also in Settings > Accuracy check): realistic violin, guitar and ukulele performances (vibrato, slurs, plucks, mistakes, `js/core/perf-synth.js`) are played through the speaker, heard by the real microphone and run through the real Scale drill; the result is compared with the known truth (pitch error, notes found, wrong notes, onset lag, score from sound against the score the performance deserves). `--set quick`, `--inst violin --level weak --vib 0 --bow slur4 --span 2 --pos mid --root 2 --seed 5`, `--gold` saves each take as a gold clip. `--direct` sends the sound straight into the app (silent, no speaker or microphone: checks the software only). A small laptop speaker cannot play below about 230 Hz, so notes below that are left out of the figures and the scales start above it |
 | `node tests/mic-loopback.js --mode listen --sec 10` | Records the mic while you play/sing and prints the notes heard (use for any real-sound check; `--lo/--hi` set the Hz range) |
 | `node tests/tuner-musicxml.js` | Synthesised-only version of the above (no speaker, runs anywhere) |
 

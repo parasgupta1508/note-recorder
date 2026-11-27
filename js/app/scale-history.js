@@ -33,6 +33,7 @@ async function runsLoad() {
 }
 function runsPersistFail() { RUNS_LS = true; lsSet(RUNS_KEY, RUNS); }
 function runsAdd(rec) {
+  if (window.stActive) return;   // the speaker test runs the real drill on a scratch player: its runs are not kept
   const before = RUNS; RUNS = histAdd(RUNS, rec);
   if (RUNS_LS) { lsSet(RUNS_KEY, RUNS); return; }
   const dropped = before.filter(r => !RUNS.includes(r));

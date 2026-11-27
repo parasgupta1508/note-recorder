@@ -517,7 +517,17 @@
     <div class="row"><button id="selftest" class="sec">Software test</button><button id="livetest" class="sec">Live check</button></div>
     <p class="hint2" id="lcMsg" style="margin:10px 0 0">Live check: tap, then play one steady note for 4 seconds (turn the microphone on first).</p>
     <div class="kv hide" id="lcOut"></div>
-    <div id="stOut" style="margin-top:10px"></div></div>
+    <div id="stOut" style="margin-top:10px"></div>
+    <div style="margin-top:18px"><b>Speaker test</b></div>
+    <p class="hint2" style="margin:4px 0 8px">The app plays a realistic violin, guitar or ukulele performance (vibrato, slurs, plucks, small mistakes) through your speaker, listens with the microphone, runs the real Scale drill on it, and compares what it heard with what was really played. Raise the volume, use the speaker (not headphones) and keep the room quiet. It uses a scratch player: nothing is added to anyone's scores.</p>
+    <div class="grid">
+      <label class="field"><span>Instrument</span><select id="stInst"><option value="violin">Violin</option><option value="guitar">Guitar</option><option value="ukulele">Ukulele</option></select></label>
+      <label class="field"><span>Player</span><select id="stLevel"><option value="expert">Expert</option><option value="good" selected>Good</option><option value="average">Average</option><option value="weak">Weak</option></select></label>
+      <label class="field"><span>Bowing (violin)</span><select id="stBow"><option value="separate">Separate bows</option><option value="slur4">Four notes to a bow</option></select></label>
+    </div>
+    <label class="check" style="margin-top:8px"><input type="checkbox" id="stVib" checked> Vibrato (violin)</label>
+    <div class="row" style="margin-top:10px"><button id="stRun" class="sec">Run one test</button><button id="stAll" class="sec">Run the full set</button><button id="stStop" class="sec hide">Stop</button></div>
+    <p class="hint2" id="stMsg" role="status" style="margin:8px 0 0"></p><div id="stRes" style="margin-top:8px"></div><div id="stFiles" class="row" style="margin-top:8px"></div></div>
   <div class="set-group" data-g="data"><h3>Backup &amp; restore</h3><p>Saves every player's scores and history in one file. Send it to yourself by WhatsApp or email, or keep the downloaded copy. A backup can only be imported if its version number is higher than the data on this device.</p>
     <div class="hint2" id="verInfo"></div>
     <div class="row" style="margin-top:10px"><button id="bkShare">Back up &amp; share</button><button id="bkDl" class="sec">Save file only</button><button id="bkImp" class="sec">Import backup…</button><input type="file" id="impFile" class="hide" accept=".json,.txt,application/json,text/plain"></div>
@@ -546,6 +556,7 @@
 <script src="js/core/scoring.js"></script>
 <script src="js/core/evaluation.js"></script>
 <script src="js/core/history.js"></script>
+<script src="js/core/perf-synth.js"></script>
 <script src="js/core/coach.js"></script>
 <script src="js/core/visual.js"></script>
 <script src="js/core/segmenter.js"></script>
@@ -584,6 +595,7 @@
 <script src="js/app/scale-grade.js"></script>
 <script src="js/app/scale-visual.js"></script>
 <script src="js/app/scale-history.js"></script>
+<script src="js/app/speaker-test.js"></script>
 <script src="js/app/piece-visual.js"></script>
 <script src="js/app/piece-engrave.js"></script>
 <script src="js/app/piece-engine.js"></script>

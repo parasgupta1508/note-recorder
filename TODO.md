@@ -47,3 +47,12 @@
 - [ ] The local checkout of `main` was 18 commits behind GitHub and holds an unfinished experiment (Recorder views Staff/Tab/Fingerboard/Roll: `js/core/fingerboard.js`, `instrument-views.js` missing). The Scale drills now have these displays, so decide whether that experiment is still wanted before it is merged or deleted.
 - [ ] Grand staff: beams between the two staves, notes that cross between staves keep the split at middle C.
 - [ ] Add the piece favourites, tags and tag names (`tuner-piece-meta-v1`, `tuner-piece-tags-v1`) to the backup / restore file.
+
+## Evaluation audit follow-ups (deferred on purpose)
+
+- [ ] **Progress charts must not mix graders.** `histRecord` stores which grader scored a run (`eng`), but `histTrend` ignores it, so switching between Strict and Practical makes a chart jump by up to 20 points. Plot or filter by grader.
+- [ ] **Web MIDI input** for keyboards (`navigator.requestMIDIAccess`; not on iOS Safari). It could feed `onAttempt({ t, midi, cents, hz })` for single notes; polyphonic chords need new matching, and the pitch pillar means nothing for a keyboard, so the weights need rethinking.
+- [ ] **Latency-calibrated onsets, elastic tempo for pieces, AudioWorklet / Worker for the pitch loop.** The measured speaker-to-microphone lag is about 60 ms in software and about 220 ms through a laptop speaker and microphone; the scorer forgives a constant lag but the skip rule does not.
+- [ ] **Teacher-marked calibration set.** Record real scales and pieces and have a teacher mark them, then tune the grader thresholds against those marks (the speaker test gives known-truth sound, not teacher opinion).
+- [ ] **Speaker test on a quiet room with the volume raised.** The real-speaker run stops at "TOO QUIET" when the microphone barely hears the speaker; run `node tests/mic-loopback.js --mode speaker --gold` once the volume is up to collect the 20-30 clips.
+
