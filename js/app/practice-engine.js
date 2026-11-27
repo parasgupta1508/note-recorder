@@ -5,6 +5,7 @@ function fillSel(sel, pairs, val) { sel.innerHTML = ''; pairs.forEach(([v, t]) =
 // The selectors depend on the instrument: its bowing or position control, and a note about its range and where the scale starts.
 function applyLimits() {
   const inst = $('scInst').value, rule = ruleFor(inst), c = controls(inst);
+  smpPreload(inst);   // the recordings that Hear scale will play
   for (const [k, id] of [['bowing', 'scBow'], ['position', 'scPos']]) {       // bowing and position, only where the instrument has them
     const o = c[k], cur = $(id).value; $(id + 'Wrap').hidden = !o;
     fillSel($(id), o ? o.options.map(x => [x.value, x.label]) : [], o && o.options.some(x => x.value === cur) ? cur : o ? o.def : '');
@@ -187,7 +188,7 @@ function startDemo() {
   const at = getCtx().currentTime + 0.08;    // one time for the first note, the click and the cursor
   if (metroOn) startMetro(at);
   demoIdx = 0; SV.demoT0 = at; $('scDemo').textContent = '■ Stop demo';   // the audio clock time of the first note: the cursor glides on it
-  refPlay(p.tl, { at, onNote: i => { demoIdx = i; renderScale(); }, onEnd: stopDemo });
+  refPlay(p.tl, { at, inst: p.inst, onNote: i => { demoIdx = i; renderScale(); }, onEnd: stopDemo });
   renderScale();
 }
 $('scDemo').onclick = () => { if (demoIdx >= 0) stopDemo(); else startDemo(); };

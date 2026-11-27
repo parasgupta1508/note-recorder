@@ -2,13 +2,20 @@
 // Part of the app. Scripts in js/app load in the order listed in index.html and share one scope.
 
 // ----- Hear scale: one oscillator per bow, so a slur is really legato (no new attack inside a slur) -----
-const REF = { timer: null, groups: [], gi: 0, ui: [], nodes: [], playing: false, onEnd: null };
+const REF = { timer: null, groups: [], gi: 0, ui: [], nodes: [], playing: false, onEnd: null, inst: null };   // inst: the instrument whose recordings play it (js/app/sampler.js); null = the plain tone
 function refGroups(tl) {                       // notes that share a bow, in order
   const gs = [];
   tl.forEach(n => { if (n.slurStart || !gs.length) gs.push([n]); else gs[gs.length - 1].push(n); });
   return gs;
 }
 function refSchedule(c, g, t0, A, vol) {       // t0: audio time of the scale's first beat
+  if (REF.inst && smpBank(REF.inst)) {         // the real instrument: one recording per note; a note slurred from the one before skips the bow's attack, so a slur is still legato
+    g.forEach((n, i) => {
+      const node = smpPlay(c, REF.inst, n.midi, t0 + n.startMs / 1000, n.durationMs / 1000 + (i < g.length - 1 ? 0.02 : 0), { legato: i > 0 });
+      if (node) { REF.nodes.push(node); node.onended = () => { REF.nodes = REF.nodes.filter(x => x !== node); }; }
+    });
+    return;
+  }
   const o = c.createOscillator(), lp = c.createBiquadFilter(), gn = c.createGain();
   o.type = 'triangle'; lp.type = 'lowpass'; lp.frequency.value = 3200;
   const s = t0 + g[0].startMs / 1000, last = g[g.length - 1], e = t0 + (last.startMs + last.durationMs) / 1000;
@@ -22,7 +29,7 @@ function refSchedule(c, g, t0, A, vol) {       // t0: audio time of the scale's 
 function refPlay(tl, opts = {}) {
   refStop(); if (!tl.length) return;
   const c = getCtx(), A = a4(), t0 = opts.at != null ? opts.at : c.currentTime + (opts.delay == null ? 0.1 : opts.delay);
-  REF.groups = refGroups(tl); REF.gi = 0; REF.playing = true; REF.onEnd = opts.onEnd || null;
+  REF.groups = refGroups(tl); REF.gi = 0; REF.playing = true; REF.onEnd = opts.onEnd || null; REF.inst = opts.inst ? smpKey(opts.inst) : null; if (REF.inst) smpPreload(REF.inst);
   const pump = () => {
     while (REF.gi < REF.groups.length && t0 + REF.groups[REF.gi][0].startMs / 1000 < c.currentTime + 0.35) {
       const g = REF.groups[REF.gi++]; refSchedule(c, g, t0, A, 0.22);

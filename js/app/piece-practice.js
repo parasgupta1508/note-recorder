@@ -233,6 +233,7 @@ function ppBackingPump() {
   while (PPB.i < PPB.events.length) {
     const e = PPB.events[PPB.i], at = PPB.t0 + e.startMs / 1000; if (at > c.currentTime + 0.8) break; PPB.i++;
     const d = e.durationMs / 1000; if (at + d < c.currentTime) continue;
+    if (smpBank('piano')) { const node = smpPlay(c, 'piano', e.midi, Math.max(at, c.currentTime), d, { vol: 0.7 }); if (node) { PPB.nodes.push(node); node.onended = () => { PPB.nodes = PPB.nodes.filter(x => x !== node); }; continue; } }   // the accompaniment is a piano
     const o = c.createOscillator(), g = c.createGain(), lp = c.createBiquadFilter(), a = Math.max(at, c.currentTime);
     o.type = 'triangle'; o.frequency.value = noteToFreq(e.midi, A); lp.type = 'lowpass'; lp.frequency.value = 2600;
     g.gain.setValueAtTime(0.0001, a); g.gain.linearRampToValueAtTime(0.09, a + 0.02); g.gain.setValueAtTime(0.09, Math.max(a + 0.02, at + d - 0.06)); g.gain.linearRampToValueAtTime(0.0001, at + d);

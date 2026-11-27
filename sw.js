@@ -1,6 +1,7 @@
 // Service worker: makes the app installable and usable offline.
 // Bump CACHE whenever you change any file, so installed copies pick up the update.
-const CACHE = 'tuner-v89';
+const CACHE = 'tuner-v90';
+const SAMPLES = 'tuner-samples-v1';   // the instrument recordings (data/samples/), about 3.6 MB: fetched on first use, then kept, and not deleted by a new app version
 const VENDOR = 'tuner-vendor-v1';   // the Detailed-analysis files live in their own cache, so a new app version does not delete them
 const FILES = [
   './',
@@ -18,6 +19,7 @@ const FILES = [
   './js/core/evaluation.js',
   './js/core/history.js',
   './js/core/perf-synth.js',
+  './js/core/sampler.js',
   './js/core/coach.js',
   './js/core/visual.js',
   './js/core/segmenter.js',
@@ -49,6 +51,7 @@ const FILES = [
   './js/app/analysis.js',
   './js/app/players.js',
   './js/app/metronome.js',
+  './js/app/sampler.js',
   './js/app/reference.js',
   './js/app/selftest.js',
   './js/app/settings-ui.js',
@@ -85,7 +88,7 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== VENDOR).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== VENDOR && k !== SAMPLES).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
 // Network first (so updates show up when online), falling back to the cache when offline.
@@ -94,6 +97,10 @@ self.addEventListener('fetch', e => {
   if (new URL(e.request.url).origin !== self.location.origin) return;   // other sites (GitHub scores, the local helper) go straight to the network: never kept in a cache, never answered with index.html
   if (new URL(e.request.url).pathname.includes('/vendor/')) {   // big, rarely changing: cache first, fill on first use
     e.respondWith(caches.open(VENDOR).then(c => c.match(e.request).then(hit => hit || fetch(e.request).then(res => { if (res.ok) c.put(e.request, res.clone()); return res; }))));
+    return;
+  }
+  if (new URL(e.request.url).pathname.includes('/data/samples/')) {   // recordings never change under the same name: cache first, fill on first use
+    e.respondWith(caches.open(SAMPLES).then(c => c.match(e.request).then(hit => hit || fetch(e.request).then(res => { if (res.ok) c.put(e.request, res.clone()); return res; }))));
     return;
   }
   e.respondWith(

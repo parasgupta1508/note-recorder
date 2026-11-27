@@ -33,6 +33,8 @@ Each benchmark runs the real code and compares with a saved baseline in `tests/b
 | `node tests/pitch-sweep.js` | Raw YIN error per semitone and sample rate | Any change to `yin` |
 | `node tests/resample.js` | The resampler keeps pitch and level and does not alias | Any change to `resample` |
 | `node tests/perf-synth.js` | The performance synthesiser: deterministic, each instrument reads at the pitch its truth says (within 2¢), vibrato rate and depth, slurs, plucks decay, player levels are ordered, the truth-versus-heard comparison | Any change to `perf-synth.js` |
+| `node tests/sampler.js` | The instrument sampler (`js/core/sampler.js`) and the real recordings in `data/samples/` (CC0: VSCO 2 CE solo violin, FreePats classical guitar, ukulele, upright piano): notes come out at the pitch asked (within 3¢), start on the beat, keep their own vibrato or decay, a long bowed note loops, a whole performance reads back as its truth. Needs ffmpeg | Any change to `sampler.js`, `perf-synth.js` or `data/samples/` |
+| `node tests/smoke-sampler.js` | The browser side (`js/app/sampler.js`): the recordings load and decode over HTTP, a note played into an offline context is in tune, Hear scale plays the recordings and falls back to the plain tone without a bank | Any change to `js/app/sampler.js` or the playback code |
 | `node tests/attempt-detector.js` | `AttemptDetector`: a repeated note without a pause is found only when a repeat is expected and only by a deep, quick dip in level (never by vibrato or a swell); the capture helpers (`holdClarity`, `heldRatio`, `heardShare`); the listening share in the result; the piece coach keys notes by place | Any change to `AttemptDetector` or the helpers in `scoring.js` |
 | `node tests/library.js` | Library model: packs to category tree, search, generated scales, transposition and range, bar grid | Any change to `library.js` |
 | `node tests/piece-import.js` | MIDI / MusicXML / .mxl importers and the input detector (fixtures are built in `tests/lib/fixtures.js`) | Any change to `midi.js`, `musicxml.js`, `piece.js` |
@@ -53,6 +55,12 @@ Not a ratchet and not part of CI: they need a person at the PC, because the note
 | `node tests/tuner-musicxml.js` | Synthesised-only version of the above (no speaker, runs anywhere) |
 
 If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. When you add a detection feature, add a benchmark case for it first. `DBG="guitar mid clean auto" node tests/strings.js` prints expected versus found notes; `KIND=repeat`, `ONLY=ukulele` narrow the Detailed run.
+
+## Instrument sounds
+
+- Hear scale, Hear piece, the piece accompaniment (piano), the Pieces "Listen" button and the speaker test play **real recordings** (`data/samples/<inst>/`, loaded by `js/app/sampler.js`, chosen and re-pitched by `js/core/sampler.js`). Every recording is CC0 (`data/samples/README.txt` names the sources). A bank that is not loaded yet (first use, or offline before it was ever fetched) falls back to the old oscillator tone, so nothing is silent.
+- The recordings are built from the originals by `node tools/samples/build.js <folder>` (the header lists what goes in it). The build measures each recording's real pitch with `yin()` (some are 20 cents from their key's name), its level, and the violin's own vibrato. **File names use `s` for sharp, never `#`** (a `#` in a URL starts a fragment and the file cannot be fetched).
+- The banks are cached by the service worker in their own `tuner-samples-v1` cache (about 3.6 MB, filled on first use, kept across app versions).
 
 ## Detection facts worth remembering
 

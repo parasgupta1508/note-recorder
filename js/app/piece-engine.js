@@ -25,7 +25,7 @@ function peScoreRun(slots, opts) { const { e, ctx } = peCtx(0); return e.evaluat
 // ----- starting over -----
 function peReset() {
   peFinalize(); clearTimeout(PE.runTimer); PE.runPass = 0; PE.pass = 1; PE.passes = []; PE.lastRun = null; peRenderResult();
-  const p = ppPlan(); PE.plan = p; PE.tl = p.tl; PE.seq = p.tl.map(n => n.midi); PE.bpm = p.bpm;
+  const p = ppPlan(); PE.plan = p; PE.tl = p.tl; PE.seq = p.tl.map(n => n.midi); PE.bpm = p.bpm; smpPreload(p.inst); smpPreload('piano');   // the piece's own recordings, and the piano that accompanies it
   PE.pos = 0; PE.grades = []; PE.attempts = []; PE.wrong = 0; PE.running = false; PE.slots = []; PE.slotAt = {}; PE.clock = null; PE.waitFrames = []; PE.waitOk = 0; PE.needGap = false; PE.devHist = []; PE.hold = null;
   PE.liveC = []; PE.silent = 99; peDet.cur = null; peDet.lastMidi = null; peClickStop(); if (typeof ppBackingStop === 'function') ppBackingStop();
   $('pzStart').textContent = 'Start practice'; peMsg('');
@@ -96,7 +96,7 @@ function peDemo() {
   if (PE.click) peClickPass(at, 0, p.beats);
   if (typeof ppBackingBegin === 'function') ppBackingBegin(at, true);
   PE.demo = 0; PW.demoT0 = at;
-  refPlay(p.tl, { at, onNote: i => { PE.demo = i; }, onEnd: peStopDemo });
+  refPlay(p.tl, { at, inst: p.inst, onNote: i => { PE.demo = i; }, onEnd: peStopDemo });
   peUi();
 }
 

@@ -1,0 +1,400 @@
+{
+ "inst": "violin",
+ "kind": "bowed",
+ "license": "CC0 1.0",
+ "credit": "VSCO 2 Community Edition (Versilian Studios / Sam Gossner), Solo Violin, Arco Vib",
+ "url": "https://github.com/sgossner/VSCO-2-CE",
+ "sr": 44100,
+ "files": [
+  {
+   "midi": 55,
+   "layer": "f",
+   "file": "G3_f.mp3",
+   "cents": -1.03,
+   "rms": 0.05184,
+   "peak": 0.1613,
+   "vib": {
+    "hz": 5.5,
+    "depth": 2.9
+   },
+   "dur": 5
+  },
+  {
+   "midi": 55,
+   "layer": "p",
+   "file": "G3_p.mp3",
+   "cents": -3,
+   "rms": 0.02356,
+   "peak": 0.0587,
+   "vib": {
+    "hz": 5.5,
+    "depth": 0.9
+   },
+   "dur": 5
+  },
+  {
+   "midi": 57,
+   "layer": "f",
+   "file": "A3_f.mp3",
+   "cents": 0.65,
+   "rms": 0.04174,
+   "peak": 0.1571,
+   "vib": {
+    "hz": 5,
+    "depth": 5.8
+   },
+   "dur": 5
+  },
+  {
+   "midi": 57,
+   "layer": "p",
+   "file": "A3_p.mp3",
+   "cents": 3.83,
+   "rms": 0.00614,
+   "peak": 0.0261,
+   "vib": {
+    "hz": 4.55,
+    "depth": 4.5
+   },
+   "dur": 5
+  },
+  {
+   "midi": 60,
+   "layer": "f",
+   "file": "C4_f.mp3",
+   "cents": -6.99,
+   "rms": 0.13004,
+   "peak": 0.4391,
+   "vib": {
+    "hz": 5.56,
+    "depth": 15.9
+   },
+   "dur": 5
+  },
+  {
+   "midi": 60,
+   "layer": "p",
+   "file": "C4_p.mp3",
+   "cents": 23.07,
+   "rms": 0.03091,
+   "peak": 0.1091,
+   "vib": {
+    "hz": 4.55,
+    "depth": 7.5
+   },
+   "dur": 5
+  },
+  {
+   "midi": 64,
+   "layer": "f",
+   "file": "E4_f.mp3",
+   "cents": 4.89,
+   "rms": 0.06648,
+   "peak": 0.2718,
+   "vib": {
+    "hz": 4.76,
+    "depth": 8.7
+   },
+   "dur": 5
+  },
+  {
+   "midi": 64,
+   "layer": "p",
+   "file": "E4_p.mp3",
+   "cents": 6.99,
+   "rms": 0.01946,
+   "peak": 0.0765,
+   "vib": {
+    "hz": 5.5,
+    "depth": 2.7
+   },
+   "dur": 5
+  },
+  {
+   "midi": 67,
+   "layer": "f",
+   "file": "G4_f.mp3",
+   "cents": 2.09,
+   "rms": 0.04624,
+   "peak": 0.1643,
+   "vib": {
+    "hz": 5.56,
+    "depth": 12.2
+   },
+   "dur": 5
+  },
+  {
+   "midi": 67,
+   "layer": "p",
+   "file": "G4_p.mp3",
+   "cents": -1.73,
+   "rms": 0.01026,
+   "peak": 0.0492,
+   "vib": {
+    "hz": 4.35,
+    "depth": 6.7
+   },
+   "dur": 5
+  },
+  {
+   "midi": 69,
+   "layer": "f",
+   "file": "A4_f.mp3",
+   "cents": 14.7,
+   "rms": 0.05368,
+   "peak": 0.265,
+   "vib": {
+    "hz": 5.56,
+    "depth": 10.9
+   },
+   "dur": 5
+  },
+  {
+   "midi": 69,
+   "layer": "p",
+   "file": "A4_p.mp3",
+   "cents": 1.49,
+   "rms": 0.01664,
+   "peak": 0.068,
+   "vib": {
+    "hz": 4,
+    "depth": 9.1
+   },
+   "dur": 5
+  },
+  {
+   "midi": 72,
+   "layer": "f",
+   "file": "C5_f.mp3",
+   "cents": -0.59,
+   "rms": 0.1199,
+   "peak": 0.3877,
+   "vib": {
+    "hz": 5,
+    "depth": 8.9
+   },
+   "dur": 5
+  },
+  {
+   "midi": 72,
+   "layer": "p",
+   "file": "C5_p.mp3",
+   "cents": -2.62,
+   "rms": 0.04494,
+   "peak": 0.1123,
+   "vib": {
+    "hz": 4.55,
+    "depth": 9.2
+   },
+   "dur": 5
+  },
+  {
+   "midi": 76,
+   "layer": "f",
+   "file": "E5_f.mp3",
+   "cents": 14.42,
+   "rms": 0.05073,
+   "peak": 0.2051,
+   "vib": {
+    "hz": 5.88,
+    "depth": 13.7
+   },
+   "dur": 5
+  },
+  {
+   "midi": 76,
+   "layer": "p",
+   "file": "E5_p.mp3",
+   "cents": 5.66,
+   "rms": 0.01095,
+   "peak": 0.0485,
+   "vib": {
+    "hz": 5.26,
+    "depth": 6.1
+   },
+   "dur": 5
+  },
+  {
+   "midi": 79,
+   "layer": "f",
+   "file": "G5_f.mp3",
+   "cents": 4.95,
+   "rms": 0.04974,
+   "peak": 0.2335,
+   "vib": {
+    "hz": 5.26,
+    "depth": 8.4
+   },
+   "dur": 5
+  },
+  {
+   "midi": 79,
+   "layer": "p",
+   "file": "G5_p.mp3",
+   "cents": 1.75,
+   "rms": 0.01159,
+   "peak": 0.059,
+   "vib": {
+    "hz": 5,
+    "depth": 5.2
+   },
+   "dur": 5
+  },
+  {
+   "midi": 81,
+   "layer": "f",
+   "file": "A5_f.mp3",
+   "cents": 2.75,
+   "rms": 0.08805,
+   "peak": 0.3197,
+   "vib": {
+    "hz": 5.56,
+    "depth": 14.1
+   },
+   "dur": 5
+  },
+  {
+   "midi": 81,
+   "layer": "p",
+   "file": "A5_p.mp3",
+   "cents": 0.45,
+   "rms": 0.01557,
+   "peak": 0.076,
+   "vib": {
+    "hz": 4.76,
+    "depth": 6.8
+   },
+   "dur": 5
+  },
+  {
+   "midi": 84,
+   "layer": "f",
+   "file": "C6_f.mp3",
+   "cents": -1.81,
+   "rms": 0.07497,
+   "peak": 0.2725,
+   "vib": {
+    "hz": 5.88,
+    "depth": 17.7
+   },
+   "dur": 5
+  },
+  {
+   "midi": 84,
+   "layer": "p",
+   "file": "C6_p.mp3",
+   "cents": -0.34,
+   "rms": 0.01534,
+   "peak": 0.0622,
+   "vib": {
+    "hz": 4.76,
+    "depth": 9.8
+   },
+   "dur": 5
+  },
+  {
+   "midi": 88,
+   "layer": "f",
+   "file": "E6_f.mp3",
+   "cents": 12.1,
+   "rms": 0.0408,
+   "peak": 0.1902,
+   "vib": {
+    "hz": 5.56,
+    "depth": 17.7
+   },
+   "dur": 5
+  },
+  {
+   "midi": 88,
+   "layer": "p",
+   "file": "E6_p.mp3",
+   "cents": 7.52,
+   "rms": 0.01062,
+   "peak": 0.0507,
+   "vib": {
+    "hz": 5,
+    "depth": 9.6
+   },
+   "dur": 5
+  },
+  {
+   "midi": 91,
+   "layer": "f",
+   "file": "G6_f.mp3",
+   "cents": 1.97,
+   "rms": 0.04551,
+   "peak": 0.2118,
+   "vib": {
+    "hz": 6.25,
+    "depth": 20.2
+   },
+   "dur": 5
+  },
+  {
+   "midi": 91,
+   "layer": "p",
+   "file": "G6_p.mp3",
+   "cents": 4.57,
+   "rms": 0.00601,
+   "peak": 0.0424,
+   "vib": {
+    "hz": 5,
+    "depth": 6.5
+   },
+   "dur": 5
+  },
+  {
+   "midi": 93,
+   "layer": "f",
+   "file": "A6_f.mp3",
+   "cents": 7.72,
+   "rms": 0.04793,
+   "peak": 0.2687,
+   "vib": {
+    "hz": 3.45,
+    "depth": 10.6
+   },
+   "dur": 5
+  },
+  {
+   "midi": 93,
+   "layer": "p",
+   "file": "A6_p.mp3",
+   "cents": -2.57,
+   "rms": 0.01062,
+   "peak": 0.0497,
+   "vib": {
+    "hz": 5.88,
+    "depth": 5.9
+   },
+   "dur": 5
+  },
+  {
+   "midi": 96,
+   "layer": "f",
+   "file": "C7_f.mp3",
+   "cents": -5.79,
+   "rms": 0.03622,
+   "peak": 0.1678,
+   "vib": {
+    "hz": 6.25,
+    "depth": 17.7
+   },
+   "dur": 5
+  },
+  {
+   "midi": 96,
+   "layer": "p",
+   "file": "C7_p.mp3",
+   "cents": 2.09,
+   "rms": 0.00823,
+   "peak": 0.0343,
+   "vib": {
+    "hz": 3.23,
+    "depth": 5.4
+   },
+   "dur": 5
+  }
+ ]
+}

@@ -1,0 +1,490 @@
+{
+ "inst": "guitar",
+ "kind": "plucked",
+ "license": "CC0 1.0",
+ "credit": "FreePats Spanish Classical Guitar (Roberto Garcia)",
+ "url": "https://freepats.zenvoid.org/Guitar/acoustic-guitar.html",
+ "sr": 44100,
+ "files": [
+  {
+   "midi": 31,
+   "layer": null,
+   "file": "G1.mp3",
+   "cents": 7.17,
+   "rms": 0.25354,
+   "peak": 0.9884,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 32,
+   "layer": null,
+   "file": "Gs1.mp3",
+   "cents": 1.45,
+   "rms": 0.22545,
+   "peak": 0.9886,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 33,
+   "layer": null,
+   "file": "A1.mp3",
+   "cents": -1.41,
+   "rms": 0.2975,
+   "peak": 0.9885,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 34,
+   "layer": null,
+   "file": "As1.mp3",
+   "cents": 4.11,
+   "rms": 0.2749,
+   "peak": 0.9886,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 35,
+   "layer": null,
+   "file": "B1.mp3",
+   "cents": 1.21,
+   "rms": 0.22564,
+   "peak": 0.9885,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 36,
+   "layer": null,
+   "file": "C2.mp3",
+   "cents": 2.94,
+   "rms": 0.15028,
+   "peak": 0.988,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 37,
+   "layer": null,
+   "file": "Cs2.mp3",
+   "cents": -2.14,
+   "rms": 0.13376,
+   "peak": 0.9886,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 38,
+   "layer": null,
+   "file": "D2.mp3",
+   "cents": -2.46,
+   "rms": 0.13116,
+   "peak": 0.9885,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 39,
+   "layer": null,
+   "file": "Ds2.mp3",
+   "cents": 0.7,
+   "rms": 0.15235,
+   "peak": 0.9886,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 40,
+   "layer": null,
+   "file": "E2.mp3",
+   "cents": 0.47,
+   "rms": 0.18721,
+   "peak": 0.9873,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 41,
+   "layer": null,
+   "file": "F2.mp3",
+   "cents": 8.03,
+   "rms": 0.12265,
+   "peak": 0.9874,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 43,
+   "layer": null,
+   "file": "G2.mp3",
+   "cents": 8.8,
+   "rms": 0.13266,
+   "peak": 0.9884,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 45,
+   "layer": null,
+   "file": "A2.mp3",
+   "cents": 0.96,
+   "rms": 0.08813,
+   "peak": 0.9884,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 47,
+   "layer": null,
+   "file": "B2.mp3",
+   "cents": 7.93,
+   "rms": 0.11032,
+   "peak": 0.9892,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 48,
+   "layer": null,
+   "file": "C3.mp3",
+   "cents": 0.08,
+   "rms": 0.0713,
+   "peak": 0.9883,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 50,
+   "layer": null,
+   "file": "D3.mp3",
+   "cents": 3.65,
+   "rms": 0.12519,
+   "peak": 0.9721,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 52,
+   "layer": null,
+   "file": "E3.mp3",
+   "cents": 3.38,
+   "rms": 0.12017,
+   "peak": 0.9881,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 53,
+   "layer": null,
+   "file": "F3.mp3",
+   "cents": 3.29,
+   "rms": 0.14107,
+   "peak": 0.9886,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 54,
+   "layer": null,
+   "file": "Fs3.mp3",
+   "cents": 2.73,
+   "rms": 0.21236,
+   "peak": 0.9906,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 55,
+   "layer": null,
+   "file": "G3.mp3",
+   "cents": 2.78,
+   "rms": 0.0874,
+   "peak": 0.9877,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 56,
+   "layer": null,
+   "file": "Gs3.mp3",
+   "cents": 8.58,
+   "rms": 0.08777,
+   "peak": 0.9886,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 57,
+   "layer": null,
+   "file": "A3.mp3",
+   "cents": 9.19,
+   "rms": 0.06389,
+   "peak": 0.9881,
+   "vib": null,
+   "dur": 2.53
+  },
+  {
+   "midi": 58,
+   "layer": null,
+   "file": "As3.mp3",
+   "cents": 10.76,
+   "rms": 0.10629,
+   "peak": 0.9877,
+   "vib": null,
+   "dur": 2.49
+  },
+  {
+   "midi": 59,
+   "layer": null,
+   "file": "B3.mp3",
+   "cents": 10.62,
+   "rms": 0.11035,
+   "peak": 0.9883,
+   "vib": null,
+   "dur": 2.27
+  },
+  {
+   "midi": 60,
+   "layer": null,
+   "file": "C4.mp3",
+   "cents": 8.21,
+   "rms": 0.05925,
+   "peak": 0.9879,
+   "vib": null,
+   "dur": 2.42
+  },
+  {
+   "midi": 61,
+   "layer": null,
+   "file": "Cs4.mp3",
+   "cents": 16.56,
+   "rms": 0.09521,
+   "peak": 0.9895,
+   "vib": null,
+   "dur": 2.89
+  },
+  {
+   "midi": 62,
+   "layer": null,
+   "file": "D4.mp3",
+   "cents": 7.32,
+   "rms": 0.10811,
+   "peak": 0.9897,
+   "vib": null,
+   "dur": 3.06
+  },
+  {
+   "midi": 63,
+   "layer": null,
+   "file": "Ds4.mp3",
+   "cents": 8.34,
+   "rms": 0.12933,
+   "peak": 0.9879,
+   "vib": null,
+   "dur": 3.13
+  },
+  {
+   "midi": 64,
+   "layer": null,
+   "file": "E4.mp3",
+   "cents": -0.43,
+   "rms": 0.08215,
+   "peak": 0.9709,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 65,
+   "layer": null,
+   "file": "F4.mp3",
+   "cents": 2.37,
+   "rms": 0.09246,
+   "peak": 0.9888,
+   "vib": null,
+   "dur": 3.11
+  },
+  {
+   "midi": 66,
+   "layer": null,
+   "file": "Fs4.mp3",
+   "cents": 2.73,
+   "rms": 0.11092,
+   "peak": 0.9926,
+   "vib": null,
+   "dur": 3.14
+  },
+  {
+   "midi": 67,
+   "layer": null,
+   "file": "G4.mp3",
+   "cents": 2.84,
+   "rms": 0.10023,
+   "peak": 0.9909,
+   "vib": null,
+   "dur": 2.41
+  },
+  {
+   "midi": 69,
+   "layer": null,
+   "file": "A4.mp3",
+   "cents": 2.82,
+   "rms": 0.17873,
+   "peak": 0.9934,
+   "vib": null,
+   "dur": 3.2
+  },
+  {
+   "midi": 70,
+   "layer": null,
+   "file": "As4.mp3",
+   "cents": -0.62,
+   "rms": 0.04587,
+   "peak": 0.9842,
+   "vib": null,
+   "dur": 2.37
+  },
+  {
+   "midi": 71,
+   "layer": null,
+   "file": "B4.mp3",
+   "cents": 11.15,
+   "rms": 0.05984,
+   "peak": 0.9855,
+   "vib": null,
+   "dur": 1.9
+  },
+  {
+   "midi": 72,
+   "layer": null,
+   "file": "C5.mp3",
+   "cents": 9.02,
+   "rms": 0.03739,
+   "peak": 0.9832,
+   "vib": null,
+   "dur": 1.56
+  },
+  {
+   "midi": 73,
+   "layer": null,
+   "file": "Cs5.mp3",
+   "cents": 8.85,
+   "rms": 0.07837,
+   "peak": 0.9883,
+   "vib": null,
+   "dur": 1.75
+  },
+  {
+   "midi": 74,
+   "layer": null,
+   "file": "D5.mp3",
+   "cents": 9.69,
+   "rms": 0.06826,
+   "peak": 0.9863,
+   "vib": null,
+   "dur": 1.26
+  },
+  {
+   "midi": 75,
+   "layer": null,
+   "file": "Ds5.mp3",
+   "cents": 2.88,
+   "rms": 0.02645,
+   "peak": 0.9913,
+   "vib": null,
+   "dur": 1.26
+  },
+  {
+   "midi": 76,
+   "layer": null,
+   "file": "E5.mp3",
+   "cents": 3.58,
+   "rms": 0.02776,
+   "peak": 0.9832,
+   "vib": null,
+   "dur": 1.34
+  },
+  {
+   "midi": 77,
+   "layer": null,
+   "file": "F5.mp3",
+   "cents": -2.25,
+   "rms": 0.04419,
+   "peak": 0.9662,
+   "vib": null,
+   "dur": 1.55
+  },
+  {
+   "midi": 78,
+   "layer": null,
+   "file": "Fs5.mp3",
+   "cents": 0.24,
+   "rms": 0.04566,
+   "peak": 0.9443,
+   "vib": null,
+   "dur": 1.38
+  },
+  {
+   "midi": 79,
+   "layer": null,
+   "file": "G5.mp3",
+   "cents": -1.81,
+   "rms": 0.06333,
+   "peak": 0.9718,
+   "vib": null,
+   "dur": 1.42
+  },
+  {
+   "midi": 80,
+   "layer": null,
+   "file": "Gs5.mp3",
+   "cents": -2.75,
+   "rms": 0.03709,
+   "peak": 0.9843,
+   "vib": null,
+   "dur": 0.95
+  },
+  {
+   "midi": 81,
+   "layer": null,
+   "file": "A5.mp3",
+   "cents": 8.25,
+   "rms": 0.06125,
+   "peak": 0.9917,
+   "vib": null,
+   "dur": 1.63
+  },
+  {
+   "midi": 82,
+   "layer": null,
+   "file": "As5.mp3",
+   "cents": 4.13,
+   "rms": 0.04798,
+   "peak": 0.971,
+   "vib": null,
+   "dur": 1.31
+  },
+  {
+   "midi": 83,
+   "layer": null,
+   "file": "B5.mp3",
+   "cents": 2.39,
+   "rms": 0.00608,
+   "peak": 0.9886,
+   "vib": null,
+   "dur": 0.98
+  },
+  {
+   "midi": 84,
+   "layer": null,
+   "file": "C6.mp3",
+   "cents": 4.21,
+   "rms": 0.00815,
+   "peak": 0.961,
+   "vib": null,
+   "dur": 0.89
+  }
+ ]
+}

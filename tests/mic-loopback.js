@@ -47,7 +47,7 @@ function saveWav(name, buf, sr0) {   // 32-bit float mono WAV; sample rate is ad
 
 srv.listen(0, '127.0.0.1', async () => {
   const port = srv.address().port, prof = fs.mkdtempSync(path.join(os.tmpdir(), 'mic-test-'));
-  const SP = ['inst', 'level', 'vib', 'bow', 'span', 'bpm', 'seed', 'root', 'type', 'grader', 'set', 'direct', 'pos'].filter(k => arg(k, null) != null).map(k => `${k}=${encodeURIComponent(arg(k))}`).join('&');
+  const SP = ['inst', 'level', 'vib', 'bow', 'span', 'bpm', 'seed', 'root', 'type', 'grader', 'set', 'direct', 'pos', 'synth'].filter(k => arg(k, null) != null).map(k => `${k}=${encodeURIComponent(arg(k))}`).join('&');
   const q = MODE === 'speaker' ? `/index.html?probe=speaker&${SP}` : MODE === 'app' ? `/index.html?probe=app&notes=${all.join(',')}` : `/tests/mic/loopback.html?mode=${MODE}&notes=${all.join(',')}&sec=${arg('sec', 8)}&lo=${arg('lo', 70)}&hi=${arg('hi', 2000)}`;
   if (MODE === 'speaker') console.log('The app will play realistic instrument sound through the speaker and listen with the microphone. This is audible and takes a few minutes. Raise the speaker volume, use the speaker (not headphones) and keep the room quiet.');
   else if (MODE !== 'listen') console.log(`Playing ${all.length} notes through the speaker (${all.map(nameOf).join(' ')}) - this is audible, about ${Math.ceil(all.length * (MODE === 'app' ? 2.6 : 1.7) + 4)} s.`);
@@ -63,7 +63,7 @@ srv.listen(0, '127.0.0.1', async () => {
     for (const t of TAKES) {
       if (t.error) { console.log(`${t.tooQuiet ? 'TOO QUIET' : t.hidden ? 'HIDDEN' : 'FAIL'} ${t.name}: ${t.error}`); if (t.tooQuiet) quiet = true; else if (t.hidden) hiddenRun = true; else fail++; continue; }
       const p = t.pitch, d = t.detection, g = t.grade, tm = t.timing;
-      console.log(`${t.ok ? 'PASS' : 'FAIL'} ${t.name}`);
+      console.log(`${t.ok ? 'PASS' : 'FAIL'} ${t.name}  [${t.sound || '?'}]`);
       console.log(`     found ${d.found}/${d.played} played notes | pitch error median ${f1(p.medAbs)}c  p95 ${f1(p.p95Abs)}c  bias ${f1(p.bias)}c  (${p.within5}/${p.n} within 5c) | wrong notes: ${d.wrongFlagged}/${d.wrongTruth} flagged, ${d.falseWrong} false | skipped: ${d.skippedTruth}`);
       console.log(`     onset lag ${f1(tm.latencyMs, 0)} ms, spread ${f1(tm.spreadMs, 0)} ms | score from sound ${g.measured ? g.measured.total + ' ' + g.measured.band : 'n/a'}  deserved ${g.reference.total} ${g.reference.band}  (pitch ${g.measured ? f1(g.measured.pitch, 0) : '-'}/${f1(g.reference.pitch, 0)}  fluency ${g.measured ? f1(g.measured.fluency, 0) : '-'}/${f1(g.reference.fluency, 0)}  tone ${g.measured ? f1(g.measured.tone, 0) : '-'}/${f1(g.reference.tone, 0)})`);
       for (const c of t.checks.filter(x => !x.ok)) console.log('     problem: ' + c.msg);

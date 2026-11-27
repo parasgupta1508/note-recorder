@@ -10,7 +10,7 @@ const pvOthers = () => PV.piece.parts.filter((p, i) => i !== PV.piece.part).flat
 
 function pvOpen(id, listen) {
   const src = pcFind(id); if (!src) return;
-  pvStop(); const p = materialize(src);
+  pvStop(); const p = materialize(src); smpPreload(p.instrument);
   PV.src = src; PV.piece = JSON.parse(JSON.stringify(p)); PV.shift = 0; PV.speed = 1; PV.acc = false; PV.loop = false;
   const fit = bestOctaveShift(pvMain(), PV.piece.instrument); if (fit) PV.shift = fit;   // start in range: a low part is lifted an octave, with a note saying so
   PV.from = 1; PV.to = pvGrid().bars;
@@ -37,7 +37,9 @@ function pvNotesInRange() {
 }
 function pvPass(t0) {
   const c = getCtx(), { notes, len } = pvNotesInRange(), sp = PV.speed, a = a4();
+  const inst = smpKey(PV.piece.instrument);
   for (const n of notes) {
+    if (inst && smpBank(inst)) { const node = smpPlay(c, inst, n.midi, t0 + n.start / sp, Math.max(0.1, n.dur / 1000 / sp)); if (node) { PV.nodes.push(node); continue; } }   // the real instrument
     const o = c.createOscillator(), g = c.createGain(), at = t0 + n.start / sp, d = Math.max(0.1, n.dur / 1000 / sp);
     o.type = 'triangle'; o.frequency.value = 440 * Math.pow(2, (n.midi - 69) / 12) * (a / 440);
     g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(0.18, at + 0.015); g.gain.setValueAtTime(0.18, at + Math.max(0.02, d - 0.06)); g.gain.linearRampToValueAtTime(0, at + d);

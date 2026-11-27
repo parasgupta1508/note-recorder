@@ -69,3 +69,10 @@ Done (see `CLAUDE.md`, "Grader rules"): fault penalty and weakest-link caps, bou
 - [ ] **Teacher-marked calibration** is still needed to tune the grader's numbers (the speaker test has a known truth, not a teacher's opinion).
 - [ ] **Slurred repeats in scales and the Recorder** use the old rule (a pause of 3 frames); the level-dip rule is only on in pieces where the next written note repeats the pitch.
 
+## Instrument sounds
+
+- [ ] **Viola, cello, mandolin and bass** have no recordings of their own: viola and cello use the violin, mandolin and bass the guitar (`smpKey` in `js/app/sampler.js`). Add banks (VSCO 2 CE has a cello and viola) if those instruments are offered.
+- [ ] **Steel-string guitar** (FreePats `FSS-SteelStringGuitar`, CC0) and a **violin pizzicato / spiccato** layer (VSCO 2 CE has them) would let a scale or piece use the articulation it is marked with.
+- [ ] **The recorder's own playback** (`js/app/recorder.js`, `chart.js` note taps and the Tuner string buttons) still use the plain tone. They could use the recordings too.
+- [ ] **Piano pedal and chords:** the piano bank has one velocity layer and no pedal, and a piece's accompaniment plays every note for its written length.
+

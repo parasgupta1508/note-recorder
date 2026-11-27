@@ -23,7 +23,7 @@ const PS_PLAYERS = {
   average: { label: 'Average', sigma: 12, offset: 7,  just: false, vibrato: true, vibHz: 5.2, vibDepth: 24, vibDelay: 0.30, scoop: 22, slide: 1,   jitter: 45, lag: 60, drift: 0.010, durFrac: 0.86, ampVar: 0.12, bow: 0.40, faultP: 0.06, wrongP: 0.02, skipP: 0 },
   weak:    { label: 'Weak',    sigma: 22, offset: 15, just: false, vibrato: true, vibHz: 5.0, vibDepth: 28, vibDelay: 0.35, scoop: 35, slide: 1,   jitter: 90, lag: 90, drift: 0.030, durFrac: 0.80, ampVar: 0.18, bow: 0.55, faultP: 0.15, wrongP: 0.05, skipP: 0.05 },
 };
-const PS_INSTRUMENTS = ['violin', 'guitar', 'ukulele'];
+const PS_INSTRUMENTS = ['violin', 'guitar', 'ukulele', 'piano'];
 
 const psHz = (midi, a4 = 440) => a4 * Math.pow(2, (midi - 69) / 12);
 const psClamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
@@ -93,6 +93,8 @@ function psPluckNote(buf, sr, o, rnd) {
 function psRender(spec) {
   const sr = spec.sr || 44100, inst = PS_INSTRUMENTS.includes(spec.inst) ? spec.inst : 'violin', a4 = spec.a4 || 440, tl = spec.tl || [];
   const P = Object.assign({}, PS_PLAYERS[spec.level] || PS_PLAYERS.good, typeof spec.player === 'object' && spec.player ? spec.player : {});
+  if (inst === 'piano') Object.assign(P, { sigma: 0, offset: 0, just: false, scoop: 0, slide: 0, faultP: 0, vibrato: false });   // a piano's pitch is fixed by its tuning: the player cannot play a note flat
+  // spec.voice (optional): (out, sr, note, rnd) -> true when it played the note (js/core/sampler.js smVoice: real recordings). spec.vibOf(midi, vel): the vibrato those recordings carry.
   const rnd = psRng(spec.seed == null ? 1 : spec.seed), tonic = spec.tonic != null ? spec.tonic : (tl.length ? tl[0].midi % 12 : 0), padS = 0.35;
   const n = tl.length, plan = [], truth = [];
   for (let i = 0; i < n; i++) {
@@ -107,7 +109,7 @@ function psRender(spec) {
     const nextStart = next ? next.startMs * (1 + P.drift * ((i + 1) / (n - 1))) + P.lag : startMs + beatMs;
     const endMs = legato ? Math.max(startMs + 80, nextStart + 8) : startMs + Math.max(60, t.durationMs * P.durFrac * (1 + 0.05 * rnd.g()));
     const amp = psClamp(1 + P.ampVar * rnd.g(), 0.5, 1.5), long = endMs - startMs >= 300;
-    const vib = inst === 'violin' && P.vibrato && long ? { hz: P.vibHz * (1 + 0.05 * rnd.g()), depth: P.vibDepth * (1 + 0.15 * rnd.g()), delay: P.vibDelay } : null;
+    const vib = spec.vibOf ? spec.vibOf(playedMidi, amp) : inst === 'violin' && P.vibrato && long ? { hz: P.vibHz * (1 + 0.05 * rnd.g()), depth: P.vibDepth * (1 + 0.15 * rnd.g()), delay: P.vibDelay } : null;
     plan.push({ i, skipped, playedMidi, cents, startMs, endMs, legato, amp, vib, wrong });
     truth.push({ index: t.index == null ? i : t.index, midi: t.midi, playedMidi: skipped ? null : playedMidi, kind: skipped ? 'skipped' : wrong ? 'wrong' : 'played', cents: skipped ? null : +cents.toFixed(2), startMs: +startMs.toFixed(1), endMs: +endMs.toFixed(1), vib: vib ? { hz: +vib.hz.toFixed(2), depth: +vib.depth.toFixed(1) } : null, amp: +amp.toFixed(3) });
   }
@@ -118,7 +120,8 @@ function psRender(spec) {
     if (p.skipped) continue;
     const prev = p.i ? plan[p.i - 1] : null, t0 = padS + p.startMs / 1000, dur = (p.endMs - p.startMs) / 1000 + (inst === 'violin' ? 0.02 : 0);
     const slurred = prev && !prev.skipped && prev.legato, shift = slurred ? Math.max(-150, Math.min(150, (prev.playedMidi - p.playedMidi) * 100)) : 0;
-    const common = { midi: p.playedMidi, cents: p.cents, t0, dur, amp: 0.3 * p.amp, a4, inst };
+    const common = { midi: p.playedMidi, cents: p.cents, t0, dur, amp: 0.3 * p.amp, vel: p.amp, a4, inst };
+    if (spec.voice && spec.voice(buf, sr, Object.assign({}, common, { legato: !!slurred, release: p.legato ? 0.012 : 0.05 }), rnd)) continue;
     if (inst === 'violin') psViolinNote(buf, sr, Object.assign(common, { attack: slurred ? 0.012 : 0.04 + rnd() * 0.03, release: p.legato ? 0.012 : 0.05, legato: slurred, scoop: slurred ? 0 : P.scoop * (0.5 + rnd()), slide: shift * P.slide, vib: p.vib, bow: P.bow, bright }), rnd);
     else psPluckNote(buf, sr, common, rnd);
   }

@@ -50,14 +50,18 @@ async function stRunScenario(sce, hooks = {}) {
     setMode('tempo', true); setGradeMode(S.grader, true); settingsChanged();
     const tl = sc.tl, c = getCtx(); await c.resume(); const sr = c.sampleRate;
     log(`Rendering ${S.inst} (${S.level}${S.vibrato ? ', vibrato' : ''}) …`); await stSleep(30);
-    const perf = psRender({ inst: S.inst, sr, tl, level: S.level, player: { vibrato: !!S.vibrato }, seed: S.seed, tonic: sc.plan.pc });
+    // Real recordings (data/samples/, js/app/sampler.js) when the bank loads: the notes are a real violin, guitar, ukulele or piano with its own vibrato and decay. The synthetic voice
+    // is the fallback (S.synth forces it), and the report says which sound was used.
+    const bank = S.synth ? null : await smpLoad(smpKey(S.inst)), spec = { inst: smpKey(S.inst) || S.inst, sr, tl, level: S.level, player: { vibrato: !!S.vibrato }, seed: S.seed, tonic: sc.plan.pc };
+    if (bank) { spec.voice = smVoice(bank); spec.vibOf = smVibOf(bank); }
+    const perf = psRender(spec);
     if (!listening) await startListening(); await c.resume();
     if (S.direct) { bus = c.createGain(); try { srcNode.disconnect(hpNode); } catch {} bus.connect(hpNode); }   // the recording goes into the app's filters instead of the microphone
     tap = stTapStart(bus);
     // preflight: a realistic note through the speaker must be clearly louder than the room, else the speaker-to-microphone path is not working
     log(S.direct ? 'Direct input (no speaker) …' : 'Checking the speaker and microphone …'); await stSleep(700);
     const room = stRms(stCat(tap.chunks.slice(-3)));
-    const pre = psRender({ inst: 'violin', sr, tl: [{ index: 0, midi: 69, startMs: 0, durationMs: 800 }], level: 'expert', player: { vibrato: false, scoop: 0 }, seed: 2 });   // a steady bowed A4 whatever the instrument: it is a level check
+    const pre = psRender({ inst: 'violin', sr, tl: [{ index: 0, midi: 69, startMs: 0, durationMs: 800 }], level: 'expert', player: { vibrato: false, scoop: 0 }, seed: 2, voice: smpBank('violin') ? smVoice(smpBank('violin')) : undefined });   // a steady bowed A4 whatever the instrument: it is a level check
     const n0 = tap.chunks.length; stPlay(c, pre.samples, sr, c.currentTime + 0.1, bus); await stSleep(1500);
     const lvl = tap.chunks.slice(n0).reduce((m, k) => Math.max(m, stRms(k)), 0);   // the loudest block while the test note sounded (it starts about 0.45 s after playback is asked for)
     if (!S.direct && (lvl < room * 3 || lvl < 0.002)) return { ok: false, tooQuiet: true, error: `TOO QUIET: the microphone barely heard the speaker (room ${room.toExponential(2)}, note ${lvl.toExponential(2)}). Raise the speaker volume, move the microphone closer, and use the speaker, not headphones.`, scenario: S };
@@ -84,11 +88,12 @@ async function stRunScenario(sce, hooks = {}) {
     chk(finished, finished ? 'the drill ran to the end of the scale' : 'the drill did not finish');
     chk(d.played === 0 || d.found / d.played >= 0.9, `found ${d.found} of ${d.played} played notes (needs 90%)`);
     chk(cmp.pitch.n >= 3 && cmp.pitch.medAbs <= 5, `median pitch error ${cmp.pitch.medAbs == null ? '–' : cmp.pitch.medAbs.toFixed(1)}¢ (needs 5¢ or less)`);
-    chk(cmp.pitch.n >= 3 && cmp.pitch.p95Abs <= 15, `95% of notes within ${cmp.pitch.p95Abs == null ? '–' : cmp.pitch.p95Abs.toFixed(1)}¢ (needs 15¢)`);
+    const p95Max = S.level === 'weak' ? 35 : 15;   // a weak player's notes sit near the halfway point to the next semitone, where a reading is least certain
+    chk(cmp.pitch.n >= 3 && cmp.pitch.p95Abs <= p95Max, `95% of notes within ${cmp.pitch.p95Abs == null ? '–' : cmp.pitch.p95Abs.toFixed(1)}¢ (needs ${p95Max}¢)`);
     if (cmp.rigLimited) checks.push({ ok: true, msg: `${cmp.rigLimited} notes below ${minHz} Hz are left out: a small speaker cannot play them (this is the rig, not the app)` });
     chk(d.falseWrong <= Math.max(1, Math.round(0.1 * d.played)), `${d.falseWrong} good notes wrongly called wrong notes`);
     if (measured) chk(Math.abs(measured.total - reference.total) <= 8, `score ${measured.total} against ${reference.total} for the same performance heard perfectly (needs within 8)`);
-    const report = { ok: checks.every(x => x.ok), scenario: S, sr, bpm: sc.bpm, notes: tl.length, finished, checks, pitch: cmp.pitch, detection: d, timing: cmp.timing, rows: cmp.rows, rigLimited: cmp.rigLimited,
+    const report = { ok: checks.every(x => x.ok), scenario: S, sound: bank ? 'recordings: ' + bank.credit : 'synthetic', sr, bpm: sc.bpm, notes: tl.length, finished, checks, pitch: cmp.pitch, detection: d, timing: cmp.timing, rows: cmp.rows, rigLimited: cmp.rigLimited,
       grade: { measured: measured && { total: measured.total, band: measured.band, pitch: measured.pitch, fluency: measured.fluency, tone: measured.tone }, reference: { total: reference.total, band: reference.band, pitch: reference.pitch, fluency: reference.fluency, tone: reference.tone } },
       truth: perf.truth, player: perf.player, wav: stWav(audio, sr), beatInWavS,
       debug: { running: sc.running, pos: sc.pos, attempts: sc.attempts.length, slots: sc.slots.length, listening, tab, clock: sc.clock, now: getCtx().currentTime - t0, hidden: document.hidden, state: getCtx().state, gate: $('gate').value } };
@@ -106,6 +111,7 @@ const ST_SET = [
   { name: 'Violin, weak, vibrato', inst: 'violin', level: 'weak', vibrato: true, bow: 'separate' },
   { name: 'Guitar, good, mid neck, two octaves', inst: 'guitar', level: 'good', vibrato: false, root: 7, pos: 'mid', span: 2 },
   { name: 'Ukulele, good', inst: 'ukulele', level: 'good', vibrato: false, root: 0 },
+  { name: 'Piano, good, two octaves', inst: 'chromatic', level: 'good', vibrato: false, root: 0, span: 2 },
 ];
 async function stRunSet(list, hooks = {}) {
   ST.running = true; ST.stop = false; const out = [];

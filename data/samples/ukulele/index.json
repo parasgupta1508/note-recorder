@@ -1,0 +1,140 @@
+{
+ "inst": "ukulele",
+ "kind": "plucked",
+ "license": "CC0 1.0",
+ "credit": "FreePats Ukulele",
+ "url": "https://freepats.zenvoid.org/GuitarFamily/ukulele.html",
+ "sr": 44100,
+ "files": [
+  {
+   "midi": 60,
+   "layer": null,
+   "file": "C4.mp3",
+   "cents": 0.68,
+   "rms": 0.06346,
+   "peak": 0.3812,
+   "vib": null,
+   "dur": 2.2
+  },
+  {
+   "midi": 62,
+   "layer": null,
+   "file": "D4.mp3",
+   "cents": 4.22,
+   "rms": 0.05688,
+   "peak": 0.4508,
+   "vib": null,
+   "dur": 2.2
+  },
+  {
+   "midi": 64,
+   "layer": null,
+   "file": "E4.mp3",
+   "cents": 0.74,
+   "rms": 0.01881,
+   "peak": 0.5713,
+   "vib": null,
+   "dur": 2.2
+  },
+  {
+   "midi": 66,
+   "layer": null,
+   "file": "Fs4.mp3",
+   "cents": 3.76,
+   "rms": 0.00827,
+   "peak": 0.5086,
+   "vib": null,
+   "dur": 1.9
+  },
+  {
+   "midi": 67,
+   "layer": null,
+   "file": "G4.mp3",
+   "cents": -2.96,
+   "rms": 0.01866,
+   "peak": 0.5608,
+   "vib": null,
+   "dur": 1.75
+  },
+  {
+   "midi": 69,
+   "layer": null,
+   "file": "A4.mp3",
+   "cents": -0.8,
+   "rms": 0.04564,
+   "peak": 0.4923,
+   "vib": null,
+   "dur": 2.2
+  },
+  {
+   "midi": 71,
+   "layer": null,
+   "file": "B4.mp3",
+   "cents": -0.54,
+   "rms": 0.02729,
+   "peak": 0.6276,
+   "vib": null,
+   "dur": 2
+  },
+  {
+   "midi": 73,
+   "layer": null,
+   "file": "Cs5.mp3",
+   "cents": -2.84,
+   "rms": 0.04586,
+   "peak": 0.6137,
+   "vib": null,
+   "dur": 2
+  },
+  {
+   "midi": 75,
+   "layer": null,
+   "file": "Ds5.mp3",
+   "cents": -3.28,
+   "rms": 0.02007,
+   "peak": 0.7031,
+   "vib": null,
+   "dur": 1.25
+  },
+  {
+   "midi": 77,
+   "layer": null,
+   "file": "F5.mp3",
+   "cents": -4.8,
+   "rms": 0.01591,
+   "peak": 0.5593,
+   "vib": null,
+   "dur": 1.35
+  },
+  {
+   "midi": 79,
+   "layer": null,
+   "file": "G5.mp3",
+   "cents": -6.62,
+   "rms": 0.02784,
+   "peak": 0.6777,
+   "vib": null,
+   "dur": 1.5
+  },
+  {
+   "midi": 81,
+   "layer": null,
+   "file": "A5.mp3",
+   "cents": -8.56,
+   "rms": 0.02605,
+   "peak": 0.5149,
+   "vib": null,
+   "dur": 1.7
+  },
+  {
+   "midi": 84,
+   "layer": null,
+   "file": "C6.mp3",
+   "cents": -0.77,
+   "rms": 0.01162,
+   "peak": 0.4911,
+   "vib": null,
+   "dur": 1.1
+  }
+ ]
+}

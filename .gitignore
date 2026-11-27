@@ -10,3 +10,6 @@ _*.html
 tests/pitch-sweep.out.json
 tests/_shots/
 tests/_mic/
+
+# The instrument recordings in data/samples/ are CC0 (see data/samples/README.txt) and are part of the app, unlike copyrighted test clips.
+!data/samples/**/*.mp3
