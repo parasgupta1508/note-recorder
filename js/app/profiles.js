@@ -82,21 +82,22 @@ if (prof.k !== 'all') { inst = FAMILIES.some(f => f[2].includes(prof.t)) ? prof.
 syncProf(); renderSet();
 $('defaults').onclick = () => { applySettings(SET_DEFAULTS); applyProfile('all'); saveSettings(); calMsg('Defaults restored.'); $('calibOut').classList.add('hide'); };
 // The listening that fits the notes written for the drill that is running (see listenFor in js/core/scoring.js). Worked out once per timeline.
-let dlMemo = { tl: null, lo: 0, v: null };
+let dlMemo = { tl: null, lo: 0, dt: 0, v: null };
 function drillListen(lo) {
   const tl = sc.running && tab !== 'piece' ? sc.tl : tab === 'piece' && typeof PE !== 'undefined' && PE.running ? PE.tl : null;
   if (!tl || !tl.length) { det.need = 6; if (typeof peDet !== 'undefined') peDet.need = 6; return null; }
-  if (dlMemo.tl !== tl || dlMemo.lo !== lo) { dlMemo = { tl, lo, v: listenFor(tl, ctx.sampleRate, lo) }; det.need = dlMemo.v.need; if (typeof peDet !== 'undefined') peDet.need = dlMemo.v.need; }
+  if (dlMemo.tl !== tl || dlMemo.lo !== lo || Math.abs(dlMemo.dt - pracDt) > 0.15 * pracDt) { dlMemo = { tl, lo, dt: pracDt, v: listenFor(tl, ctx.sampleRate, lo, pracDt) }; det.need = dlMemo.v.need; if (typeof peDet !== 'undefined') peDet.need = dlMemo.v.need; }
   return dlMemo.v;
 }
-let gateOn = false, trkF = 0, trkT = -9, hpCut = 70, recTickT = -1, pracTickT = -1, frameCl = null, frameT = 0, frameRms = 0;   // frameCl / frameT: clarity and time of the frame just analysed (the drills store them with each note)
+let gateOn = false, trkF = 0, trkT = -9, hpCut = 70, recTickT = -1, pracTickT = -1, pracDt = 1 / 60, frameCl = null, frameT = 0, frameRms = 0, frameFast = 0;   // frameCl / frameT: clarity and time of the frame just analysed (the drills store them with each note)
 function loop() {
   rafId = requestAnimationFrame(loop);
   analyser.getFloatTimeDomainData(buf);
   const t = ctx.currentTime - t0;
+  if (t < recTickT) recTickT = -1;   // the microphone was switched off and on again: this clock started over
   let rms = 0, pk = 0; for (let i = 0; i < buf.length; i++) { rms += buf[i] * buf[i]; const a = Math.abs(buf[i]); if (a > pk) pk = a; } rms = Math.sqrt(rms / buf.length);
   updateLevel(rms, pk); calibFrame(rms, pk);
-  let f = null, fR = null, rA = null; frameCl = null; frameT = t; frameRms = rms;
+  let f = null, fR = null, rA = null; frameCl = null; frameT = t; frameRms = rms; { let s = 0; const n = Math.min(1024, buf.length); for (let i = buf.length - n; i < buf.length; i++) s += buf[i] * buf[i]; frameFast = Math.sqrt(s / n); }   // the newest 23 ms: where a re-strike shows first
   const G = +$('gate').value;
   gateOn = rms > G || (gateOn && rms > G * 0.6);   // hysteresis: a fading note does not chatter the gate
   // Sustain tracking: once the tuner has a note, a decaying string keeps reading (down to about -14 dB under the gate)
@@ -137,10 +138,12 @@ function loop() {
   if (tab === 'tuner') tunerFrame(t, f);
   // The drills count frames (6 for a note, 8 of quiet, the hold and smoothing windows), so they run at one rate, about 60 a second, whatever the screen's refresh rate:
   // on a 120 Hz screen every one of those windows would otherwise be half as long and the same playing would be graded differently.
-  if (t - pracTickT >= 0.012) {
-    pracTickT = t;
+  const pg = fixedRate(pracTickT, t, 0.012);
+  if (pg.fire) {
+    if (pracTickT > 0 && t > pracTickT && t - pracTickT < 0.2) pracDt += (t - pracTickT - pracDt) * 0.05;   // the real time between the frames the drills get
+    pracTickT = pg.last;
     if (demoIdx < 0) collectHold(f);                   // keep scoring the note that is still sounding
-    if (sc.running && demoIdx < 0) { det.frame(t, f, a4(), frameRms, false); liveScaleFrame(f, t); }   // a scale never repeats a note, so a dip in level is never a new note here
+    if (sc.running && demoIdx < 0) { det.frame(t, f, a4(), frameRms, false, frameFast); liveScaleFrame(f, t); }   // a scale never repeats a note, so a dip in level is never a new note here
     if (tab === 'piece' && typeof pieceFrame === 'function') pieceFrame(f, t);   // Piece practice has its own engine
   }
   if (tab === 'rec' && recording) { drawRoll(); recUi(); }

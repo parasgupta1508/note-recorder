@@ -164,7 +164,7 @@ function psCompare(truth, slots, tl, opts = {}) {
   return {
     rows, rigLimited: rig.filter(Boolean).length,
     pitch: { n: err.length, ambiguous, bias: q(err, 0.5), medAbs: q(abs, 0.5), p95Abs: q(abs, 0.95), within5: abs.filter(x => x <= 5).length, within10: abs.filter(x => x <= 10).length },
-    detection: { played: played.length, found: found.length, missed: played.filter(r => !r.heard).map(r => r.index), skippedTruth: bad.filter(r => r.kind === 'skipped').length, wrongTruth: bad.filter(r => r.kind === 'wrong').length,
+    detection: { played: played.length, found: found.length, playedLong: played.filter(r => { const t = truth.find(q => q.index === r.index); return t.endMs - t.startMs >= 100; }).length, foundLong: found.filter(r => { const t = truth.find(q => q.index === r.index); return t.endMs - t.startMs >= 100; }).length, missed: played.filter(r => !r.heard).map(r => r.index), skippedTruth: bad.filter(r => r.kind === 'skipped').length, wrongTruth: bad.filter(r => r.kind === 'wrong').length,
       badFound: bad.filter(r => r.heard).length, wrongFlagged: bad.filter(r => r.wrongFlag).length, falseWrong: played.filter(r => r.wrongFlag && clear.includes(r)).length },
     timing: { latencyMs: q(te, 0.5), spreadMs: te.length ? q(te, 0.75) - q(te, 0.25) : null, n: te.length },
   };

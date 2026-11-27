@@ -37,14 +37,43 @@ const vib = Array.from({ length: 90 }, (_, i) => ({ n: 60, lv: 0.3 * (1 + 0.35 *
 r = run(vib, true);
 ok(r.out.length === 1, `vibrato that moves the level by 35% is one note even when a repeat is expected (${r.out.length})`);
 // a slow fade and swell is not a new note either
-const swell = note(60, 15, 0.3).concat(Array.from({ length: 40 }, (_, i) => ({ n: 60, lv: 0.3 - 0.27 * Math.min(1, i / 20) + (i > 25 ? 0.27 * Math.min(1, (i - 25) / 15) : 0) })));
+const swell = note(60, 15, 0.3).concat(Array.from({ length: 70 }, (_, i) => ({ n: 60, lv: 0.3 - 0.27 * Math.min(1, i / 20) + (i > 25 ? 0.27 * Math.min(1, (i - 25) / 36) : 0) })));
 r = run(swell, true);
-ok(r.out.length === 1, `a slow fade and swell (over 0.3 s) is one note (${r.out.length})`);
+ok(r.out.length === 1, `a slow fade and swell (back to strength over 0.6 s) is one note (${r.out.length})`);
 
 // ---- helpers that feed the grader
 ok(lib.holdClarity([0.9, 0.9, 0.97, 0.98, 0.96, 0.97], 2) === 0.97 && lib.holdClarity([0.97, 0.97], 0) === null, 'holdClarity: median after the attack; too few frames gives nothing');
 ok(Math.abs(lib.heldRatio(1.0, 1.7, 800) - 0.9) < 0.03 && lib.heldRatio(1, 1, 0) === null && lib.heldRatio(1, 5, 500) === 1.5, 'heldRatio: time sounded against written length, capped at 1.5');
 ok(lib.heardShare(40, 1000) > 0.7 && lib.heardShare(12, 1000) < 0.3 && lib.heardShare(500, 1000) === 1 && lib.heardShare(10, 0) === null, 'heardShare: share of a note that was heard');
+
+// ---- a re-struck plucked or struck note (piano, guitar): no dip, the level jumps up while the old note still rings
+{
+  const decay = (k, from, tau = 0.25) => Array.from({ length: k }, (_, i) => ({ n: 60, lv: from * Math.exp(-i * DT / tau) }));
+  const strike = decay(24, 0.5, 0.5).concat(decay(24, 0.5, 0.5));                                            // struck, rings for 0.4 s, struck again at the same strength
+  let q = run(strike, 'rise');
+  ok(q.out.length === 2 && q.d.rearmed === true, `repeat expected, struck instrument: a re-strike while the first note still rings is a new note (${q.out.length} attempts)`);
+  q = run(strike, true);
+  ok(q.out.length === 1, 'the bowed-note (dip) rule does not see a re-strike');
+  q = run(strike, false);
+  ok(q.out.length === 1, 'no repeat expected: a re-strike of the same pitch is not a new note (a scale never gets a false retry)');
+  q = run(decay(60, 0.5), 'rise');
+  ok(q.out.length === 1, `one note that simply dies away is one note even when a repeat is expected (${q.out.length})`);
+  const soft = decay(24, 0.5).concat(decay(24, 0.06));                                              // a faint noise bump (12% of the first strike) is not a strike
+  q = run(soft, 'rise');
+  ok(q.out.length === 1, `a bump to under 40% of the first note's peak is not a new note (${q.out.length})`);
+  const tooSoon = decay(5, 0.5).concat(decay(30, 0.5));                                             // a second strike inside 80 ms of the first is the same attack
+  q = run(tooSoon, 'rise');
+  ok(q.out.length === 1, `a jump within 80 ms of the start is the same attack (${q.out.length})`);
+}
+
+// ---- the drills' fixed-rate gate must survive a restart of the microphone clock (it once froze every drill after the mic was switched off and on)
+{
+  const fires = (times, minDt = 0.012) => { let last = -1, n = 0; for (const t of times) { const g = lib.fixedRate(last, t, minDt); last = g.last; if (g.fire) n++; } return n; };
+  const ramp = (a, b, dt) => { const o = []; for (let i = 0; a + i * dt < b - 1e-9; i++) o.push(a + i * dt); return o; };
+  ok(fires(ramp(0, 1, 1 / 60)) === 60 && fires(ramp(0, 1, 1 / 120)) === 60 && fires(ramp(0, 1, 1 / 40)) === 40, 'the gate lets through about 60 frames a second at most (60 Hz: all, 120 Hz: every other one, 40 Hz: all)');
+  ok(fires(ramp(0, 90, 1 / 60).concat(ramp(0, 5, 1 / 60))) === 5400 + 300, 'after the clock restarts from zero (microphone off and on) the next session is not frozen: all 300 of its frames get through');
+  ok(lib.fixedRate(90, 3, 0.012).fire === true && lib.fixedRate(-1, 0, 0.012).fire === true && lib.fixedRate(1, 1.005, 0.012).fire === false, 'the gate: a clock that went backwards starts over; the very first frame fires; a frame too soon does not');
+}
 
 // ---- the listening fits the shortest written note (real scores: notes with under 150 ms to the next were found 10% of the time with the ordinary settings)
 {
@@ -53,7 +82,8 @@ ok(lib.heardShare(40, 1000) > 0.7 && lib.heardShare(12, 1000) < 0.3 && lib.heard
   ok(L(250).win === 2048 && L(150).win === 2048 && L(125).win === 1024 && L(100).need === 3, 'quick music gets a shorter window (250 ms gaps: 2048; 125 ms: 1024) and fewer frames (3 at 100 ms)');
   ok(L(125, 60).win === 2048 && L(125, 40).win >= 2048, 'the window never gets too short to hold 2.2 periods of the lowest note (60 Hz: not 1024)');
   ok(lib.listenFor([], 44100, 100).win === 4096 && lib.listenFor([{ startMs: 0 }], 44100, 100).win === 4096 && lib.listenFor(mk(10), 44100, 100).win === 4096, 'no gap to follow (empty, one note, or only a chord\'s 10 ms spread): ordinary settings');
-  const withGrace = [{ startMs: 0 }, { startMs: 15 }, { startMs: 800 }, { startMs: 1600 }];
+  ok(lib.listenFor(mk(208), 48000, 175).need === 6 && lib.listenFor(mk(208), 48000, 175, 1 / 40).need === 4 && lib.listenFor(mk(208), 48000, 175, 1 / 30).need === 3, 'the frames an attempt needs follow the time, not a count: 208 ms gaps need 6 frames at 60 a second, 4 at 40, 3 at 30');
+  const withGrace =[{ startMs: 0 }, { startMs: 15 }, { startMs: 800 }, { startMs: 1600 }];
   ok(lib.listenFor(withGrace, 44100, 196).gap === 785, 'a grace note or chord spread under 40 ms is not taken as the gap');
 }
 

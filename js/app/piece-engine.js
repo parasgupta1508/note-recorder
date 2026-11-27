@@ -218,9 +218,10 @@ function peAdvanceWait(rule) {
 }
 // One microphone frame (f: Hz, or 0 when nothing is heard). Called by the microphone loop (profiles.js) while this screen is open.
 function pieceFrame(f, t) {
+  if (window.stActive && window.stTrace) window.stTrace.push([+t.toFixed(3), f ? +f.toFixed(1) : 0, +(frameCl || 0).toFixed(2), +frameRms.toFixed(4), PE.pos, peDet.need, dlMemo.v ? dlMemo.v.win : 0]);   // the speaker test keeps what the loop heard, to explain a missed note
   peCollect(f);
   if (!PE.running || PE.demo >= 0) return;
-  peDet.frame(t, f, a4(), frameRms, PE.pos > 0 && PE.seq[PE.pos] === PE.seq[PE.pos - 1]);   // a repeated note can start without a pause: a deep dip in level then counts as the new note
+  peDet.frame(t, f, a4(), frameRms, PE.pos > 0 && PE.seq[PE.pos] === PE.seq[PE.pos - 1] && (ruleFor(PE.plan.inst).bowing ? true : 'rise'), frameFast);   // a repeated note can start without a pause: a deep dip in level then counts as the new note
   if (peDet.rearmed) { peDet.rearmed = false; PE.needGap = false; }
   peClockTick(t);
   if (PE.pos >= PE.seq.length) return;

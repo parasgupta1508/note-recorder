@@ -100,17 +100,25 @@ class Segmenter {
 class AttemptDetector {
   constructor(onAttempt) { this.onAttempt = onAttempt; this.cur = null; this.gap = 99; this.lastMidi = null; this.need = 6; this.rearmed = false; }
   // The sound level of the note being followed: its recent peak and its deepest dip since (kept on every frame, voiced or not, because a bow change is often a silent frame).
-  levelTrack(c, t, lv) {
+  levelTrack(c, t, lv, lf) {   // lv: the level over the whole analysis window; lf: the level of its newest 23 ms (a strike shows there at once, but is smeared in lv)
     if (c.pk == null) { c.pk = lv; c.dip = lv; c.dipT = t; }
     if (lv > c.pk) c.pk = lv; else c.pk = c.pk * 0.985 + lv * 0.015;   // the peak decays slowly so a long fade is not mistaken for a dip
     if (lv < c.dip || t - c.dipT > 0.25) { c.dip = lv; c.dipT = t; }
+    (c.recent = c.recent || []).push([t, lf == null ? lv : lf]); while (c.recent.length && t - c.recent[0][0] > 0.12) c.recent.shift();   // the last 0.12 s of levels, for the re-strike test
   }
-  // A bow change or a fresh pluck on the SAME pitch: the level fell under 30% of the note's recent peak and climbed back within 0.1 s. Only asked when the next written note repeats
+  // A re-strike of a plucked or struck note on the SAME pitch (piano, guitar, ukulele): the old note is still ringing, so there is no dip, but the level jumps up to well over what it
+  // had fallen to in the last 0.12 s. Never asked of a bowed note (vibrato moves its loudness by a third); only asked when the next written note repeats the pitch.
+  levelRise(c, t, lv, lf) {
+    if (lf != null) lv = lf;
+    const r = c.recent || []; let mn = Infinity; for (let i = 0; i < r.length - 1; i++) if (r[i][1] < mn) mn = r[i][1];   // not counting the frame being tested (the last one)
+    return t - c.t > 0.08 && mn < Infinity && lv > 1.7 * mn && lv > 0.4 * c.pk;
+  }
+  // A bow change on the SAME pitch: the level fell under 30% of the note's recent peak and climbed back within 0.25 s. Only asked when the next written note repeats
   // the pitch (a shallower dip may just be vibrato moving the loudness, so it is never taken as a new note here).
-  levelDip(c, t, lv) { return t - c.t > 0.08 && t - c.dipT <= 0.1 && c.dip < c.pk * 0.3 && lv > Math.max(c.dip * 2, c.pk * 0.6); }
+  levelDip(c, t, lv) { return t - c.t > 0.08 && t - c.dipT <= 0.25 && c.dip < c.pk * 0.3 && lv > Math.max(c.dip * 2, c.pk * 0.6); }   // a new bow takes up to a quarter of a second to come back to strength
   // t: time of the frame, f: Hz or null, a4, lv: the frame's level (rms) or undefined, repeat: true when the next written note has the same pitch as the one just played.
-  frame(t, f, a4, lv, repeat) {
-    if (!f) { if (this.cur && lv != null) this.levelTrack(this.cur, t, lv); if (++this.gap >= 3) { this.cur = null; this.lastMidi = null; } return; }
+  frame(t, f, a4, lv, repeat, lf) {
+    if (!f) { if (this.cur && lv != null) this.levelTrack(this.cur, t, lv, lf); if (++this.gap >= 3) { this.cur = null; this.lastMidi = null; } return; }
     this.gap = 0;
     let n = freqToNote(f, a4);
     if (this.cur && n.midi !== this.cur.midi) {
@@ -118,8 +126,8 @@ class AttemptDetector {
       if (Math.abs(c) < 65) n = { midi: this.cur.midi, cents: c };
     }
     if (lv != null && this.cur && this.cur.midi === n.midi) {
-      this.levelTrack(this.cur, t, lv);
-      if (repeat && this.cur.reg && this.levelDip(this.cur, t, lv)) { this.cur = null; this.lastMidi = null; this.rearmed = true; }   // the same pitch again: a new attempt
+      this.levelTrack(this.cur, t, lv, lf);
+      if (repeat && this.cur.reg && (repeat === 'rise' ? this.levelRise(this.cur, t, lv, lf) : this.levelDip(this.cur, t, lv))) { this.cur = null; this.lastMidi = null; this.rearmed = true; }   // the same pitch again: a new attempt (repeat: true = a bowed note's dip, 'rise' = a plucked or struck note's re-strike)
     }
     if (!this.cur || this.cur.midi !== n.midi) this.cur = { midi: n.midi, cents: [], hz: [], reg: false, t };
     this.cur.cents.push(n.cents); this.cur.hz.push(f);

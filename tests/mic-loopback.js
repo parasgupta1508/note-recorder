@@ -66,7 +66,7 @@ srv.listen(0, '127.0.0.1', async () => {
       if (t.error) { console.log(`${t.tooQuiet ? 'TOO QUIET' : t.hidden ? 'HIDDEN' : 'FAIL'} ${t.name}: ${t.error}`); if (t.tooQuiet) quiet = true; else if (t.hidden) hiddenRun = true; else fail++; continue; }
       const p = t.pitch, d = t.detection, g = t.grade, tm = t.timing;
       console.log(`${t.ok ? 'PASS' : 'FAIL'} ${t.name}  [${t.sound || '?'}]`);
-      console.log(`     found ${d.found}/${d.played} played notes | pitch error median ${f1(p.medAbs)}c  p95 ${f1(p.p95Abs)}c  bias ${f1(p.bias)}c  (${p.within5}/${p.n} within 5c) | wrong notes: ${d.wrongFlagged}/${d.wrongTruth} flagged, ${d.falseWrong} false | skipped: ${d.skippedTruth}`);
+      console.log(`     found ${d.found}/${d.played} played notes${d.playedLong != null && d.playedLong !== d.played ? ' (' + d.foundLong + '/' + d.playedLong + ' of 100 ms or more)' : ''} | pitch error median ${f1(p.medAbs)}c  p95 ${f1(p.p95Abs)}c  bias ${f1(p.bias)}c  (${p.within5}/${p.n} within 5c) | wrong notes: ${d.wrongFlagged}/${d.wrongTruth} flagged, ${d.falseWrong} false | skipped: ${d.skippedTruth}`);
       console.log(`     onset lag ${f1(tm.latencyMs, 0)} ms, spread ${f1(tm.spreadMs, 0)} ms | score from sound ${g.measured ? g.measured.total + ' ' + g.measured.band : 'n/a'}  deserved ${g.reference.total} ${g.reference.band}  (pitch ${g.measured ? f1(g.measured.pitch, 0) : '-'}/${f1(g.reference.pitch, 0)}  fluency ${g.measured ? f1(g.measured.fluency, 0) : '-'}/${f1(g.reference.fluency, 0)}  tone ${g.measured ? f1(g.measured.tone, 0) : '-'}/${f1(g.reference.tone, 0)})`);
       for (const c of t.checks.filter(x => !x.ok)) console.log('     problem: ' + c.msg);
       if (!t.finished && t.debug) console.log('     debug: ' + JSON.stringify(t.debug));
