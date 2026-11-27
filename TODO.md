@@ -87,3 +87,10 @@ First run on 10 public-domain scores found that **quick notes are lost**: notes 
 - [ ] **Run the full 10-piece set after every change** to the detector or the attempt logic, and add a number to a baseline once it is stable (the speaker test is not a ratchet yet).
 - [ ] **Piece practice still shows the test piece afterwards** (the screen is not put back as it was).
 
+### Real-piece results after the fixes (silent mode, real recordings): 8 of 10 pass
+
+Notes found: Foster 100%, Bach 100%, Schumann 100%, Aloha Oe 100%, Beethoven 93%, Corelli 93%, Haydn 90%, Handel 88%, Joplin 91%, Mozart 84% (of notes of 100 ms or more). Failing: Mozart K. 155 (84%, needs 85%) and Joplin (score 84 against 100: 3 good notes called wrong notes, and 18 of 195 notes missed). Through the real speaker and microphone: Corelli, Schumann (51/57, score 90) and Aloha Oe (38/41) pass; the others have not been run that way yet.
+
+- [ ] **Run the real-speaker version of all 10 pieces and the 8 scale scenarios** (about 30 minutes of sound, quiet room, volume up): `node tests/mic-loopback.js --mode speaker --pieces --gold` and `--mode speaker --gold`. The gold clips so far (`tests/audio/gold/`, 15) are from the silent runs.
+- [ ] **Joplin**: 3 to 5 good notes are called wrong notes (octave errors on low piano notes in quick passages); look at them with the frame trace (`trace` in the take file, `$TEMP`-style script in the git history of this TODO).
+
