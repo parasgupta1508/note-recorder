@@ -56,3 +56,16 @@
 - [ ] **Teacher-marked calibration set.** Record real scales and pieces and have a teacher mark them, then tune the grader thresholds against those marks (the speaker test gives known-truth sound, not teacher opinion).
 - [ ] **Speaker test on a quiet room with the volume raised.** The real-speaker run stops at "TOO QUIET" when the microphone barely hears the speaker; run `node tests/mic-loopback.js --mode speaker --gold` once the volume is up to collect the 20-30 clips.
 
+## Evaluation audit: what was done, and what is still open
+
+Done (see `CLAUDE.md`, "Grader rules"): fault penalty and weakest-link caps, bounded offset forgiveness, evenness-based pulse, the zone and free margin no longer stack, one fixed frame rate for the drills, clarity / held length / listening share stored per note, deep-dip detection of repeated notes in pieces, per-note history for pieces (newest 12 runs), the coach keys piece notes by place, the speaker test and the performance synthesiser.
+
+- [ ] **Run the real speaker test with the volume up** and collect the 20-30 clips: `node tests/mic-loopback.js --mode speaker --gold` (it stops at "TOO QUIET" when the microphone barely hears the speaker). A small laptop speaker cannot play below about 230 Hz, so low guitar and violin notes are left out of its figures.
+- [ ] **Wait for note does not store clarity or listening share** (`waitFrame` keeps no per-frame clarity), so the cleanliness part of tone and the "microphone heard only X%" notice only work in Tempo-locked mode.
+- [ ] **Note length is only judged for bowed instruments in Tempo-locked mode** (plucked and struck notes decay by themselves).
+- [ ] **Pieces: the just / Pythagorean zone uses one tonic** for the whole piece (`peCtx`), so it is wrong after a modulation. Needs the key signature per bar from `js/core/musicxml.js`. Pieces are also still reduced to the top line, and tempo is the constant one you choose.
+- [ ] **Tone has no vibrato model**: wobble is the standard deviation of the smoothed frames. Vibrato rate and depth need a shorter window than 93 ms (a 6 Hz vibrato has a period of about 167 ms).
+- [ ] **Measured and left alone:** the 93 ms analysis window finds 29 of 29 notes at 240 BPM on the synthesised violin, so no shorter window was added. Re-check on real clips.
+- [ ] **Teacher-marked calibration** is still needed to tune the grader's numbers (the speaker test has a known truth, not a teacher's opinion).
+- [ ] **Slurred repeats in scales and the Recorder** use the old rule (a pause of 3 frames); the level-dip rule is only on in pieces where the next written note repeats the pitch.
+

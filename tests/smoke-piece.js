@@ -113,7 +113,7 @@ setTimeout(function(){ try{
 var run=PE.lastRun; ck('result: a run record for this piece',!!run&&run.rec.type==='piece'&&/Etude · Violin/.test(run.rec.label)&&run.rec.total>=80&&/^pc/.test(run.rec.sid));
 ck('result: the card has the score, the band, the three marks and the coach',!$('pzResult').hidden&&/Distinction|Merit/.test($('pzResult').textContent)&&$('pzResult').querySelectorAll('.rb').length===3&&/What to improve/.test($('pzResult').textContent));
 ck('result: the Result button is on',!$('pzResBtn').disabled);
-ck('history: the run is kept on this device under its own key, with no per-note list',(function(){var a=peRuns();return a.length>=1&&a[a.length-1].sid===run.rec.sid&&a[a.length-1].notes.length===0})());
+ck('history: the run is kept on this device under its own key, with a compact per-note list (name, pitch, played, cents, bar)',(function(){var a=peRuns(),r=a[a.length-1];return a.length>=1&&r.sid===run.rec.sid&&r.notes.length>0&&r.notes.every(function(x){return typeof x.m==='number'&&('b' in x)&&!('s' in x)&&!('e' in x)})})());
 
 // ---- a range of bars
 peSetMode('tempo'); peReset(); $('ppFrom').value=3; $('ppTo').value=4; $('ppFrom').dispatchEvent(new Event('change'));

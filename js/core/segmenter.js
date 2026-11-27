@@ -98,14 +98,28 @@ class Segmenter {
 }
 
 class AttemptDetector {
-  constructor(onAttempt) { this.onAttempt = onAttempt; this.cur = null; this.gap = 99; this.lastMidi = null; this.need = 6; }
-  frame(t, f, a4) {
-    if (!f) { if (++this.gap >= 3) { this.cur = null; this.lastMidi = null; } return; }
+  constructor(onAttempt) { this.onAttempt = onAttempt; this.cur = null; this.gap = 99; this.lastMidi = null; this.need = 6; this.rearmed = false; }
+  // The sound level of the note being followed: its recent peak and its deepest dip since (kept on every frame, voiced or not, because a bow change is often a silent frame).
+  levelTrack(c, t, lv) {
+    if (c.pk == null) { c.pk = lv; c.dip = lv; c.dipT = t; }
+    if (lv > c.pk) c.pk = lv; else c.pk = c.pk * 0.985 + lv * 0.015;   // the peak decays slowly so a long fade is not mistaken for a dip
+    if (lv < c.dip || t - c.dipT > 0.25) { c.dip = lv; c.dipT = t; }
+  }
+  // A bow change or a fresh pluck on the SAME pitch: the level fell under 30% of the note's recent peak and climbed back within 0.1 s. Only asked when the next written note repeats
+  // the pitch (a shallower dip may just be vibrato moving the loudness, so it is never taken as a new note here).
+  levelDip(c, t, lv) { return t - c.t > 0.08 && t - c.dipT <= 0.1 && c.dip < c.pk * 0.3 && lv > Math.max(c.dip * 2, c.pk * 0.6); }
+  // t: time of the frame, f: Hz or null, a4, lv: the frame's level (rms) or undefined, repeat: true when the next written note has the same pitch as the one just played.
+  frame(t, f, a4, lv, repeat) {
+    if (!f) { if (this.cur && lv != null) this.levelTrack(this.cur, t, lv); if (++this.gap >= 3) { this.cur = null; this.lastMidi = null; } return; }
     this.gap = 0;
     let n = freqToNote(f, a4);
     if (this.cur && n.midi !== this.cur.midi) {
       const c = centsBetween(f, noteToFreq(this.cur.midi, a4));
       if (Math.abs(c) < 65) n = { midi: this.cur.midi, cents: c };
+    }
+    if (lv != null && this.cur && this.cur.midi === n.midi) {
+      this.levelTrack(this.cur, t, lv);
+      if (repeat && this.cur.reg && this.levelDip(this.cur, t, lv)) { this.cur = null; this.lastMidi = null; this.rearmed = true; }   // the same pitch again: a new attempt
     }
     if (!this.cur || this.cur.midi !== n.midi) this.cur = { midi: n.midi, cents: [], hz: [], reg: false, t };
     this.cur.cents.push(n.cents); this.cur.hz.push(f);

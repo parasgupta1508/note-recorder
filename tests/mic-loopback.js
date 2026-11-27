@@ -59,9 +59,9 @@ srv.listen(0, '127.0.0.1', async () => {
   srv.close(); let fail = 0; const say = (ok, m) => { console.log((ok ? 'PASS ' : 'FAIL ') + m); if (!ok) fail++; };
   if (r.error) { console.log('FAIL ' + r.error); process.exit(1); }
   if (r.mode === 'speaker') {
-    const f1 = (x, d = 1) => x == null ? '-' : x.toFixed(d); let quiet = false;
+    const f1 = (x, d = 1) => x == null ? '-' : x.toFixed(d); let quiet = false, hiddenRun = false;
     for (const t of TAKES) {
-      if (t.error) { console.log(`${t.tooQuiet ? 'TOO QUIET' : 'FAIL'} ${t.name}: ${t.error}`); if (t.tooQuiet) quiet = true; else fail++; continue; }
+      if (t.error) { console.log(`${t.tooQuiet ? 'TOO QUIET' : t.hidden ? 'HIDDEN' : 'FAIL'} ${t.name}: ${t.error}`); if (t.tooQuiet) quiet = true; else if (t.hidden) hiddenRun = true; else fail++; continue; }
       const p = t.pitch, d = t.detection, g = t.grade, tm = t.timing;
       console.log(`${t.ok ? 'PASS' : 'FAIL'} ${t.name}`);
       console.log(`     found ${d.found}/${d.played} played notes | pitch error median ${f1(p.medAbs)}c  p95 ${f1(p.p95Abs)}c  bias ${f1(p.bias)}c  (${p.within5}/${p.n} within 5c) | wrong notes: ${d.wrongFlagged}/${d.wrongTruth} flagged, ${d.falseWrong} false | skipped: ${d.skippedTruth}`);
@@ -76,7 +76,7 @@ srv.listen(0, '127.0.0.1', async () => {
           notes: t.truth.filter(x => x.kind !== 'skipped').map(x => ({ midi: x.playedMidi, start: +(t.beatInWavS + x.startMs / 1000).toFixed(3), dur: Math.round(x.endMs - x.startMs), cents: x.cents })) }, null, 1));
       }
     }
-    if (quiet) { console.log('INCONCLUSIVE: the microphone barely heard the speaker. Raise the volume and run again.'); process.exit(2); }
+    if (quiet || hiddenRun) { console.log(quiet ? 'INCONCLUSIVE: the microphone barely heard the speaker. Raise the volume and run again.' : 'INCONCLUSIVE: the browser window was hidden. Keep it visible (do not minimise or cover it) and the screen awake, and run again.'); process.exit(2); }
     console.log(fail ? `${fail} of ${TAKES.length} takes FAILED` : `all ${TAKES.length} takes passed`); console.log('recordings and truth: tests/_mic/speaker-*.wav, *.take.json' + (process.argv.includes('--gold') ? '; gold clips: tests/audio/gold/' : '')); process.exit(fail ? 1 : 0);
   }
   if (r.mode === 'listen') {

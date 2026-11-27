@@ -103,26 +103,28 @@ function peDemo() {
 // ----- the results of one play of the piece: one slot per note per pass -----
 function peSlot(i, pass = PE.pass) {
   const key = pass + ':' + i; let s = PE.slotAt[key];
-  if (!s) { const n = PE.tl[i]; s = PE.slotAt[key] = { pass, index: i, name: n.noteName, midi: n.midi, d: 'up', k: 's', c: null, m: null, a: 0, s: null, e: null, sp: null, wrong: 0, rt: 0 }; PE.slots.push(s); }
+  if (!s) { const n = PE.tl[i]; s = PE.slotAt[key] = { pass, index: i, name: n.noteName, midi: n.midi, d: 'up', k: 's', c: null, m: null, a: 0, s: null, e: null, sp: null, cl: null, r: null, cov: null, wrong: 0, rt: 0 }; PE.slots.push(s); }
   return s;
 }
-const peNewHold = (a, T, ix, e) => ({ midi: a.midi, c0: a.cents, T, frames: [], gap: 0, inst: PE.plan.inst, ix, pass: PE.pass, e: e == null ? null : e });
+const peNewHold = (a, T, ix, e) => ({ midi: a.midi, c0: a.cents, T, frames: [], cl: [], t0: a.t, last: a.t, gap: 0, inst: PE.plan.inst, ix, pass: PE.pass, e: e == null ? null : e });
 // While a note is held, frames keep coming in (after the attack) so its accuracy and steadiness can be scored. An octave glitch frame counts as a gap.
 function peCollect(f) {
   const h = PE.hold; if (!h) return;
   if (f) {
     const c = centsBetween(f, noteToFreq(h.midi, a4()));
-    if (Math.abs(c) <= 65) { h.frames.push(peDev(c, h.midi)); h.gap = 0; } else if (isOctaveGlitch(c)) { if (++h.gap >= 4) peFinalize(); } else peFinalize();
+    if (Math.abs(c) <= 65) { h.frames.push(peDev(c, h.midi)); h.cl.push(frameCl); h.last = frameT; h.gap = 0; } else if (isOctaveGlitch(c)) { if (++h.gap >= 4) peFinalize(); } else peFinalize();
   } else if (++h.gap >= 4) peFinalize();
 }
 function peFinalize() {
   const h = PE.hold; PE.hold = null; if (!h) return;
-  let c = h.c0, a = Math.abs(h.c0) <= h.T ? 1 : 0, s = null, m = null, sp = null;   // s stays null when the note was too short to measure wobble
+  let c = h.c0, a = Math.abs(h.c0) <= h.T ? 1 : 0, s = null, m = null, sp = null, cl = null;   // s stays null when the note was too short to measure wobble
   if (h.frames.length >= 4) {
     const sm = ruleFor(h.inst).smooth, st = holdStats(h.frames, h.T, sm); c = st.c; s = st.s; a = st.a;
     m = evalMedian(smoothCents(h.frames.slice(Math.min(3, h.frames.length >> 2)), sm)); sp = Math.abs(h.c0 - m);   // the evaluation judges the pitch after the attack
+    cl = holdClarity(h.cl, Math.min(3, h.frames.length >> 2));
   }
-  Object.assign(peSlot(h.ix, h.pass), { k: 'h', c, a, s, e: h.e, m, sp });
+  const bowed = !!ruleFor(h.inst).bowing && PE.mode === 'tempo' && PE.tl[h.ix], r = bowed ? heldRatio(h.t0, h.last, PE.tl[h.ix].durationMs) : null, cov = bowed ? heardShare(h.frames.length, PE.tl[h.ix].durationMs) : null;   // length is judged only where a note can be held (bowed), against the click
+  Object.assign(peSlot(h.ix, h.pass), { k: 'h', c, a, s, e: h.e, m, sp, cl, r, cov });
   PE.devHist.push(m != null ? m : c);   // the grader's view of the player's overall offset
   if (PE.runPass && h.pass === PE.runPass) peFlushRun();   // the last note of a finished pass has just been scored
 }
@@ -218,7 +220,8 @@ function peAdvanceWait(rule) {
 function pieceFrame(f, t) {
   peCollect(f);
   if (!PE.running || PE.demo >= 0) return;
-  peDet.frame(t, f, a4());
+  peDet.frame(t, f, a4(), frameRms, PE.pos > 0 && PE.seq[PE.pos] === PE.seq[PE.pos - 1]);   // a repeated note can start without a pause: a deep dip in level then counts as the new note
+  if (peDet.rearmed) { peDet.rearmed = false; PE.needGap = false; }
   peClockTick(t);
   if (PE.pos >= PE.seq.length) return;
   if (!f) { if (++PE.silent > 8) { PE.liveC = []; PE.waitFrames = []; PE.waitOk = 0; PE.needGap = false; } return; }   // a bow change or a breath is a short gap, not an error
@@ -236,13 +239,19 @@ function peFreqRange() { return PE.running && PE.seq.length ? [Math.max(25, note
 // ----- the result: a Trinity-style report for the run, kept per piece on this device (never the file itself) -----
 const PE_RUNS_KEY = 'tuner-piece-runs-v1', PE_BAND = { Distinction: 'dist', Merit: 'merit', Pass: 'pass', 'Below Pass': 'below' };
 const peRuns = () => { try { const a = JSON.parse(localStorage.getItem(PE_RUNS_KEY)); return Array.isArray(a) ? a : []; } catch { return []; } };
-function peSaveRun(rec) { const all = peRuns(); all.push({ ...rec, notes: [] }); try { localStorage.setItem(PE_RUNS_KEY, JSON.stringify(all.slice(-120))); } catch {} }   // the per-note list is not kept: only the summary
+// A run keeps a compact per-note list (name, pitch, played, cents, bar) for the newest PE_KEEP_NOTES runs, so the coach can see which bars go wrong again and again; older runs keep only the summary.
+const PE_KEEP_NOTES = 12;
+function peSaveRun(rec) {
+  const all = peRuns(); all.push(rec);
+  all.slice(0, Math.max(0, all.length - PE_KEEP_NOTES)).forEach(r => { r.notes = []; });
+  try { localStorage.setItem(PE_RUNS_KEY, JSON.stringify(all.slice(-120))); } catch { try { all.forEach(r => { r.notes = []; }); localStorage.setItem(PE_RUNS_KEY, JSON.stringify(all.slice(-120))); } catch {} }   // storage full: keep the summaries
+}
 function peQueueRun() { PE.runPass = PE.pass; clearTimeout(PE.runTimer); if (!PE.hold) peFlushRun(); else PE.runTimer = setTimeout(() => { peFinalize(); peFlushRun(); }, 1500); }   // the last note is still being held
 function peFlushRun() {
   clearTimeout(PE.runTimer); const pass = PE.runPass; PE.runPass = 0; if (!pass || !PE.plan) return;
   const slots = PE.slots.filter(s => s.pass === pass); if (!slots.length) return;
   const p = PE.plan, ev = peScoreRun(slots, { beatMs: 60000 / PE.bpm, mode: PE.mode, wobbleCap: ruleFor(p.inst).wobble });
-  const rec = histRecord(ev, { t: Date.now(), player: typeof profile !== 'undefined' ? profile : '', inst: p.inst, type: 'piece', root: p.pc, span: 1, pos: p.pos, bow: p.bow, bpm: PE.bpm, mode: PE.mode, label: p.label, pass }); rec.sid = p.sid;
+  const rec = histRecord(ev, { t: Date.now(), player: typeof profile !== 'undefined' ? profile : '', inst: p.inst, type: 'piece', root: p.pc, span: 1, pos: p.pos, bow: p.bow, bpm: PE.bpm, mode: PE.mode, label: p.label, pass }); rec.sid = p.sid; rec.notes = rec.notes.map((x, i) => ({ n: x.n, m: x.m, k: x.k ? 1 : 0, c: x.c, b: PE.tl[i] ? PE.tl[i].bar : 0 }));   // compact: only what the coach reads, and the bar
   const prior = peRuns().filter(r => r.sid === p.sid && r.inst === rec.inst && (!rec.p || r.p === rec.p)), best = histIsBest(prior, rec);
   PE.lastRun = { rec, coach: coachReview(rec, prior, { best }), best, earlier: prior.slice(-5).map(r => r.total), weak: peWeakSpots(slots) }; peSaveRun(rec); PE.resOpen = true; peRenderResult(); peUi();
 }
@@ -265,7 +274,8 @@ function peRenderResult() {
   el.innerHTML = `<div class="res-head"><div class="res-score"><b>${r.total}</b><small>/100</small></div>
     <div><span class="band ${PE_BAND[r.band]}">${r.band}</span>${L.best ? ' <span class="pbadge">★ Personal best</span>' : ''}
     <div class="mut res-sub">${peEsc(r.label)} · ${r.bpm} BPM · ${r.mode === 'wait' ? 'Wait for note' : 'Tempo-locked'} · pass ${r.pass}${r.eng ? ' · ' + (r.eng === 'strict' ? 'Strict' : 'Practical') + ' grading' : ''}</div>
-    ${r.off != null && Math.abs(r.off) >= 8 ? `<div class="mut res-sub">You played ${Math.abs(r.off).toFixed(0)}¢ ${r.off > 0 ? 'sharp' : 'flat'} overall. Most of that is forgiven in the score, but check your tuning or your first note.</div>` : ''}
+    ${r.cov != null && r.cov < 0.6 ? `<div class="warn-t res-sub">The microphone heard only ${Math.round(r.cov * 100)}% of each note. Move it closer, quiet the room, or raise the input level: this score may be lower than your playing deserves.</div>` : ''}
+    ${r.off != null && Math.abs(r.off) >= 8 ? `<div class="mut res-sub">You played ${Math.abs(r.off).toFixed(0)}¢ ${r.off > 0 ? 'sharp' : 'flat'} overall. Up to 12¢ of that is forgiven in the score${Math.abs(r.off) > 12 ? ' and the rest counts against you' : ''}, so check your tuning or your first note.</div>` : ''}
     ${L.earlier.length ? `<div class="mut res-sub">Earlier runs of this piece: ${L.earlier.join(' · ')}</div>` : ''}</div></div>
     <div class="res-bars">${peBar('Pitch &amp; intonation', 50, r.pitch)}${peBar('Fluency &amp; pulse', 30, r.fluency)}${peBar('Tone &amp; steadiness', 20, r.tone)}</div>
     ${weak}<h4>What you're doing well</h4>${list(L.coach.strengths)}<h4>What to improve</h4>${list(L.coach.focus)}`;

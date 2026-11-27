@@ -35,6 +35,15 @@ function holdStats(frames, tol, win = 3) {
   return { c, s, a: f.filter(x => Math.abs(x) <= tol).length / n, n };
 }
 
+// What a held note tells the grader besides its pitch. cl: the pitch detector's clarity for each frame of the note. skip: frames of the attack to leave out.
+// holdClarity -> the median clarity after the attack, or null when there are too few frames. heldRatio -> how long the note really sounded against its written length
+// (1 = all of it); the last frame stands for one frame period (about 1/60 s). Both are null when they cannot be measured.
+const holdClarity = (cl, skip) => { const v = cl.slice(skip).filter(x => typeof x === 'number'); return v.length >= 4 ? evalMedian(v) : null; };
+// The share of a note's written length for which a pitch was actually heard (frames that passed the gate and the clarity bar, about 60 a second, less the 6 the attempt needed).
+// A low share on a bowed note is the room or the microphone, not the player, and the result says so.
+const heardShare = (frames, durationMs, fps = 60) => durationMs > 0 ? Math.max(0, Math.min(1, frames / Math.max(4, durationMs / 1000 * fps - 6))) : null;
+const heldRatio = (t0, last, durationMs, framePeriod = 1 / 60) => (durationMs > 0 && last >= t0) ? Math.min(1.5, ((last - t0 + framePeriod) * 1000) / durationMs) : null;
+
 // Per-note score from its events (recent plays weigh more). wobbleCap: a number, or a function of an event, giving the wobble that earns zero steadiness credit (default: the instrument rule of the event). minPlays: fewer plays give no score.
 const defaultWobble = e => ruleFor(e.i).wobble;
 function noteScore(evs, wobbleCap = defaultWobble, minPlays = 3) {

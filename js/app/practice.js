@@ -143,19 +143,21 @@ function collectHold(f) {
   if (!hold) return;
   if (f) {
     const c = centsBetween(f, noteToFreq(hold.midi, a4()));
-    if (Math.abs(c) <= 65) { hold.frames.push(scaleDev(c, hold.midi)); hold.gap = 0; } else if (isOctaveGlitch(c)) { if (++hold.gap >= 4) finalizeHold(); } else finalizeHold();
+    if (Math.abs(c) <= 65) { hold.frames.push(scaleDev(c, hold.midi)); hold.cl.push(frameCl); hold.last = frameT; hold.gap = 0; } else if (isOctaveGlitch(c)) { if (++hold.gap >= 4) finalizeHold(); } else finalizeHold();
   } else if (++hold.gap >= 4) finalizeHold();
 }
 function finalizeHold() {
   const h = hold; hold = null; if (!h) return;
-  let c = h.c0, a = Math.abs(h.c0) <= h.T ? 1 : 0, s = null, m = null, sp = null;   // s stays null when the note was too short to measure wobble
+  let c = h.c0, a = Math.abs(h.c0) <= h.T ? 1 : 0, s = null, m = null, sp = null, cl = null;   // s stays null when the note was too short to measure wobble
   if (h.frames.length >= 4) {
     const st = holdStats(h.frames, h.T, ruleFor(h.i).smooth); c = st.c; s = st.s; a = st.a;
     const body = smoothCents(h.frames.slice(Math.min(3, h.frames.length >> 2)), ruleFor(h.i).smooth);   // the evaluation judges the pitch after the attack
     m = evalMedian(body); sp = Math.abs(h.c0 - m);                                                      // sp: how far the first frame was from where the note settled
+    cl = holdClarity(h.cl, Math.min(3, h.frames.length >> 2));                                          // cl: how clearly pitched the sound was
   }
   addEv(h.midi, { k: 'h', c, a, s, e: h.e, d: h.d, sl: h.sl, i: h.i }, true);
-  Object.assign(slotFor(h.ix, h.pass), { k: 'h', c, a, s, e: h.e, m, sp });
+  const bowed = !!ruleFor(h.i).bowing && sc.mode === 'tempo' && sc.tl[h.ix], r = bowed ? heldRatio(h.t0, h.last, sc.tl[h.ix].durationMs) : null, cov = bowed ? heardShare(h.frames.length, sc.tl[h.ix].durationMs) : null;   // length is judged only where a note can be held (bowed), against the click
+  Object.assign(slotFor(h.ix, h.pass), { k: 'h', c, a, s, e: h.e, m, sp, cl, r, cov });
   (sc.devHist = sc.devHist || []).push(m != null ? m : c);   // the grader's view of the player's overall offset
   renderCard(); renderSummary();
   if (sc.runPass && h.pass === sc.runPass) flushRun();   // the last note of a finished pass has just been scored
@@ -163,7 +165,7 @@ function finalizeHold() {
 // One result per scale position per pass of this run.
 function slotFor(i, pass = sc.pass) {
   const key = pass + ':' + i; let s = sc.slotAt[key];
-  if (!s) { const n = sc.tl[i]; s = sc.slotAt[key] = { pass, index: i, name: n.noteName, midi: n.midi, d: n.direction, k: 's', c: null, m: null, a: 0, s: null, e: null, sp: null, wrong: 0, rt: 0 }; sc.slots.push(s); }
+  if (!s) { const n = sc.tl[i]; s = sc.slotAt[key] = { pass, index: i, name: n.noteName, midi: n.midi, d: n.direction, k: 's', c: null, m: null, a: 0, s: null, e: null, sp: null, cl: null, r: null, cov: null, wrong: 0, rt: 0 }; sc.slots.push(s); }
   return s;
 }
 const SPARK = '▁▂▃▄▅▆▇█';

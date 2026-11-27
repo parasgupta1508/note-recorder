@@ -160,4 +160,39 @@ ok(lib.visPlace({ string: 6, fret: 3 }, [40, 45, 50, 55, 59, 64], 43).offset ===
 const kb = lib.visKeys(60, 72);
 ok(kb.units === 8 && kb.keys.filter(k => !k.black).length === 8 && kb.keys.filter(k => k.black).length === 5 && kb.keys.find(k => k.midi === 61).black, 'keyboard C4 to C5: 8 white keys, 5 black');
 
+// ---- the examiner rules (audit of the grader): a fault is not averaged away, no pillar carries the others, a flat scale is out of tune, uneven notes are heard
+{
+  const strict = lib.findEngine('scorer', 'strict'), prac = lib.findEngine('scorer', 'practical'), P = { tolerance: 12, expressive: 1, drift: 70 };
+  const run = (e, slots, o = {}) => e.evaluate(slots, Object.assign({ beatMs: BEAT, mode: 'tempo', wobbleCap: 40, params: P }, o));
+  const bad = (n, at, off) => mkSlots(n, i => at.includes(i) ? { c: off, m: off, a: 0 } : {});
+  const one = run(strict, bad(15, [5], 40)), three = run(strict, bad(15, [3, 7, 11], 35)), long3 = run(strict, bad(43, [5, 20, 33], 35));
+  ok(one.band === 'Distinction' && one.faults === 1, `one note 40 cents out in 15 still earns Distinction (${one.total})`);
+  ok(three.band === 'Merit' && three.capped === 'pitch' && three.faults === 3, `three notes 35 cents out in 15 cannot be Distinction: pitch ${three.pitch.toFixed(0)} caps the run at Merit (${three.total})`);
+  ok(long3.total < run(strict, mkSlots(43)).total - 3, `a fault costs points in a long scale too (3 faults in 43 notes: ${long3.total} against ${run(strict, mkSlots(43)).total})`);
+  const weakPitch = run(strict, mkSlots(15, () => ({ c: 27, m: 27, a: 0 })));
+  ok(weakPitch.pitch < 50 && weakPitch.total <= 74, `perfect rhythm and tone cannot carry poor intonation: pitch ${weakPitch.pitch.toFixed(0)} gives ${weakPitch.total}, at most a Pass`);
+  const slow = run(strict, mkSlots(15, (i) => ({ e: i * 400 })));
+  ok(slow.fluency < 100, 'a tempo that drifts away from the click costs fluency');
+  // practical: a flat scale
+  const flat = d => run(prac, mkSlots(15, () => ({ c: d, m: d, a: Math.abs(d) <= 10 ? 1 : 0 })));
+  ok(flat(-10).band === 'Distinction' && flat(-10).offset === -10, 'practical: a scale 10 cents flat is forgiven and the offset is reported');
+  ok(flat(-30).band !== 'Distinction' && flat(-30).offset === -30 && flat(-30).total < flat(-10).total - 8, `practical: a scale 30 cents flat is out of tune all the way through (${flat(-30).total} against ${flat(-10).total}) and the offset is still reported`);
+  ok(prac.shift(Array(8).fill(-30), { params: P }) === -12 && prac.shift(Array(8).fill(-8), { params: P }) === -5.6, 'practical: the live meter forgives the same bounded share (12 cents at most)');
+  // practical: the bowed-string zone and the free margin do not stack in full
+  const ld = prac.dev(-24, { midi: 71, root: 0, fretless: true, params: P }), lead = run(prac, mkSlots(8, i => i === 3 ? { midi: 71, c: ld, m: ld, a: 1 } : {}));   // one leading note 24 cents flat (the zone takes 12 of it), the rest exact
+  ok(lead.pitch < 100, `practical: a leading note 24 cents flat no longer gets full marks (${lead.pitch.toFixed(1)})`);
+  // evenness: a constant lag is forgiven, uneven notes are not
+  const lagged = run(strict, mkSlots(15, () => ({ e: 200 }))), uneven = run(strict, mkSlots(15, (i) => ({ e: i % 2 ? 130 : -130 }))), even0 = run(strict, mkSlots(15));
+  ok(lagged.fluency === 100 && uneven.fluency < 85 && uneven.even < 50 && even0.even === 100, `evenness: a constant 200 ms lag costs nothing; notes alternately 130 ms early and late do (fluency ${uneven.fluency.toFixed(0)})`);
+  // tone: cleanliness and the missing-measurement rule
+  const clean = run(strict, mkSlots(15, () => ({ cl: 0.98 }))), noisyRoom = run(strict, mkSlots(15, () => ({ cl: 0.90 }))), scratchy = run(strict, mkSlots(15, i => ({ cl: i % 3 === 0 ? 0.86 : 0.98 })));
+  ok(clean.tone === 100 && noisyRoom.tone === 100, 'tone: a poor room or microphone (every note clarity 0.90) is not held against the player');
+  ok(scratchy.tone < 95 && scratchy.tone > 70, `tone: notes that are much less clearly pitched than the player's usual (scratch, bow noise) cost tone (${scratchy.tone.toFixed(0)})`);
+  const unm = run(strict, mkSlots(15, () => ({ s: null })));
+  ok(unm.tone === 75 && unm.toneMeasured === false, 'tone: when no note was long enough to measure, the mark is a neutral 75 and says so');
+  // short notes
+  const shorts = run(strict, mkSlots(15, (i) => ({ r: i % 2 ? 0.4 : 1 })));
+  ok(shorts.shorts === 7 && shorts.continuity < 90, `notes held under 60% of their length are counted and cost continuity (${shorts.shorts} short, continuity ${shorts.continuity.toFixed(0)})`);
+}
+
 console.log(fail ? `${fail} FAILED` : 'all evaluation tests passed'); process.exit(fail ? 1 : 0);

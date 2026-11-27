@@ -2,8 +2,8 @@
 //   1. Expressive intonation (bowed strings): a note is right anywhere between its equal-tempered, just and Pythagorean pitch for its place in the scale, and a high
 //      leading tone is allowed to be sharp (professional violinists play it so; Lund University studies of concertmasters, Pythagorean/just tuning tendencies).
 //      Fretted instruments and piano are equal-tempered, so they keep the single target.
-//   2. Overall offset is forgiven: if the whole scale sits 10 cents flat the player is consistent, which is a tuning (or starting-note) matter, not 15 bad notes.
-//      The median offset of the run is taken out (weight "drift") and reported separately so the player can fix it.
+//   2. Overall offset is forgiven up to 12 cents: if the whole scale sits 10 cents flat the player is consistent, which is a tuning (or starting-note) matter, not 15 bad notes.
+//      The median offset of the run is taken out (weight "drift", at most 12 cents) and reported separately so the player can fix it; a scale further out than that is out of tune.
 //   3. A tolerance zone, not a pin: full marks within `tolerance` cents of the target zone, falling to zero over 32 cents (the strict grader: 6 and 44).
 //   4. Timing: a human drifts by a tenth of a beat; full marks within 12% of a beat of the player's own steady lag, zero by 52%.
 //   5. Steadiness: normal vibrato and wobble get 25% more allowance. A wrong note costs the same as in strict (3 points, up to 30): that is not a human wobble.
@@ -13,6 +13,10 @@ const PRAC_JI = [0, 11.7, 3.9, 15.6, -13.7, -2.0, -9.8, 2.0, 13.7, -15.6, -3.9, 
 const PRAC_PY = [0, -9.8, 3.9, -5.9, 7.8, -2.0, 11.7, 2.0, -7.8, 5.9, -3.9, 9.8];             // Pythagorean (stacked fifths): thirds and leading tone higher
 const PRAC_HI = { 11: 20 };                                                                     // a high leading tone (the semitone to the tonic narrowed)
 const pracClamp = (x, a, b) => Math.max(a, Math.min(b, x));
+// How much of the player's overall offset is forgiven: the drift share of the median offset, but never more than PRAC_OFF_MAX cents. A scale 10 cents flat is a tuning
+// matter and is forgiven; one 30 cents flat is out of tune all the way through and keeps its marks off (the offset is still reported, so the player can fix it).
+const PRAC_OFF_MAX = 12;
+const pracForgive = (median, drift) => pracClamp(pracClamp(median, -50, 50) * drift, -PRAC_OFF_MAX, PRAC_OFF_MAX);
 const pracMedian = a => { const s = a.slice().sort((x, y) => x - y), h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; };
 const pracP = (ctx, k, d) => ctx && ctx.params && ctx.params[k] != null ? +ctx.params[k] : d;
 registerEngine({
@@ -32,15 +36,16 @@ registerEngine({
   // The player's overall offset so far (median of the notes already played, needs 4), scaled by the drift setting: shifted out of the live meter and the grade.
   shift(devs, ctx) {
     if (!devs || devs.length < 4) return 0;
-    return pracClamp(pracMedian(devs), -30, 30) * pracP(ctx, 'drift', 70) / 100;
+    return pracForgive(pracMedian(devs), pracP(ctx, 'drift', 70) / 100);
   },
   tol(T, ctx) { return Math.max(T, pracP(ctx, 'tolerance', 12)); },
   evaluate(slots, opts = {}) {
     const ctx = { params: opts.params }, free = pracP(ctx, 'tolerance', 12), drift = pracP(ctx, 'drift', 70) / 100;
     const dv = x => (typeof x.m === 'number' ? x.m : x.c), played = slots.filter(x => x.k === 'h' && typeof dv(x) === 'number');
-    const offset = played.length >= 4 ? pracClamp(pracMedian(played.map(dv)), -30, 30) : 0;
-    const adj = slots.map(x => x.k === 'h' ? Object.assign({}, x, { c: x.c == null ? x.c : x.c - drift * offset, m: typeof x.m === 'number' ? x.m - drift * offset : x.m }) : x);
-    const r = evaluateRun(adj, Object.assign({}, opts, { wobbleCap: (opts.wobbleCap || 25) * 1.25, curve: { free, span: 32, pulseFree: 0.12, pulseSpan: 0.40, wrongPenalty: 3, wrongCap: 30 } }));
+    const offset = played.length >= 4 ? pracClamp(pracMedian(played.map(dv)), -50, 50) : 0, removed = pracForgive(offset, drift);
+    const adj = slots.map(x => x.k === 'h' ? Object.assign({}, x, { c: x.c == null ? x.c : x.c - removed, m: typeof x.m === 'number' ? x.m - removed : x.m }) : x);
+    const zoned = !!pracP(ctx, 'expressive', 0), freeNow = zoned ? Math.max(6, free * 0.6) : free;   // on a bowed string the just / Pythagorean zone is already an allowance: the two do not stack in full
+    const r = evaluateRun(adj, Object.assign({}, opts, { wobbleCap: (opts.wobbleCap || 25) * 1.25, curve: { free: freeNow, span: 32, pulseFree: 0.12, pulseSpan: 0.40, evenFree: 0.09, evenSpan: 0.22, wrongPenalty: 3, wrongCap: 30 } }));
     if (r) { r.engine = 'practical'; r.offset = Math.round(offset * 10) / 10; }
     return r;
   },

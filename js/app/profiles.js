@@ -81,14 +81,14 @@ profReady = true;
 if (prof.k !== 'all') { inst = FAMILIES.some(f => f[2].includes(prof.t)) ? prof.t : 'chromatic'; resetTuner(); buildInstChips(); }   // remember the instrument between visits
 syncProf(); renderSet();
 $('defaults').onclick = () => { applySettings(SET_DEFAULTS); applyProfile('all'); saveSettings(); calMsg('Defaults restored.'); $('calibOut').classList.add('hide'); };
-let gateOn = false, trkF = 0, trkT = -9, hpCut = 70, recTickT = -1;
+let gateOn = false, trkF = 0, trkT = -9, hpCut = 70, recTickT = -1, pracTickT = -1, frameCl = null, frameT = 0, frameRms = 0;   // frameCl / frameT: clarity and time of the frame just analysed (the drills store them with each note)
 function loop() {
   rafId = requestAnimationFrame(loop);
   analyser.getFloatTimeDomainData(buf);
   const t = ctx.currentTime - t0;
   let rms = 0, pk = 0; for (let i = 0; i < buf.length; i++) { rms += buf[i] * buf[i]; const a = Math.abs(buf[i]); if (a > pk) pk = a; } rms = Math.sqrt(rms / buf.length);
   updateLevel(rms, pk); calibFrame(rms, pk);
-  let f = null, fR = null, rA = null;
+  let f = null, fR = null, rA = null; frameCl = null; frameT = t; frameRms = rms;
   const G = +$('gate').value;
   gateOn = rms > G || (gateOn && rms > G * 0.6);   // hysteresis: a fading note does not chatter the gate
   // Sustain tracking: once the tuner has a note, a decaying string keeps reading (down to about -14 dB under the gate)
@@ -113,7 +113,7 @@ function loop() {
     const rm = recording ? recModeCfg() : null, yb = rm && rm.win && lo >= 80 ? buf.subarray(buf.length - rm.win) : buf;   // fast mode: only the newest 2048 samples, so a quick note change is not smeared
     const r = f0Engine().frame(yb, ctx.sampleRate, lo, hi), conf = +$('conf').value;
     const near = r && track && Math.abs(centsBetween(r.freq, trkF)) < 45;
-    if (r && (gateOn ? r.clarity > conf : near && r.clarity > 0.5) || (near && r.clarity > 0.5)) f = r.freq;
+    if (r && (gateOn ? r.clarity > conf : near && r.clarity > 0.5) || (near && r.clarity > 0.5)) { f = r.freq; frameCl = r.clarity; }
     if (recording && gateOn) { fR = recPitch(r, rms, pk, conf); rA = r; }   // the recorder is stricter than the tuner: fewer wrong notes from noise
   }
   if (f) { trkF = f; trkT = t; }
@@ -126,9 +126,14 @@ function loop() {
   }
   liveFrame(f, gateOn);
   if (tab === 'tuner') tunerFrame(t, f);
-  if (demoIdx < 0) collectHold(f);                   // keep scoring the note that is still sounding
-  if (sc.running && demoIdx < 0) { det.frame(t, f, a4()); liveScaleFrame(f, t); }
-  if (tab === 'piece' && typeof pieceFrame === 'function') pieceFrame(f, t);   // Piece practice has its own engine
+  // The drills count frames (6 for a note, 8 of quiet, the hold and smoothing windows), so they run at one rate, about 60 a second, whatever the screen's refresh rate:
+  // on a 120 Hz screen every one of those windows would otherwise be half as long and the same playing would be graded differently.
+  if (t - pracTickT >= 0.012) {
+    pracTickT = t;
+    if (demoIdx < 0) collectHold(f);                   // keep scoring the note that is still sounding
+    if (sc.running && demoIdx < 0) { det.frame(t, f, a4(), frameRms, false); liveScaleFrame(f, t); }   // a scale never repeats a note, so a dip in level is never a new note here
+    if (tab === 'piece' && typeof pieceFrame === 'function') pieceFrame(f, t);   // Piece practice has its own engine
+  }
   if (tab === 'rec' && recording) { drawRoll(); recUi(); }
 }
 

@@ -20,7 +20,9 @@ const coachFix = (inst, sharp) => sharp ? (inst === 'violin' ? 'place the finger
 
 // Notes that went sharp or flat in at least COACH_MIN_RUNS of the recent runs, worst first: [{ name, sharp, runs, of, avg }]
 function coachRecurringNotes(runs, cur) {
-  const per = runs.map(r => { const m = {}; for (const x of r.notes) if (x.k && typeof x.c === 'number') (m[x.m] = m[x.m] || { n: x.n, v: [] }).v.push(x.c); return m; });
+  // A scale is judged by pitch (the same note anywhere in it is the same note); a piece by place (the same pitch in another bar is another note), and only runs of the same length are compared.
+  const place = cur && cur.type === 'piece', len = cur && cur.notes ? cur.notes.length : 0;
+  const per = runs.map(r => { const m = {}; if (place && r.notes.length !== len) return m; r.notes.forEach((x, i) => { if (x.k && typeof x.c === 'number') { const key = place ? i : x.m; (m[key] = m[key] || { n: place && x.b ? `${x.n} in bar ${x.b}` : x.n, v: [] }).v.push(x.c); } }); return m; });
   const out = [];
   for (const m in per[per.length - 1] || {}) {
     const mine = coachAvg(per[per.length - 1][m].v); if (Math.abs(mine) < COACH_BIAS) continue;

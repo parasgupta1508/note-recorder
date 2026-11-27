@@ -67,7 +67,7 @@ function stopScale() {                       // stops the demo and/or the practi
   setMsg(was ? 'Stopped — press Start practice to begin again' : '');
   renderScale(); renderSummary(); renderCard(); renderAnalysis();
 }
-const newHold = (a, T, ix, e) => ({ midi: a.midi, c0: a.cents, T, frames: [], gap: 0, sl: scaleLabel(), i: $('scInst').value, ix, pass: sc.pass, d: sc.tl[ix].direction, e: e == null ? null : e });
+const newHold = (a, T, ix, e) => ({ midi: a.midi, c0: a.cents, T, frames: [], cl: [], t0: a.t, last: a.t, gap: 0, sl: scaleLabel(), i: $('scInst').value, ix, pass: sc.pass, d: sc.tl[ix].direction, e: e == null ? null : e });
 const scCents = c => `${c >= 0 ? '+' : '−'}${Math.abs(c).toFixed(0)}¢`;
 const cls3 = g => g === 'In tune' ? 'ok' : g === 'Close' ? 'warn' : 'bad';
 function markSkip(i, t) {

@@ -43,6 +43,7 @@ async function stRunScenario(sce, hooks = {}) {
   window.stActive = true; profile = ''; cardAll = {}; cardSess = {}; passAll = [];
   let tap = null, bus = null;
   try {
+    if (document.hidden) return { ok: false, hidden: true, error: 'HIDDEN: the browser window is hidden, minimised or the screen is asleep, so the page cannot listen. Keep this window visible and the screen awake, then run again.', scenario: S };
     showTab('scale'); if (sc.running) stopScale();
     stSet('scInst', S.inst); settingsChanged();
     stSet('scRoot', S.root); stSet('scType', S.type); stSet('scSpan', S.span); if (!$('scBowWrap').hidden) stSet('scBow', S.bow); if (S.pos && !$('scPosWrap').hidden) stSet('scPos', S.pos); stSet('scBpm', S.bpm); $('scStrict').checked = true; $('scRepeat').checked = false;
@@ -62,8 +63,8 @@ async function stRunScenario(sce, hooks = {}) {
     if (!S.direct && (lvl < room * 3 || lvl < 0.002)) return { ok: false, tooQuiet: true, error: `TOO QUIET: the microphone barely heard the speaker (room ${room.toExponential(2)}, note ${lvl.toExponential(2)}). Raise the speaker volume, move the microphone closer, and use the speaker, not headphones.`, scenario: S };
     log('Starting the Scale drill …');
     const t1 = Date.now(); startScale();
-    for (let i = 0; i < 1000 && sc.clock == null && sc.running; i++) await stSleep(20);
-    if (sc.clock == null) return { ok: false, error: 'The drill did not start (no count-in).', scenario: S };
+    for (let i = 0; i < 750 && sc.clock == null && sc.running; i++) await stSleep(20);
+    if (sc.clock == null) { stopScale(); return { ok: false, hidden: document.hidden, error: document.hidden ? 'HIDDEN: the browser window was hidden while the test ran (minimised, covered or the screen slept). Keep it visible and the screen awake, then run again.' : 'The drill did not start (no count-in).', scenario: S }; }
     const playAt = sc.clock + t0 - perf.padS;                 // the first beat of the drill, on the audio clock, less the lead-in of the recording
     if (playAt < c.currentTime + 0.05) return { ok: false, error: 'The recording was not ready in time for the count-in.', scenario: S };
     const src = stPlay(c, perf.samples, sr, playAt, bus);
@@ -108,7 +109,7 @@ const ST_SET = [
 ];
 async function stRunSet(list, hooks = {}) {
   ST.running = true; ST.stop = false; const out = [];
-  try { for (let i = 0; i < list.length && !ST.stop; i++) { const sce = list[i]; if (hooks.log) hooks.log(`${i + 1}/${list.length}: ${sce.name || sce.inst}`); let r = await stRunScenario(Object.assign({ seed: 100 + i }, sce), hooks); if (!r.ok && !r.error && r.finished === false && !ST.stop) { if (hooks.log) hooks.log('The drill did not finish; trying once more'); r = await stRunScenario(Object.assign({ seed: 100 + i }, sce), hooks); r.retried = true; } r.name = sce.name || `${sce.inst} ${sce.level}`; out.push(r); if (hooks.onTake) await hooks.onTake(r, i); if (r.tooQuiet) break; } }
+  try { for (let i = 0; i < list.length && !ST.stop; i++) { const sce = list[i]; if (hooks.log) hooks.log(`${i + 1}/${list.length}: ${sce.name || sce.inst}`); let r = await stRunScenario(Object.assign({ seed: 100 + i }, sce), hooks); if (!r.ok && !r.error && !r.hidden && r.finished === false && !ST.stop) { if (hooks.log) hooks.log('The drill did not finish; trying once more'); r = await stRunScenario(Object.assign({ seed: 100 + i }, sce), hooks); r.retried = true; } r.name = sce.name || `${sce.inst} ${sce.level}`; out.push(r); if (hooks.onTake) await hooks.onTake(r, i); if (r.tooQuiet || r.hidden) break; } }
   finally { ST.running = false; }
   return out;
 }
@@ -127,8 +128,8 @@ function stShow(list) {
 }
 async function stGo(list) {
   if (ST.running) return; $('stRun').disabled = $('stAll').disabled = true; $('stStop').classList.remove('hide'); $('stMsg').className = 'hint2'; $('stRes').innerHTML = ''; $('stFiles').innerHTML = '';
-  try { const res = await stRunSet(list, { log: t => { $('stMsg').textContent = t; } }); stShow(res); const bad = res.filter(r => !r.ok).length; $('stMsg').className = 'hint2 ' + (res.some(r => r.tooQuiet) ? 'warn-t' : bad ? 'bad-t' : 'ok-t');
-    $('stMsg').textContent = res.some(r => r.tooQuiet) ? 'Too quiet: raise the speaker volume and try again.' : bad ? `${bad} of ${res.length} tests failed.` : `All ${res.length} tests passed.`; }
+  try { const res = await stRunSet(list, { log: t => { $('stMsg').textContent = t; } }); stShow(res); const bad = res.filter(r => !r.ok).length; $('stMsg').className = 'hint2 ' + (res.some(r => r.tooQuiet || r.hidden) ? 'warn-t' : bad ? 'bad-t' : 'ok-t');
+    $('stMsg').textContent = res.some(r => r.hidden) ? 'The window was hidden: keep it visible and the screen awake, then run again.' : res.some(r => r.tooQuiet) ? 'Too quiet: raise the speaker volume and try again.' : bad ? `${bad} of ${res.length} tests failed.` : `All ${res.length} tests passed.`; }
   finally { $('stRun').disabled = $('stAll').disabled = false; $('stStop').classList.add('hide'); }
 }
 $('stRun').onclick = () => stGo([{ name: `${$('stInst').selectedOptions[0].textContent}, ${$('stLevel').value}${$('stVib').checked ? ', vibrato' : ''}`, inst: $('stInst').value, level: $('stLevel').value, vibrato: $('stVib').checked && $('stInst').value === 'violin', bow: $('stBow').value }]);

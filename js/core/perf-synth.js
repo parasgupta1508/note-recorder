@@ -153,8 +153,9 @@ function psCompare(truth, slots, tl, opts = {}) {
     return { index: t.index, kind: t.kind, heard, wrongFlag: !!s && s.wrong > 0, meas, err: heard && t.kind === 'played' && t.cents != null ? meas - t.cents : null,
       timeErr: heard && t.kind === 'played' && s.e != null ? s.e - (t.startMs - tl[i].startMs) : null, vib: !!t.vib };
   });
-  // A note 45 cents or more from its target is as near to the next semitone: whether it is "badly out of tune" or "a wrong note" is a judgement, not a measurement, so it is counted apart.
-  const played = rows.filter(r => r.kind === 'played'), found = played.filter(r => r.heard), clear = found.filter(r => Math.abs(truth[r.index == null ? 0 : truth.findIndex(t => t.index === r.index)].cents) < 45), ambiguous = found.length - clear.length;
+  // A note 45 cents or more from its target (or whose vibrato swings it across the halfway point: centre plus depth of 60 or more) is as near to the next semitone: whether it is
+  // "badly out of tune" or "a wrong note" is a judgement, not a measurement, so it is counted apart.
+  const played = rows.filter(r => r.kind === 'played'), found = played.filter(r => r.heard), clear = found.filter(r => { const t = truth.find(q => q.index === r.index); return Math.abs(t.cents) < 45 && Math.abs(t.cents) + (t.vib ? t.vib.depth : 0) < 60; }), ambiguous = found.length - clear.length;
   const err = clear.map(r => r.err).filter(x => x != null), abs = err.map(Math.abs), te = found.map(r => r.timeErr).filter(x => x != null);
   const bad = rows.filter(r => r.kind !== 'played');
   return {

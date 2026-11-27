@@ -50,7 +50,7 @@ function runsClean(a, player) {
   const num = (x, d = 0) => Number.isFinite(+x) ? +x : d, str = (x, n = 60) => String(x == null ? '' : x).slice(0, n), dir = o => ({ n: num(o && o.n), played: num(o && o.played), bias: o && o.bias == null ? null : num(o && o.bias), abs: o && o.abs == null ? null : num(o && o.abs), pitch: o && o.pitch == null ? null : num(o && o.pitch) });
   return (Array.isArray(a) ? a : []).slice(-HIST_MAX).filter(r => r && typeof r === 'object' && Number.isFinite(+r.t) && Number.isFinite(+r.total) && Array.isArray(r.notes) && SCALE_DEFS[r.type]).map(r => ({
     v: HIST_VERSION, t: num(r.t), p: player, inst: str(r.inst, 20), type: str(r.type, 20), root: num(r.root), span: num(r.span, 1), pos: str(r.pos, 12), bow: str(r.bow, 12), bpm: num(r.bpm, 80), mode: r.mode === 'wait' ? 'wait' : 'tempo', label: str(r.label), pass: num(r.pass, 1),
-    total: num(r.total), band: evalBand(num(r.total)), pitch: num(r.pitch), fluency: num(r.fluency), tone: num(r.tone), pulse: r.pulse == null ? null : num(r.pulse), continuity: num(r.continuity), lag: r.lag == null ? null : num(r.lag),
+    total: num(r.total), band: evalBand(num(r.total)), pitch: num(r.pitch), fluency: num(r.fluency), tone: num(r.tone), pulse: r.pulse == null ? null : num(r.pulse), continuity: num(r.continuity), lag: r.lag == null ? null : num(r.lag), cov: r.cov == null ? null : num(r.cov),
     wrong: num(r.wrong), skipped: num(r.skipped), retries: num(r.retries), stalls: num(r.stalls), slots: num(r.slots), played: num(r.played), up: dir(r.up), down: dir(r.down),
     notes: r.notes.slice(0, 200).map(x => ({ n: str(x && x.n, 6), m: num(x && x.m), d: x && x.d === 'u' ? 'u' : 'd', k: x && x.k ? 1 : 0, c: x && x.c == null ? null : num(x && x.c), s: x && x.s == null ? null : num(x && x.s), e: x && x.e == null ? null : num(x && x.e) })),
   }));
@@ -90,7 +90,8 @@ function renderResult() {
   el.innerHTML = `<div class="res-head"><div class="res-score"><b>${r.total}</b><small>/100</small></div>
     <div><span class="band ${BAND_CLS[r.band]}">${r.band}</span>${L.best ? ' <span class="pbadge">★ Personal best</span>' : ''}
     <div class="mut res-sub">${esc(r.label.split(' · ').slice(0, 2).join(' · '))} · ${r.bpm} BPM · ${r.mode === 'wait' ? 'Wait for note' : 'Tempo-locked'} · pass ${r.pass}${r.eng ? ' · ' + (r.eng === 'strict' ? 'Strict' : 'Practical') + ' grading' : ''}</div>
-    ${r.off != null && Math.abs(r.off) >= 8 ? `<div class="mut res-sub">Your whole scale sat ${Math.abs(r.off).toFixed(0)}¢ ${r.off > 0 ? 'sharp' : 'flat'}. Most of that is forgiven in the score, but check your tuning or your first note.</div>` : ''}
+    ${r.cov != null && r.cov < 0.6 ? `<div class="warn-t res-sub">The microphone heard only ${Math.round(r.cov * 100)}% of each note. Move it closer, quiet the room, or raise the input level: this score may be lower than your playing deserves.</div>` : ''}
+    ${r.off != null && Math.abs(r.off) >= 8 ? `<div class="mut res-sub">Your whole scale sat ${Math.abs(r.off).toFixed(0)}¢ ${r.off > 0 ? 'sharp' : 'flat'}. Up to 12¢ of that is forgiven in the score${Math.abs(r.off) > 12 ? ' and the rest counts against you' : ''}, so check your tuning or your first note.</div>` : ''}
     ${L.streak > 1 ? `<div class="mut res-sub">${L.streak}-day practice streak</div>` : ''}</div></div>
     <div class="res-bars">${resBar('Pitch &amp; intonation', 50, r.pitch)}${resBar('Fluency &amp; pulse', 30, r.fluency)}${resBar('Tone &amp; steadiness', 20, r.tone)}</div>
     <div class="mut res-dir">${[resDir('Going up', r.up), resDir('Coming down', r.down)].filter(Boolean).join(' · ')}</div>

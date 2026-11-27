@@ -60,5 +60,7 @@ for (const inst of ['violin', 'guitar', 'ukulele']) {
   const half = lib.psCompare(r.truth, sl.map((x, i) => i % 2 ? Object.assign({}, x, { k: 's' }) : x), t2);
   ok(half.detection.found < c.detection.found && half.detection.missed.length > 0, 'notes the drill did not hear are reported as missed');
   const far = r.truth.map(t => Object.assign({}, t, { cents: 50 })), fs = lib.psTruthSlots(far, t2, { tol: 10, smooth: 7 }), fc = lib.psCompare(far, fs, t2);
-  ok(fc.pitch.n === 0 && fc.pitch.ambiguous === fc.detection.found, 'notes 45 cents or more off are counted as ambiguous, not as measurement error'); }
+  ok(fc.pitch.n === 0 && fc.pitch.ambiguous === fc.detection.found, 'notes 45 cents or more off are counted as ambiguous, not as measurement error');
+  const swing = r.truth.map(t => Object.assign({}, t, { cents: -36, vib: { hz: 5.5, depth: 29 } })), sw = lib.psCompare(swing, lib.psTruthSlots(swing, t2, { tol: 10, smooth: 7 }), t2);
+  ok(sw.pitch.n === 0 && sw.pitch.ambiguous === sw.detection.found, 'a note 36 cents flat with a 29 cent vibrato crosses the halfway point and is counted as ambiguous too'); }
 console.log(fail ? `\n${fail} FAILED` : '\nall performance-synth checks pass'); process.exit(fail ? 1 : 0);
