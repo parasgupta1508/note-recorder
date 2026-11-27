@@ -1,4 +1,4 @@
-// The Practise button on the Pieces screen, in headless Edge: a generated scale opens the Scale drills set to that scale; a built-in MusicXML piece (Canon in D) opens Piece practice.
+// The Pieces screen in headless Edge (Practise button, and the filters keeping the folder view): a generated scale opens the Scale drills set to that scale; a built-in MusicXML piece (Canon in D) opens Piece practice.
 // Run: node tests/smoke-practise.js
 const { spawnSync } = require('child_process'), fs = require('fs'), path = require('path');
 const exe = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Google/Chrome/Application/chrome.exe'].find(fs.existsSync);
@@ -17,6 +17,18 @@ try{
   showTab('pieces'); pcPractiseScale(q.id);
   ck('a 4-octave piano arpeggio is kept to the drill limit',shown('scale')&&$('scInst').value==='chromatic'&&$('scType').value==='arpMinor'&&+$('scSpan').value===MAX_SPAN);
   ck('a piece that is not a scale is left alone',pcPractiseScale('no-such-id')===false);
+  var folders=function(){return Array.prototype.map.call($('pcList').querySelectorAll('.pc-folder b'),function(b){return b.textContent})};
+  var rows=function(){return $('pcList').querySelectorAll('.pc-item').length};
+  PC.inst='violin'; PC.path=[]; PC.q='';
+  PC.f={builtin:true}; pcRenderHome();
+  ck('Built-in keeps the folder view (Scales and arpeggios), no piece rows at the top',folders().indexOf('Scales and arpeggios')>=0&&rows()===0);
+  PC.f={pieces:true}; pcRenderHome();
+  ck('Pieces filter shows folders, not the Scales folder',folders().indexOf('Scales and arpeggios')<0);
+  PC.f={favourite:true}; pcRenderHome();
+  ck('Favourites with nothing saved shows a message, not a flat list',rows()===0&&/Nothing matches/.test($('pcList').textContent));
+  PC.f={builtin:true}; PC.q='a major'; pcRenderHome();
+  ck('typing in search makes the list flat',folders().length===0&&rows()>0);
+  PC.q=''; PC.f={}; pcRenderHome();
 }catch(e){ck('exception '+e.message,false)}
 document.title='RESULT|'+r.join('|')},1500)</script>`;
 const f = path.join(__dirname, '..', '_smoke-practise.html'); fs.writeFileSync(f, src.replace('</body>', probe + '</body>'));

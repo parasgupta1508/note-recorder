@@ -57,8 +57,9 @@ function pcRenderHome() {
   if (PC.f.tag && !PCTAGS.includes(PC.f.tag)) PC.f.tag = '';
   pcRenderFilters();
   const all = pcAllFor(PC.inst), q = PC.q.trim(), active = Object.keys(PC.f).filter(k => PC.f[k]);
-  // Scales alone shows the "Scales and arpeggios" folder as the top of the tree, Pieces alone shows the tree without it; anything more (a search, favourites, a tag ...) is a flat list.
-  const onlyScales = !q && active.length === 1 && PC.f.scales, onlyPieces = !q && active.length === 1 && PC.f.pieces, searching = !!q || (active.length > 0 && !onlyScales && !onlyPieces), base = onlyScales ? [LIB_SCALES_CAT] : [], tree = buildTree(all, PC.inst);
+  // A filter (Built-in, Scales, Pieces, Favourites, a tag) keeps the folder view: the tree is built from the matching pieces only, so you still choose folder by folder.
+  // Only typing in the search box turns the list flat. Scales alone starts inside the "Scales and arpeggios" folder, as before.
+  const onlyScales = !q && active.length === 1 && PC.f.scales, searching = !!q, base = onlyScales ? [LIB_SCALES_CAT] : [], tree = buildTree(active.length ? searchPieces(all, '', PC.f) : all, PC.inst);
   let node = treeAt(tree, base.concat(PC.path)); if (!node) { PC.path = []; node = treeAt(tree, base) || tree; }
   const crumbs = [`<button type="button" data-crumb="-1">${onlyScales ? pcEsc(LIB_SCALES_CAT) : LIB_INSTRUMENT_NAMES[PC.inst]}</button>`].concat(PC.path.map((c, i) => `<button type="button" data-crumb="${i}">${pcEsc(c)}</button>`));
   $('pcCrumb').innerHTML = searching ? '' : (PC.path.length ? crumbs.join('<span aria-hidden="true">›</span>') : '');
@@ -66,8 +67,9 @@ function pcRenderHome() {
   if (searching) {
     const found = searchPieces(all, PC.q, PC.f); html = found.length ? found.slice(0, 80).map(pcRow).join('') + (found.length > 80 ? `<p class="mut">${found.length - 80} more. Type more of the name to narrow it down.</p>` : '') : '<p class="mut">Nothing matches.</p>';
   } else {
-    const l = listNode(node); if (onlyPieces && !PC.path.length) l.folders = l.folders.filter(f => f.name !== LIB_SCALES_CAT);
+    const l = listNode(node);
     html = l.folders.map(f => `<button type="button" class="pc-folder" data-folder="${pcEsc(f.name)}"><span><b>${pcEsc(f.name)}</b><small>${f.count} piece${f.count === 1 ? '' : 's'}</small></span><i aria-hidden="true">›</i></button>`).join('') + l.pieces.map(pcRow).join('');
+    if (!html && active.length) html = '<p class="mut">Nothing matches these filters.</p>';
     if (!html) html = '<div class="home-card"><b>Nothing here yet</b><p class="mut">Add a piece, or import a folder of MIDI or MusicXML files, and it will be kept on this device.</p></div>';
   }
   $('pcList').innerHTML = html;
@@ -103,10 +105,10 @@ $('pcList').addEventListener('change', e => { const c = e.target.closest('input[
 $('pcCrumb').addEventListener('click', e => { const b = e.target.closest('[data-crumb]'); if (b) { PC.path = PC.path.slice(0, +b.dataset.crumb + 1); pcRenderHome(); } });
 $('pcLibInst').addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if (b) pcSetInst(b.dataset.i, true); });
 $('pcFilters').addEventListener('click', e => {
-  const t = e.target.closest('button[data-t]'); if (t) { PC.f.tag = PC.f.tag === t.dataset.t ? '' : t.dataset.t; pcRenderHome(); return; }
+  const t = e.target.closest('button[data-t]'); if (t) { PC.f.tag = PC.f.tag === t.dataset.t ? '' : t.dataset.t; PC.path = []; pcRenderHome(); return; }
   const b = e.target.closest('button[data-f]'); if (!b) return; const k = b.dataset.f; PC.f[k] = !PC.f[k];
   if (k === 'scales' && PC.f.scales) PC.f.pieces = false; if (k === 'pieces' && PC.f.pieces) PC.f.scales = false;   // a piece is a scale or it is not
-  if (k === 'scales' || k === 'pieces') PC.path = []; pcRenderHome();
+  PC.path = []; pcRenderHome();   // every filter starts again at the top folder
 });
 $('pcSearch').addEventListener('input', () => { PC.q = $('pcSearch').value; pcRenderHome(); });
 $('pcAdd').onclick = () => { pcView('add'); pcMsg(''); };
