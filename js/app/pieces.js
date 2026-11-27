@@ -82,13 +82,22 @@ const pcRow = p => {
     + `<button type="button" class="pc-ic${(p.tags || []).length || PC.tagOpen === p.id ? ' on' : ''}" data-tag="${pcEsc(p.id)}" aria-expanded="${PC.tagOpen === p.id}" aria-label="Tags" title="Tags">🏷</button>`
     + `<button type="button" class="sec" data-practise="${pcEsc(p.id)}">Practise</button></div>${menu}</div>`;
 };
+// A generated scale or arpeggio is practised in the Scale drills (which score it and play it), set to that instrument, root, type and span. Returns false for any other piece.
+function pcPractiseScale(id) {
+  const p = pcFind(id); if (!p || !p.generator) return false;
+  const g = p.generator, root = GEN_ROOTS.indexOf(g.root) >= 0 ? GEN_ROOTS.indexOf(g.root) : +g.root;
+  showTab('scale');
+  const set = (el, v) => { $(el).value = v; $(el).dispatchEvent(new Event('change', { bubbles: true })); };
+  set('scInst', practiceInstrument(p.instrument)); set('scRoot', root); set('scType', g.type); set('scSpan', Math.min(MAX_SPAN, g.octaves));
+  return true;
+}
 $('pcList').addEventListener('click', e => {
   const fv = e.target.closest('[data-fav]'); if (fv) { const p = pcFind(fv.dataset.fav); if (p) { pcToggleFav(p); pcRenderHome(); } return; }
   const tg = e.target.closest('button[data-tag]'); if (tg) { PC.tagOpen = PC.tagOpen === tg.dataset.tag ? null : tg.dataset.tag; pcRenderHome(); return; }
   if (e.target.closest('[data-settags]')) { showTab('settings'); if (typeof setLay !== 'undefined' && setLay !== 'classic') { setCur = 'piecetags'; renderSet(); } scrollTo(0, 0); return; }
   const f = e.target.closest('[data-folder]'); if (f) { PC.path.push(f.dataset.folder); pcRenderHome(); return; }
   const l = e.target.closest('[data-listen]'), pr = e.target.closest('[data-practise]');
-  if (l) pvOpen(l.dataset.listen, true); else if (pr) { if (typeof ppOpenLibPiece === 'function' && ppOpenLibPiece(pr.dataset.practise)) return; pvOpen(pr.dataset.practise, false); }   // a MusicXML piece is practised with scoring in Piece practice
+  if (l) pvOpen(l.dataset.listen, true); else if (pr) { if (pcPractiseScale(pr.dataset.practise)) return; if (typeof ppOpenLibPiece === 'function' && ppOpenLibPiece(pr.dataset.practise)) return; pvOpen(pr.dataset.practise, false); }   // a MusicXML piece is practised with scoring in Piece practice
 });
 $('pcList').addEventListener('change', e => { const c = e.target.closest('input[data-tg]'); if (c) { pcToggleTag(c.dataset.tg, c.dataset.tag); pcRenderHome(); } });
 $('pcCrumb').addEventListener('click', e => { const b = e.target.closest('[data-crumb]'); if (b) { PC.path = PC.path.slice(0, +b.dataset.crumb + 1); pcRenderHome(); } });
