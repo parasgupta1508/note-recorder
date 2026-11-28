@@ -53,6 +53,10 @@ function listenFor(tl, sr, loHz, framePeriod = 1 / 60) {   // framePeriod: secon
 // If the clock went BACKWARDS (the microphone was switched off and on again, which starts the loop's clock from zero) the gate starts over: without that the drills would sit still
 // until the new session outlasted the old one. Returns { fire, last }.
 function fixedRate(last, t, minDt) { if (t < last) last = -1; return t - last >= minDt ? { fire: true, last: t } : { fire: false, last }; }
+// A note this short (under 120 ms, as written) is not reliably heard as a pitch by anyone, a pitch tracker included (a 32nd note at ♩=120 is 62 ms). One that was NOT played back is left out of the
+// score instead of counting as skipped; one that was heard still counts. tooShortSkipped(slot, noteMs) -> true when the note should be left out.
+const TOO_SHORT_MS = 120;   // measured on real scores: notes of 120 ms or more are found about 90% of the time, shorter ones well under that
+const tooShortSkipped = (slot, noteMs) => slot.k !== 'h' && typeof noteMs === 'number' && noteMs < TOO_SHORT_MS;
 // What a held note tells the grader besides its pitch. cl: the pitch detector's clarity for each frame of the note. skip: frames of the attack to leave out.
 // holdClarity -> the median clarity after the attack, or null when there are too few frames. heldRatio -> how long the note really sounded against its written length
 // (1 = all of it); the last frame stands for one frame period (about 1/60 s). Both are null when they cannot be measured.

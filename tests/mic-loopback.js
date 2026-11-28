@@ -32,7 +32,10 @@ const srv = http.createServer((req, res) => {
     if (u.pathname === '/api/core') { res.setHeader('content-type', 'application/json'); return res.end(JSON.stringify(core)); }
     if (u.pathname === '/api/result') { res.end('ok'); return finish(JSON.parse(buf.toString())); }
     if (u.pathname === '/api/wav') { saveWav(u.searchParams.get('name'), buf, +u.searchParams.get('sr') || 48000); return res.end('ok'); }
-    if (u.pathname === '/api/pieces') { const d = path.join(root, 'tests', '_pieces'), ix = fs.existsSync(path.join(d, 'index.json')) ? JSON.parse(fs.readFileSync(path.join(d, 'index.json'), 'utf8')) : []; res.setHeader('content-type', 'application/json'); return res.end(JSON.stringify(ix)); }
+    if (u.pathname === '/api/pieces') { const d = path.join(root, 'tests', '_pieces'), ix = fs.existsSync(path.join(d, 'index.json')) ? JSON.parse(fs.readFileSync(path.join(d, 'index.json'), 'utf8')) : [], known = new Set(ix.map(p => p.file));
+      // any score you drop in tests/_pieces/ (.mxl, .musicxml, .xml) that is not listed is run too, every instrument part on its own (the page reads the parts)
+      const extra = fs.existsSync(d) ? fs.readdirSync(d).filter(f => /\.(mxl|musicxml|xml)$/i.test(f) && !known.has(f)).map(f => ({ file: f, auto: true, title: f.replace(/\.(mxl|musicxml|xml)$/i, '').replace(/[-_]+/g, ' ') })) : [];
+      res.setHeader('content-type', 'application/json'); return res.end(JSON.stringify(ix.concat(extra))); }
     if (u.pathname.startsWith('/api/piece/')) { const f = path.join(root, 'tests', '_pieces', path.basename(decodeURIComponent(u.pathname.slice(11)))); if (!fs.existsSync(f)) { res.statusCode = 404; return res.end(); } return res.end(fs.readFileSync(f)); }
     if (u.pathname === '/api/log') { if (MODE === 'speaker') console.log('  ' + buf.toString()); return res.end('ok'); }
     if (u.pathname === '/api/take') { const t = JSON.parse(buf.toString()); TAKES.push(t); fs.writeFileSync(path.join(__dirname, '_mic', u.searchParams.get('name') + '.take.json'), JSON.stringify(t)); return res.end('ok'); }
@@ -49,7 +52,7 @@ function saveWav(name, buf, sr0) {   // 32-bit float mono WAV; sample rate is ad
 
 srv.listen(0, '127.0.0.1', async () => {
   const port = srv.address().port, prof = fs.mkdtempSync(path.join(os.tmpdir(), 'mic-test-'));
-  const SP = ['inst', 'level', 'vib', 'bow', 'span', 'bpm', 'seed', 'root', 'type', 'grader', 'set', 'direct', 'pos', 'synth', 'pieces', 'piece', 'bpm', 'maxsec'].filter(k => arg(k, null) != null).map(k => `${k}=${encodeURIComponent(arg(k))}`).join('&');
+  const SP = ['inst', 'level', 'vib', 'bow', 'span', 'bpm', 'seed', 'root', 'type', 'grader', 'set', 'direct', 'pos', 'synth', 'pieces', 'piece', 'bpm', 'maxsec', 'only'].filter(k => arg(k, null) != null).map(k => `${k}=${encodeURIComponent(arg(k))}`).join('&');
   const q = MODE === 'speaker' ? `/index.html?probe=speaker&${SP}` : MODE === 'app' ? `/index.html?probe=app&notes=${all.join(',')}` : `/tests/mic/loopback.html?mode=${MODE}&notes=${all.join(',')}&sec=${arg('sec', 8)}&lo=${arg('lo', 70)}&hi=${arg('hi', 2000)}`;
   if (MODE === 'speaker') console.log('The app will play realistic instrument sound through the speaker and listen with the microphone. This is audible and takes a few minutes. Raise the speaker volume, use the speaker (not headphones) and keep the room quiet.');
   else if (MODE !== 'listen') console.log(`Playing ${all.length} notes through the speaker (${all.map(nameOf).join(' ')}) - this is audible, about ${Math.ceil(all.length * (MODE === 'app' ? 2.6 : 1.7) + 4)} s.`);
@@ -63,6 +66,7 @@ srv.listen(0, '127.0.0.1', async () => {
   if (r.mode === 'speaker') {
     const f1 = (x, d = 1) => x == null ? '-' : x.toFixed(d); let quiet = false, hiddenRun = false;
     for (const t of TAKES) {
+      if (t.skipped) { console.log(`SKIP ${t.name}: ${t.note}`); continue; }
       if (t.error) { console.log(`${t.tooQuiet ? 'TOO QUIET' : t.hidden ? 'HIDDEN' : 'FAIL'} ${t.name}: ${t.error}`); if (t.tooQuiet) quiet = true; else if (t.hidden) hiddenRun = true; else fail++; continue; }
       const p = t.pitch, d = t.detection, g = t.grade, tm = t.timing;
       console.log(`${t.ok ? 'PASS' : 'FAIL'} ${t.name}  [${t.sound || '?'}]`);
@@ -79,7 +83,7 @@ srv.listen(0, '127.0.0.1', async () => {
       }
     }
     if (quiet || hiddenRun) { console.log(quiet ? 'INCONCLUSIVE: the microphone barely heard the speaker. Raise the volume and run again.' : 'INCONCLUSIVE: the browser window was hidden. Keep it visible (do not minimise or cover it) and the screen awake, and run again.'); process.exit(2); }
-    console.log(fail ? `${fail} of ${TAKES.length} takes FAILED` : `all ${TAKES.length} takes passed`); console.log('recordings and truth: tests/_mic/speaker-*.wav, *.take.json' + (process.argv.includes('--gold') ? '; gold clips: tests/audio/gold/' : '')); process.exit(fail ? 1 : 0);
+    const ran = TAKES.filter(x => !x.skipped).length; console.log(fail ? `${fail} of ${ran} takes FAILED` : `all ${ran} takes passed` + (ran < TAKES.length ? ` (${TAKES.length - ran} skipped)` : '')); console.log('recordings and truth: tests/_mic/speaker-*.wav, *.take.json' + (process.argv.includes('--gold') ? '; gold clips: tests/audio/gold/' : '')); process.exit(fail ? 1 : 0);
   }
   if (r.mode === 'listen') {
     const v = r.frames.filter(f => f.hz); console.log(`mic: ${r.mic}  ${r.sr} Hz  ${v.length}/${r.frames.length} frames had a clear pitch`);

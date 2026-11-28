@@ -75,6 +75,10 @@ ok(lib.heardShare(40, 1000) > 0.7 && lib.heardShare(12, 1000) < 0.3 && lib.heard
   ok(lib.fixedRate(90, 3, 0.012).fire === true && lib.fixedRate(-1, 0, 0.012).fire === true && lib.fixedRate(1, 1.005, 0.012).fire === false, 'the gate: a clock that went backwards starts over; the very first frame fires; a frame too soon does not');
 }
 
+// ---- notes too short for anyone to hear as a pitch are left out of the score when they were not played back (a 32nd note at 120 is 62 ms)
+ok(lib.tooShortSkipped({ k: 's' }, 62) === true && lib.tooShortSkipped({ k: 's' }, 119) === true && lib.tooShortSkipped({ k: 's' }, 120) === false && lib.tooShortSkipped({ k: 's' }, 300) === false, 'a skipped note under 120 ms is left out; one of 120 ms or more is still a skip');
+ok(lib.tooShortSkipped({ k: 'h' }, 62) === false && lib.tooShortSkipped({ k: 's' }, undefined) === false, 'a short note that WAS heard still counts, and an unknown length is never left out');
+
 // ---- the listening fits the shortest written note (real scores: notes with under 150 ms to the next were found 10% of the time with the ordinary settings)
 {
   const mk = g => Array.from({ length: 10 }, (_, i) => ({ startMs: i * g })), L = (g, lo = 196) => lib.listenFor(mk(g), 44100, lo);

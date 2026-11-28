@@ -251,9 +251,9 @@ function peSaveRun(rec) {
 function peQueueRun() { PE.runPass = PE.pass; clearTimeout(PE.runTimer); if (!PE.hold) peFlushRun(); else PE.runTimer = setTimeout(() => { peFinalize(); peFlushRun(); }, 1500); }   // the last note is still being held
 function peFlushRun() {
   clearTimeout(PE.runTimer); const pass = PE.runPass; PE.runPass = 0; if (!pass || !PE.plan) return;
-  const slots = PE.slots.filter(s => s.pass === pass); if (!slots.length) return;
+  const all = PE.slots.filter(s => s.pass === pass), slots = all.filter(s => !tooShortSkipped(s, PE.tl[s.index] && PE.tl[s.index].durationMs)), left = all.length - slots.length; if (!slots.length) return;   // left: notes under 90 ms that were not heard, which no one could hear: not counted
   const p = PE.plan, ev = peScoreRun(slots, { beatMs: 60000 / PE.bpm, mode: PE.mode, wobbleCap: ruleFor(p.inst).wobble });
-  const rec = histRecord(ev, { t: Date.now(), player: typeof profile !== 'undefined' ? profile : '', inst: p.inst, type: 'piece', root: p.pc, span: 1, pos: p.pos, bow: p.bow, bpm: PE.bpm, mode: PE.mode, label: p.label, pass }); rec.sid = p.sid; rec.notes = rec.notes.map((x, i) => ({ n: x.n, m: x.m, k: x.k ? 1 : 0, c: x.c, b: PE.tl[i] ? PE.tl[i].bar : 0 }));   // compact: only what the coach reads, and the bar
+  const rec = histRecord(ev, { t: Date.now(), player: typeof profile !== 'undefined' ? profile : '', inst: p.inst, type: 'piece', root: p.pc, span: 1, pos: p.pos, bow: p.bow, bpm: PE.bpm, mode: PE.mode, label: p.label, pass }); rec.sid = p.sid; rec.left = left; rec.notes = rec.notes.map((x, i) => ({ n: x.n, m: x.m, k: x.k ? 1 : 0, c: x.c, b: PE.tl[i] ? PE.tl[i].bar : 0 }));   // compact: only what the coach reads, and the bar
   const prior = peRuns().filter(r => r.sid === p.sid && r.inst === rec.inst && (!rec.p || r.p === rec.p)), best = histIsBest(prior, rec);
   PE.lastRun = { rec, coach: coachReview(rec, prior, { best }), best, earlier: prior.slice(-5).map(r => r.total), weak: peWeakSpots(slots) }; peSaveRun(rec); PE.resOpen = true; peRenderResult(); peUi();
 }
@@ -276,6 +276,7 @@ function peRenderResult() {
   el.innerHTML = `<div class="res-head"><div class="res-score"><b>${r.total}</b><small>/100</small></div>
     <div><span class="band ${PE_BAND[r.band]}">${r.band}</span>${L.best ? ' <span class="pbadge">★ Personal best</span>' : ''}
     <div class="mut res-sub">${peEsc(r.label)} · ${r.bpm} BPM · ${r.mode === 'wait' ? 'Wait for note' : 'Tempo-locked'} · pass ${r.pass}${r.eng ? ' · ' + (r.eng === 'strict' ? 'Strict' : 'Practical') + ' grading' : ''}</div>
+    ${r.left ? `<div class="mut res-sub">${r.left} very short note${r.left > 1 ? 's' : ''} (under 120 ms, like a 32nd note at this tempo) ${r.left > 1 ? 'were' : 'was'} left out of the score: a pitch cannot be heard in them. Slow the tempo to practise them.</div>` : ''}
     ${r.cov != null && r.cov < 0.6 ? `<div class="warn-t res-sub">The microphone heard only ${Math.round(r.cov * 100)}% of each note. Move it closer, quiet the room, or raise the input level: this score may be lower than your playing deserves.</div>` : ''}
     ${r.off != null && Math.abs(r.off) >= 8 ? `<div class="mut res-sub">You played ${Math.abs(r.off).toFixed(0)}¢ ${r.off > 0 ? 'sharp' : 'flat'} overall. Up to 12¢ of that is forgiven in the score${Math.abs(r.off) > 12 ? ' and the rest counts against you' : ''}, so check your tuning or your first note.</div>` : ''}
     ${L.earlier.length ? `<div class="mut res-sub">Earlier runs of this piece: ${L.earlier.join(' · ')}</div>` : ''}</div></div>

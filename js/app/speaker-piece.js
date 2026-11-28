@@ -50,8 +50,9 @@ async function stRunPiece(sce, hooks = {}) {
     const finished = !!done(); await stSleep(600); if (!finished && PE.running) peStop();
     const beatInWavS = playAt + perf.padS - tap.t, audio = tap.stop(); tap = null;
     const minHz = S.direct ? 0 : (S.minHz || 230), slots = PE.slots.filter(s => s.pass === 1), cmp = psCompare(perf.truth, slots, tl, { minHz });
-    const refSlots = psTruthSlots(perf.truth, tl, { tol: peTol(), smooth: ruleFor(S.inst).smooth }).map((x, i) => cmp.rows[i].rig ? (slots.find(q => q.index === x.index) || x) : x), beatMs = 60000 / PE.bpm;
-    const opts = { beatMs, mode: 'tempo', wobbleCap: ruleFor(S.inst).wobble }, measured = finished ? peScoreRun(slots, opts) : null, reference = peScoreRun(refSlots, opts);
+    const dropped = new Set(slots.filter(s => tooShortSkipped(s, tl[s.index] && tl[s.index].durationMs)).map(s => s.index));   // the drill leaves these out; so does the reference
+    const refSlots = psTruthSlots(perf.truth, tl, { tol: peTol(), smooth: ruleFor(S.inst).smooth }).filter(x => !dropped.has(x.index)).map((x, i) => cmp.rows[i].rig ? (slots.find(q => q.index === x.index) || x) : x), beatMs = 60000 / PE.bpm;
+    const opts = { beatMs, mode: 'tempo', wobbleCap: ruleFor(S.inst).wobble }, measured = finished ? peScoreRun(slots.filter(s => !dropped.has(s.index)), opts) : null, reference = peScoreRun(refSlots, opts);
     const d = cmp.detection, checks = [], chk = (ok, msg) => checks.push({ ok: !!ok, msg });
     chk(finished, finished ? 'the piece ran to the end' : 'the piece did not finish');
     // notes under 100 ms (ornaments, 64ths) cannot be told apart by a pitch tracker: the bar is on the notes of at least 100 ms, and the others are reported

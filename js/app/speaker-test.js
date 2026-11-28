@@ -115,7 +115,7 @@ const ST_SET = [
 ];
 async function stRunSet(list, hooks = {}) {
   ST.running = true; ST.stop = false; const out = [];
-  try { for (let i = 0; i < list.length && !ST.stop; i++) { const sce = list[i]; if (hooks.log) hooks.log(`${i + 1}/${list.length}: ${sce.name || sce.inst}`); const run = sce.xml ? stRunPiece : stRunScenario; let r = await run(Object.assign({ seed: 100 + i }, sce), hooks); if (!r.ok && !r.error && !r.hidden && r.finished === false && !ST.stop) { if (hooks.log) hooks.log('The drill did not finish; trying once more'); r = await run(Object.assign({ seed: 100 + i }, sce), hooks); r.retried = true; } r.name = sce.name || `${sce.inst} ${sce.level}`; out.push(r); if (hooks.onTake) await hooks.onTake(r, i); if (r.tooQuiet || r.hidden) break; } }
+  try { for (let i = 0; i < list.length && !ST.stop; i++) { const sce = list[i]; if (sce.skip) { const r = { ok: true, skipped: true, name: sce.name, note: sce.skip, scenario: { inst: 'none', level: '' } }; out.push(r); if (hooks.onTake) await hooks.onTake(r, i); continue; } if (hooks.log) hooks.log(`${i + 1}/${list.length}: ${sce.name || sce.inst}`); const run = sce.xml ? stRunPiece : stRunScenario; let r = await run(Object.assign({ seed: 100 + i }, sce), hooks); if (!r.ok && !r.error && !r.hidden && r.finished === false && !ST.stop) { if (hooks.log) hooks.log('The drill did not finish; trying once more'); r = await run(Object.assign({ seed: 100 + i }, sce), hooks); r.retried = true; } r.name = sce.name || `${sce.inst} ${sce.level}`; out.push(r); if (hooks.onTake) await hooks.onTake(r, i); if (r.tooQuiet || r.hidden) break; } }
   finally { ST.running = false; }
   return out;
 }
