@@ -50,7 +50,7 @@ function startScale() {
   stopDemo(); resetPractice(); sc.running = true;
   const begin = () => {
     if (!sc.running) return;
-    if (sc.mode === 'tempo') startCountIn(); else setMsg('Play the first note and hold it in tune; the target waits for you');
+    if (sc.mode === 'tempo' && calFresh()) startCountIn(); else if (sc.mode === 'tempo') timingCalib(sc.seq, setMsg).then(() => { if (sc.running) setTimeout(() => { if (sc.running) startCountIn(); }, 900); }); else setMsg('Play the first note and hold it in tune; the target waits for you');
   };
   const fresh = !listening;
   setMsg(listening ? '' : 'Starting microphone…');
@@ -107,7 +107,7 @@ function onAttempt(a) {
   a = Object.assign({}, a, { cents: scaleDev(a.cents, a.midi) }); const sh = scaleShift();   // the grader's deviation; sh = the player's overall offset to forgive
   if (sc.mode === 'wait') return waitAttempt(a);
   const seq = sc.seq, tl = sc.tl, exp = seq[sc.pos], T = scaleTol();
-  const lagMs = systemLagMs(frameWinS, ctx && ctx.outputLatency), terr = ix => sc.clock == null ? null : Math.round((a.t - sc.clock) * 1000 - tl[ix].startMs - lagMs);   // lagMs: the app's own delay, not the player's
+  const lagMs = systemLagMs(frameWinS, ctx && ctx.outputLatency, CAL.hwMs), terr = ix => sc.clock == null ? null : Math.round((a.t - sc.clock) * 1000 - tl[ix].startMs - lagMs);   // lagMs: the app's own delay, not the player's
   const rec = { index: sc.pos + 1, expected: tl[sc.pos].noteName, played: midiName(a.midi), hz: a.hz, cents: a.cents, time_s: a.t, pass: sc.pass, direction: tl[sc.pos].direction, timing_ms: null };
   // Re-playing the note just played is a retry: scored as another play of that note, never a skip or a wrong note.
   // If the clock had already skipped it, this is a late play: it replaces the skip.

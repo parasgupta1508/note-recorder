@@ -1,6 +1,6 @@
 // Service worker: makes the app installable and usable offline.
 // Bump CACHE whenever you change any file, so installed copies pick up the update.
-const CACHE = 'tuner-v94';
+const CACHE = 'tuner-v95';
 const SAMPLES = 'tuner-samples-v1';   // the instrument recordings (data/samples/), about 3.6 MB: fetched on first use, then kept, and not deleted by a new app version
 const VENDOR = 'tuner-vendor-v1';   // the Detailed-analysis files live in their own cache, so a new app version does not delete them
 const FILES = [
@@ -52,6 +52,7 @@ const FILES = [
   './js/app/players.js',
   './js/app/metronome.js',
   './js/app/sampler.js',
+  './js/app/timing-calib.js',
   './js/app/reference.js',
   './js/app/selftest.js',
   './js/app/settings-ui.js',

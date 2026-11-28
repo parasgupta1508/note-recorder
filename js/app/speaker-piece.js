@@ -37,8 +37,9 @@ async function stRunPiece(sce, hooks = {}) {
     const lvl = tap.chunks.slice(n0).reduce((m, k) => Math.max(m, stRms(k)), 0);
     if (!S.direct && (lvl < room * 3 || lvl < 0.002)) return { ok: false, tooQuiet: true, error: `TOO QUIET: the microphone barely heard the speaker (room ${room.toExponential(2)}, note ${lvl.toExponential(2)}). Raise the speaker volume, move the microphone closer, and use the speaker, not headphones.`, scenario: S };
     log('Starting Piece practice …'); window.stTrace = [];
+    CAL.hwMs = null; CAL.dest = bus || null;
     const t1 = Date.now(); peStart();
-    for (let i = 0; i < 750 && PE.clock == null && PE.running; i++) await stSleep(20);
+    for (let i = 0; i < 1100 && PE.clock == null && PE.running; i++) await stSleep(20);
     if (PE.clock == null) { peStop(); return { ok: false, hidden: document.hidden, error: document.hidden ? 'HIDDEN: the browser window was hidden while the test ran. Keep it visible and the screen awake, then run again.' : 'Piece practice did not start (no count-in).', scenario: S }; }
     const clock0 = PE.clock, playAt = PE.clock + t0 - perf.padS;
     if (playAt < c.currentTime + 0.05) return { ok: false, error: 'The recording was not ready in time for the count-in.', scenario: S };
@@ -65,11 +66,14 @@ async function stRunPiece(sce, hooks = {}) {
     const fbCheck = psFeedbackCheck(perf.truth.map((t, i) => cmp.rows[i].rig || dropped.has(i) ? Object.assign({}, t, { kind: 'rig' }) : t.kind === 'played' ? Object.assign({}, t, { cents: peDev(t.cents, tl[i].midi) }) : t), tl, weak.map(w => ({ name: w.name, bar: w.bar })));
     if (fbCheck.recall != null) chk(fbCheck.recall >= 0.34, `feedback names ${Math.round(fbCheck.recall * fbCheck.worst.length)} of the ${fbCheck.worst.length} notes that were really worst (${fbCheck.worst.map(w => 'bar ' + w.bar + ' ' + w.note + ' ' + w.cents).join(', ')}); needs at least one in three`);
     chk(fbCheck.falseSpots <= 1, `feedback accuses ${fbCheck.falseSpots} note(s) that were in tune (at most 1)`);
-    return { ok: checks.every(x => x.ok), scenario: Object.assign({}, S, { xml: undefined }), kind: 'piece', feedback: { strengths: coach.strengths, focus: coach.focus, spots: weak.map(w => ({ bar: w.bar, name: w.name, text: w.text })), offset: run.rec ? run.rec.off : null, check: fbCheck }, sound: bank ? 'recordings: ' + bank.credit : 'synthetic', sr, bpm: PE.bpm, notes: tl.length, bars: [plan.from, plan.to], finished, checks, pitch: cmp.pitch, detection: d, timing: cmp.timing, rows: cmp.rows, rigLimited: cmp.rigLimited,
+    const cal = { hwMs: CAL.hwMs, totalMs: CAL.totalMs, why: CAL.why, lags: CAL.last ? CAL.last.lags : null, winMs: CAL.last ? CAL.last.winMs : null };
+    if (cmp.timing.latencyMs != null && !S.direct) chk(Math.abs(cmp.timing.latencyMs) <= 100, `the player's lag reads ${Math.round(cmp.timing.latencyMs)} ms from the truth after the timing check (needs within 100 ms)`);
+    return { ok: checks.every(x => x.ok), scenario: Object.assign({}, S, { xml: undefined }), kind: 'piece', calibration: cal, feedback: { strengths: coach.strengths, focus: coach.focus, spots: weak.map(w => ({ bar: w.bar, name: w.name, text: w.text })), offset: run.rec ? run.rec.off : null, check: fbCheck }, sound: bank ? 'recordings: ' + bank.credit : 'synthetic', sr, bpm: PE.bpm, notes: tl.length, bars: [plan.from, plan.to], finished, checks, pitch: cmp.pitch, detection: d, timing: cmp.timing, rows: cmp.rows, rigLimited: cmp.rigLimited,
       grade: { measured: measured && { total: measured.total, band: measured.band, pitch: measured.pitch, fluency: measured.fluency, tone: measured.tone }, reference: { total: reference.total, band: reference.band, pitch: reference.pitch, fluency: reference.fluency, tone: reference.tone } },
       truth: perf.truth, player: perf.player, wav: stWav(audio, sr), beatInWavS, clock0, trace: (window.stTrace || []).slice(0, 7000), attempts: PE.attempts.slice(0, 400).map(a => ({ i: a.index, e: a.expected, p: a.played, g: a.grade, t: +(a.time_s || 0).toFixed(3), ms: a.timing_ms })), debug: { need: peDet.need, scNeed: det.need, listen: dlMemo.v, running: PE.running, pos: PE.pos, attempts: PE.attempts.length, slots: PE.slots.length, listening, hidden: document.hidden } };
   } catch (e) { return { ok: false, error: 'Test error: ' + (e && e.message || e), scenario: S }; }
   finally {
+    CAL.dest = null; CAL.hwMs = null;
     if (tap) tap.stop(); if (bus) { try { bus.disconnect(); } catch {} try { srcNode.connect(hpNode); } catch {} }
     try { if (PE.running) peStop(); $('pzRepeat').checked = prevRepeat; peSetMode(prevMode); } catch {}
     stRestore(saved);

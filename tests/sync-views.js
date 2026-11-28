@@ -37,8 +37,8 @@ srv.listen(0, async () => {
       out[name] = { frames, n: sc.tl.length, beat: 60 / sc.bpm, ppb: SV_PPB };
     }
     listening = true; stream = { getTracks() { return []; } }; sc.calibAt = performance.now(); $('scBpm').value = 120; $('scBpm').dispatchEvent(new Event('change')); setMode('tempo'); $('scBpm').value = 120;
-    await record('tab-tempo', 'tab', () => startScale(), 11500); stopScale(); await sleep(400);
-    await record('roll-tempo', 'roll', () => startScale(), 11500); stopScale(); await sleep(400);
+    await record('tab-tempo', 'tab', () => { CAL.hwMs = 0; CAL.totalMs = 0; CAL.at = Date.now(); startScale(); }, 11500); stopScale(); await sleep(400);
+    await record('roll-tempo', 'roll', () => { CAL.hwMs = 0; CAL.totalMs = 0; CAL.at = Date.now(); startScale(); }, 11500); stopScale(); await sleep(400);
     await record('tab-demo', 'tab', () => startDemo(), 9000); stopDemo(); await sleep(400);
     await record('roll-demo', 'roll', () => startDemo(), 9000); stopDemo(); listening = false;
     return out;

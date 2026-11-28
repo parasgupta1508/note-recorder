@@ -68,7 +68,7 @@ svFull(true); ck('full screen: the player goes full screen (or the overlay fallb
 // ---- Tempo-locked: 60 BPM (one note a second). Note 2 is 25 cents sharp, note 4 is skipped, note 9 is a little late.
 listening=true; stream={getTracks:function(){return[]}}; sc.running=true; sc.calibAt=0; quietCalib(false); ck('practice start runs the quiet room check first',!!calib&&calib.phase===1&&/room noise/i.test($('scMsg').textContent)); calib.end=0; calibFrame(0.004); ck('room check sets a gentle gate above the room noise (0.006 for a 0.004 room: capped)',Math.abs(+$('gate').value-0.006)<0.0015); calib=null; sc.running=false; sc.calibAt=performance.now(); quietCalib(false); ck('no second check within 10 minutes',!calib);
 sc.calibAt=performance.now(); listening=true; stream={getTracks:function(){return[]}}; $('scBpm').value=60; $('scRepeat').checked=false; setMode('tempo');
-startScale(); ck('tempo run starts with a count-in clock',sc.running&&sc.clock!==null); sc.clock=0; stopMetro();
+CAL.hwMs=0;CAL.totalMs=0;CAL.at=Date.now();startScale(); ck('tempo run starts with a count-in clock',sc.running&&sc.clock!==null); sc.clock=0; stopMetro();
 var t=0,i;
 for(i=0;i<15;i++){ if(i===4){t=quiet(t,60);continue} t=quiet(i-0.0>t?t:t,0); var start=i+(i===9?0.3:0); if(start>t) t=quiet(t,Math.round((start-t)*60)); t=play(t,sc.seq[i],i===2?25:2,30); t=quiet(t,Math.max(0,Math.round((i+1-t)*60))) }
 t=quiet(t,30);

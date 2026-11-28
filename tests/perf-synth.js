@@ -73,5 +73,6 @@ for (const inst of ['violin', 'guitar', 'ukulele']) {
   c = lib.psFeedbackCheck(tr, t3, [Object.assign(spot(4), { bias: 30 })]); ok(c.signWrong === 1, 'telling the player a flat note was sharp is counted');
   c = lib.psFeedbackCheck(tr.map(x => Object.assign({}, x, { cents: 3 })), t3, []); ok(c.recall === null && c.worst.length === 0, 'when nothing was clearly wrong there is nothing to find');
   c = lib.psFeedbackCheck(tr.map((x, i) => i === 3 ? Object.assign({}, x, { kind: 'skipped', cents: null }) : x), t3, [spot(3)]); ok(c.worst.some(w => w.index === 3 && w.cents === 'skipped') && c.recall > 0, 'a skipped note is one of the worst, and naming it counts');
+  c = lib.psFeedbackCheck(tr.map((x, i) => i === 4 ? Object.assign({}, x, { kind: 'rig' }) : x), t3, []); ok(c.worst.every(w => w.index !== 4) && c.worst.length === 1, 'a note the speaker cannot play (kind rig) is never one the app should have named');
   const planted = lib.psRender({ inst: 'violin', sr: 22050, tl: t3, level: 'expert', player: { vibrato: false, just: false }, plant: { index: 6, cents: -40 }, seed: 3, tonic: 7 }); ok(Math.abs(planted.truth[6].cents + 40) < 1e-6, 'a planted fault is exactly what the truth says'); }
 console.log(fail ? `\n${fail} FAILED` : '\nall performance-synth checks pass'); process.exit(fail ? 1 : 0);

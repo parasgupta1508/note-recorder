@@ -71,7 +71,7 @@ function peQuietCalib(fresh) {
 }
 function peStart() {
   peStopDemo(); peReset(); PE.running = true;
-  const begin = () => { if (!PE.running) return; if (PE.mode === 'tempo') peCountIn(); else peMsg('Play the first note and hold it in tune; the music waits for you'); };
+  const begin = () => { if (!PE.running) return; if (PE.mode === 'tempo' && calFresh()) peCountIn(); else if (PE.mode === 'tempo') timingCalib(PE.seq, peMsg).then(() => { if (PE.running) setTimeout(() => { if (PE.running) peCountIn(); }, 900); }); else peMsg('Play the first note and hold it in tune; the music waits for you'); };
   const fresh = !listening; peMsg(listening ? '' : 'Starting microphone…'); $('pzStart').textContent = 'Restart'; peUi();
   const go = w => w ? w.then(begin) : begin();
   if (listening) go(peQuietCalib(false));
@@ -162,7 +162,7 @@ function peOnAttempt(a) {
   a = Object.assign({}, a, { cents: peDev(a.cents, a.midi) }); const sh = peShift();   // the grader's deviation; sh = the player's overall offset to forgive
   if (PE.mode === 'wait') return peWaitAttempt(a);
   const seq = PE.seq, tl = PE.tl, exp = seq[PE.pos], T = peTol();
-  const lagMs = systemLagMs(frameWinS, ctx && ctx.outputLatency), terr = ix => PE.clock == null ? null : Math.round((a.t - PE.clock) * 1000 - tl[ix].startMs - lagMs);   // lagMs: the app's own delay, not the player's
+  const lagMs = systemLagMs(frameWinS, ctx && ctx.outputLatency, CAL.hwMs), terr = ix => PE.clock == null ? null : Math.round((a.t - PE.clock) * 1000 - tl[ix].startMs - lagMs);   // lagMs: the app's own delay, not the player's
   const rec = { index: PE.pos + 1, expected: tl[PE.pos].noteName, played: midiName(a.midi), hz: a.hz, cents: a.cents, time_s: a.t, pass: PE.pass, direction: 'up', timing_ms: null };
   // Re-playing the note just played is a retry: scored as another play of that note, never a skip or a wrong note. If the clock had already skipped it, it is a late play that replaces the skip.
   // (In a piece the note after the next one can be the one just played, as in A B A: if the clock says the sound is nearer in time to that later note, it is that note, not a retry.)

@@ -62,7 +62,23 @@ const tooShortSkipped = (slot, noteMs) => slot.k !== 'h' && typeof noteMs === 'n
 // times, so "behind the click" means the PLAYER is behind, not the app. winS: seconds of audio the pitch frame covered; outLatS: AudioContext.outputLatency (0 when not known).
 // What it cannot know is the rest of the hardware (a Bluetooth speaker or microphone): the score forgives a constant lag, and the advice only speaks of a large one.
 const ONSET_DELAY_MS = 0;   // measured in silent mode against the known onsets: half the window alone leaves the violin, guitar and ukulele within about 30 ms of the truth (20 ms more took out too much)
-const systemLagMs = (winS, outLatS) => 500 * (winS > 0 ? winS : 0.093) + ONSET_DELAY_MS + (outLatS > 0 && outLatS < 0.5 ? outLatS * 1000 : 0);
+// hwMs: the delay of this speaker, air and microphone, MEASURED by the timing check at the start of the run (js/app/timing-calib.js); when it is there it replaces the estimate (the click's
+// output latency is part of what it measured). Without it (headphones, or not yet measured) the browser's own outputLatency is the best that is known.
+const systemLagMs = (winS, outLatS, hwMs) => 500 * (winS > 0 ? winS : 0.093) + ONSET_DELAY_MS + (typeof hwMs === 'number' ? hwMs : (outLatS > 0 && outLatS < 0.5 ? outLatS * 1000 : 0));
+// What the timing check found. lags: for each calibration note, ms from when it was due to when the drill noticed it (null: not heard). winMs: the analysis window the drill listened with.
+// The drill's own delay (half the window, and the detector's 40 ms on a plucked beep) is taken off, what is left is the hardware. Needs 3 of the 4 notes heard, and the same delay each time (within 70 ms).
+// The two pitches the timing check plays: from the music itself (the detector is listening around its notes), and from its higher notes (a laptop speaker does not play below about
+// 230 Hz, MIDI 59, so a low scale would not be heard).
+const calPitches = seq => { const hi = seq.filter(m => m >= 59), pool = hi.length >= 2 && new Set(hi).size >= 2 ? hi : seq, first = pool[0], other = pool.find(m => m !== first); return [first, other == null ? first + 2 : other]; };
+// A plucked beep is noticed a little later than half a window even with NO hardware in between (measured in silent mode: 28 to 57 ms, about 40 on average): that is the detector's, not the hardware's.
+const CAL_INTERNAL_MS = 40;
+function latencyFromBeeps(lags, winMs) {
+  const v = lags.filter(x => typeof x === 'number' && x > -50 && x < 1000).sort((a, b) => a - b);
+  if (v.length < 3) return { ok: false, why: `heard ${v.length} of ${lags.length} notes` };
+  const spread = v[v.length - 1] - v[0]; if (spread > 70) return { ok: false, why: `the delay was not steady (${Math.round(spread)} ms apart)` };
+  const med = v[v.length >> 1];
+  return { ok: true, totalMs: med, hwMs: Math.max(0, Math.min(600, med - 0.5 * winMs - CAL_INTERNAL_MS)), spreadMs: spread };
+}
 // What a held note tells the grader besides its pitch. cl: the pitch detector's clarity for each frame of the note. skip: frames of the attack to leave out.
 // holdClarity -> the median clarity after the attack, or null when there are too few frames. heldRatio -> how long the note really sounded against its written length
 // (1 = all of it); the last frame stands for one frame period (about 1/60 s). Both are null when they cannot be measured.

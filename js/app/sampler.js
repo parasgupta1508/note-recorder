@@ -43,7 +43,7 @@ function smpPlay(c, preset, midi, at, dur, o = {}) {
   const need = (dur + lead) * pr + off;                        // how much of the recording the note uses; a bowed note longer than that loops its steady part
   if (P.loop && need > s.dur - 0.45) { src.loop = true; src.loopStart = P.loop.a; src.loopEnd = P.loop.b; }
   gn.gain.setValueAtTime(0.0001, st); gn.gain.linearRampToValueAtTime(vol, top); gn.gain.setValueAtTime(vol, Math.max(top, end)); gn.gain.linearRampToValueAtTime(0.0001, Math.max(top, end) + rel);
-  src.connect(gn); gn.connect(c.destination); src.start(st, Math.min(off, s.ab.duration - 0.05)); src.stop(Math.max(top, end) + rel + 0.03);
+  src.connect(gn); gn.connect(o.dest || c.destination); src.start(st, Math.min(off, s.ab.duration - 0.05)); src.stop(Math.max(top, end) + rel + 0.03);
   src.onended = () => { try { gn.disconnect(); } catch {} };
   return src;
 }

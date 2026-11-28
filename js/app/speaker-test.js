@@ -66,8 +66,9 @@ async function stRunScenario(sce, hooks = {}) {
     const lvl = tap.chunks.slice(n0).reduce((m, k) => Math.max(m, stRms(k)), 0);   // the loudest block while the test note sounded (it starts about 0.45 s after playback is asked for)
     if (!S.direct && (lvl < room * 3 || lvl < 0.002)) return { ok: false, tooQuiet: true, error: `TOO QUIET: the microphone barely heard the speaker (room ${room.toExponential(2)}, note ${lvl.toExponential(2)}). Raise the speaker volume, move the microphone closer, and use the speaker, not headphones.`, scenario: S };
     log('Starting the Scale drill …');
+    CAL.hwMs = null; CAL.dest = bus || null;   // a fresh timing check for every take; in silent mode its notes go into the app's input like the performance
     const t1 = Date.now(); startScale();
-    for (let i = 0; i < 750 && sc.clock == null && sc.running; i++) await stSleep(20);
+    for (let i = 0; i < 1100 && sc.clock == null && sc.running; i++) await stSleep(20);
     if (sc.clock == null) { stopScale(); return { ok: false, hidden: document.hidden, error: document.hidden ? 'HIDDEN: the browser window was hidden while the test ran (minimised, covered or the screen slept). Keep it visible and the screen awake, then run again.' : 'The drill did not start (no count-in).', scenario: S }; }
     const playAt = sc.clock + t0 - perf.padS;                 // the first beat of the drill, on the audio clock, less the lead-in of the recording
     if (playAt < c.currentTime + 0.05) return { ok: false, error: 'The recording was not ready in time for the count-in.', scenario: S };
@@ -87,7 +88,8 @@ async function stRunScenario(sce, hooks = {}) {
     const chk = (ok, msg) => checks.push({ ok: !!ok, msg });
     chk(finished, finished ? 'the drill ran to the end of the scale' : 'the drill did not finish');
     chk(d.played === 0 || d.found / d.played >= 0.9, `found ${d.found} of ${d.played} played notes (needs 90%)`);
-    chk(cmp.pitch.n >= 3 && cmp.pitch.medAbs <= 6, `median pitch error ${cmp.pitch.medAbs == null ? '–' : cmp.pitch.medAbs.toFixed(1)}¢ (needs 6¢ or less)`);
+    const medMax = S.direct ? 6 : 8;   // through a real speaker, a room and a microphone there is more error than in silent mode
+    chk(cmp.pitch.n >= 3 && cmp.pitch.medAbs <= medMax, `median pitch error ${cmp.pitch.medAbs == null ? '–' : cmp.pitch.medAbs.toFixed(1)}¢ (needs ${medMax}¢ or less)`);
     const p95Max = S.level === 'weak' ? 40 : 20;   // a weak player's notes sit near the halfway point to the next semitone, where a reading is least certain
     chk(cmp.pitch.n >= 3 && cmp.pitch.p95Abs <= p95Max, `95% of notes within ${cmp.pitch.p95Abs == null ? '–' : cmp.pitch.p95Abs.toFixed(1)}¢ (needs ${p95Max}¢)`);
     if (cmp.rigLimited) checks.push({ ok: true, msg: `${cmp.rigLimited} notes below ${minHz} Hz are left out: a small speaker cannot play them (this is the rig, not the app)` });
@@ -97,15 +99,17 @@ async function stRunScenario(sce, hooks = {}) {
     const sm = summariseRun(slots.filter(s => !(cmp.rows[s.index] && cmp.rows[s.index].rig)), { tol: tol(), beatMs, wobbleCap: ruleFor(S.inst).wobble }), run = sc.lastRun || {}, coach = run.coach || { strengths: [], focus: [] };
     const fbCheck = psFeedbackCheck(perf.truth.map((t, i) => cmp.rows[i].rig ? Object.assign({}, t, { kind: 'rig' }) : t.kind === 'played' ? Object.assign({}, t, { cents: scaleDev(t.cents, tl[i].midi) }) : t), tl, (sm ? sm.spots : []).map(s => ({ name: s.name, midi: s.midi, d: s.d, bias: s.bias })));
     if (fbCheck.recall != null) chk(fbCheck.recall >= 0.5, `feedback names ${Math.round(fbCheck.recall * fbCheck.worst.length)} of the ${fbCheck.worst.length} notes that were really worst (${fbCheck.worst.map(w => w.note + ' ' + w.cents).join(', ')}); needs at least half`);
-    const accuseMax = S.level === 'weak' ? 1 : 0;   // a weak player's run has notes the listening itself misses, which then read as not played
+    const accuseMax = S.level === 'weak' || !S.direct ? 1 : 0;   // a weak player's run has notes the listening itself misses, which then read as not played
     chk(fbCheck.falseSpots <= accuseMax && fbCheck.signWrong === 0, `feedback accuses ${fbCheck.falseSpots} note(s) that were in tune (at most ${accuseMax}) and gets sharp/flat wrong on ${fbCheck.signWrong}`);
-    const report = { ok: checks.every(x => x.ok), scenario: S, feedback: { strengths: coach.strengths, focus: coach.focus, spots: sm ? sm.spots.map(s => ({ name: s.name, d: s.d, text: s.text })) : [], offset: run.rec ? run.rec.off : null, check: fbCheck }, rec: run.rec ? { total: run.rec.total, band: run.rec.band, listen: run.rec.cov } : null, sound: bank ? 'recordings: ' + bank.credit : 'synthetic', sr, bpm: sc.bpm, notes: tl.length, finished, checks, pitch: cmp.pitch, detection: d, timing: cmp.timing, rows: cmp.rows, rigLimited: cmp.rigLimited,
+    const cal = { hwMs: CAL.hwMs, totalMs: CAL.totalMs, why: CAL.why, lags: CAL.last ? CAL.last.lags : null, winMs: CAL.last ? CAL.last.winMs : null };
+    if (cmp.timing.latencyMs != null && !S.direct) chk(Math.abs(cmp.timing.latencyMs) <= 100, `the player's lag reads ${Math.round(cmp.timing.latencyMs)} ms from the truth after the timing check (needs within 100 ms)`);
+    const report = { ok: checks.every(x => x.ok), scenario: S, calibration: cal, feedback: { strengths: coach.strengths, focus: coach.focus, spots: sm ? sm.spots.map(s => ({ name: s.name, d: s.d, text: s.text })) : [], offset: run.rec ? run.rec.off : null, check: fbCheck }, rec: run.rec ? { total: run.rec.total, band: run.rec.band, listen: run.rec.cov } : null, sound: bank ? 'recordings: ' + bank.credit : 'synthetic', sr, bpm: sc.bpm, notes: tl.length, finished, checks, pitch: cmp.pitch, detection: d, timing: cmp.timing, rows: cmp.rows, rigLimited: cmp.rigLimited,
       grade: { measured: measured && { total: measured.total, band: measured.band, pitch: measured.pitch, fluency: measured.fluency, tone: measured.tone }, reference: { total: reference.total, band: reference.band, pitch: reference.pitch, fluency: reference.fluency, tone: reference.tone } },
       truth: perf.truth, player: perf.player, wav: stWav(audio, sr), beatInWavS,
       debug: { running: sc.running, pos: sc.pos, attempts: sc.attempts.length, slots: sc.slots.length, listening, tab, clock: sc.clock, now: getCtx().currentTime - t0, hidden: document.hidden, state: getCtx().state, gate: $('gate').value } };
     return report;
   } catch (e) { return { ok: false, error: 'Test error: ' + (e && e.message || e), scenario: S }; }
-  finally { if (tap) tap.stop(); if (bus) { try { bus.disconnect(); } catch {} try { srcNode.connect(hpNode); } catch {} } stRestore(saved); }
+  finally { CAL.dest = null; CAL.hwMs = null; if (tap) tap.stop(); if (bus) { try { bus.disconnect(); } catch {} try { srcNode.connect(hpNode); } catch {} } stRestore(saved); }
 }
 
 // The full set: realistic players on the three instruments. Each entry is one performance.

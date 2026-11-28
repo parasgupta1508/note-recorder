@@ -75,6 +75,22 @@ ok(lib.heardShare(40, 1000) > 0.7 && lib.heardShare(12, 1000) < 0.3 && lib.heard
   ok(lib.fixedRate(90, 3, 0.012).fire === true && lib.fixedRate(-1, 0, 0.012).fire === true && lib.fixedRate(1, 1.005, 0.012).fire === false, 'the gate: a clock that went backwards starts over; the very first frame fires; a frame too soon does not');
 }
 
+// ---- the timing check: what four beeps heard through a speaker and microphone say about the hardware
+{
+  const win = 85.3, L = (...a) => lib.latencyFromBeeps(a, win);
+  let r = L(212, 218, 209, 215);
+  ok(r.ok && Math.abs(r.totalMs - 215) < 1 && Math.abs(r.hwMs - (215 - 0.5 * win - lib.CAL_INTERNAL_MS)) < 1, `four notes heard about 213 ms late: the hardware is that less half the analysis window and the detector's own 40 ms (${r.ok ? Math.round(r.hwMs) : '-'} ms)`);
+  ok(L(212, null, 209, 215).ok && !L(212, null, null, 215).ok && /heard 2 of 4/.test(L(212, null, null, 215).why), 'three of four notes are enough; two are not (headphones: nothing is heard)');
+  ok(!L(150, 260, 140, 255).ok && /not steady/.test(L(150, 260, 140, 255).why), 'a delay that jumps about is not trusted');
+  ok(L(30, 28, 35, 31).ok && L(30, 28, 35, 31).hwMs === 0 && L(80, 82, 79, 85).hwMs === 0, 'a delay no longer than the app itself adds cannot be negative: the hardware is 0');
+  ok(!L(-200, 5000, 4000, null).ok, 'impossible times (before the note, seconds later) are ignored');
+  ok(JSON.stringify(lib.calPitches([55, 57, 59, 60, 62, 64])) === '[59,60]' && JSON.stringify(lib.calPitches([52, 55, 60, 64, 67, 60, 55])) === '[60,64]', 'the timing check uses the higher notes of the music (a laptop speaker plays nothing under MIDI 59)');
+  ok(JSON.stringify(lib.calPitches([48, 50])) === '[48,50]' && JSON.stringify(lib.calPitches([60, 60, 60])) === '[60,62]' && JSON.stringify(lib.calPitches([55, 57, 58])) === '[55,57]', 'a low piece still gets two of its own notes; one repeated pitch gets a second pitch two semitones up');
+  const w = 4096 / 48000;
+  ok(Math.abs(lib.systemLagMs(w, 0.03, 130) - (0.5 * w * 1000 + 130)) < 1e-9, 'with a measured hardware delay, the delay taken out is half the window plus that');
+  ok(Math.abs(lib.systemLagMs(w, 0.03, 0) - 0.5 * w * 1000) < 1e-9 && Math.abs(lib.systemLagMs(w, 0.03, null) - (0.5 * w * 1000 + 30)) < 1e-9, 'a measured 0 is used as 0; no measurement falls back to the browser\'s output latency');
+}
+
 // ---- notes too short for anyone to hear as a pitch are left out of the score when they were not played back (a 32nd note at 120 is 62 ms)
 ok(lib.tooShortSkipped({ k: 's' }, 62) === true && lib.tooShortSkipped({ k: 's' }, 119) === true && lib.tooShortSkipped({ k: 's' }, 120) === false && lib.tooShortSkipped({ k: 's' }, 300) === false, 'a skipped note under 120 ms is left out; one of 120 ms or more is still a skip');
 ok(lib.tooShortSkipped({ k: 'h' }, 62) === false && lib.tooShortSkipped({ k: 's' }, undefined) === false, 'a short note that WAS heard still counts, and an unknown length is never left out');

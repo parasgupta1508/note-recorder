@@ -36,7 +36,7 @@ srv.listen(0, async () => {
     }
     // Tempo-locked
     listening = true; stream = { getTracks() { return []; } }; sc.calibAt = performance.now(); $('scBpm').value = 120; $('scBpm').dispatchEvent(new Event('change')); setMode('tempo'); $('scBpm').value = 120;
-    await record('tempo', () => startScale(), 11500); stopScale(); await sleep(300);
+    await record('tempo', () => { CAL.hwMs = 0; CAL.totalMs = 0; CAL.at = Date.now(); startScale(); }, 11500); stopScale(); await sleep(300);
     // Hear scale with the click on
     startMetro(); stopMetro(); metroOn = true;
     await record('demo', () => { metroOn = true; startDemo(); }, 9000); stopDemo(); stopMetro(); listening = false;

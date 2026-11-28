@@ -179,7 +179,7 @@ function psCompare(truth, slots, tl, opts = {}) {
 function psFeedbackCheck(truth, tl, spots, o = {}) {
   const min = o.min == null ? 15 : o.min, at = i => tl[i] || {};
   const match = (s, i) => (s.midi == null || at(i).midi === s.midi) && (s.name == null || at(i).noteName === s.name) && (s.d == null || (at(i).direction || 'up') === s.d) && (s.bar == null || at(i).bar === s.bar);
-  const bad = truth.map((t, i) => ({ i, w: t.kind !== 'played' ? 100 : Math.abs(t.cents) })).filter(x => x.w >= min).sort((a, b) => b.w - a.w).slice(0, 3);
+  const bad = truth.map((t, i) => ({ i, w: t.kind === 'rig' ? 0 : t.kind !== 'played' ? 100 : Math.abs(t.cents) })).filter(x => x.w >= min).sort((a, b) => b.w - a.w).slice(0, 3);
   const recall = bad.length ? bad.filter(w => spots.some(s => match(s, w.i))).length / bad.length : null;
   const falseSpots = spots.filter(s => !truth.some((t, i) => match(s, i) && (t.kind !== 'played' || Math.abs(t.cents) >= 10))).length;
   let signWrong = 0; for (const s of spots) { if (s.bias == null || Math.abs(s.bias) < 8) continue; const cs = truth.map((t, i) => match(s, i) && t.kind === 'played' ? t.cents : null).filter(v => v != null); if (cs.length && Math.abs(cs.reduce((a, b) => a + b, 0) / cs.length) >= 8 && Math.sign(cs.reduce((a, b) => a + b, 0)) !== Math.sign(s.bias)) signWrong++; }

@@ -142,9 +142,12 @@ function loop() {
   if (pg.fire) {
     if (pracTickT > 0 && t > pracTickT && t - pracTickT < 0.2) pracDt += (t - pracTickT - pracDt) * 0.05;   // the real time between the frames the drills get
     pracTickT = pg.last;
+    if (CAL.active) calFrame(t, f);                      // the timing check is playing its notes: only it listens, the drill waits
+    else {
     if (demoIdx < 0) collectHold(f);                   // keep scoring the note that is still sounding
     if (sc.running && demoIdx < 0) { det.frame(t, f, a4(), frameRms, false, frameFast); liveScaleFrame(f, t); }   // a scale never repeats a note, so a dip in level is never a new note here
     if (tab === 'piece' && typeof pieceFrame === 'function') pieceFrame(f, t);   // Piece practice has its own engine
+    }
   }
   if (tab === 'rec' && recording) { drawRoll(); recUi(); }
 }
