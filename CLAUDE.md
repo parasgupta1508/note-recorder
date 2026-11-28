@@ -136,3 +136,10 @@ If a benchmark prints REGRESSION, fix the change or drop it. Do not commit it. W
 
 - When you change any cached file, bump `CACHE` in `sw.js` (currently `tuner-v44`) so installed copies update.
 - Netlify is no longer used. GitHub Pages is the only host.
+
+## Audit reports (token-efficient)
+
+The rules are in `docs/audits/AUDIT_PROTOCOL.md`; the current report is `docs/audits/LATEST_AUDIT.md`. Audits never edit application code: they only write that report.
+
+- **"give me full report" (Smart Delta Mode):** follow `docs/audits/AUDIT_PROTOCOL.md` in **Delta Mode**. Read ONLY `docs/audits/LATEST_AUDIT.md` and the files changed since the commit hash recorded in it (`git diff --name-only <hash>..HEAD`). Update `docs/audits/LATEST_AUDIT.md` and print a compact summary in chat.
+- **"give me deep report" (Full Scan Mode):** follow `docs/audits/AUDIT_PROTOCOL.md` in **Deep Mode**. Re-read all the core engine files from scratch and ignore the earlier audit's assumptions. Overwrite `docs/audits/LATEST_AUDIT.md` and print it in chat.
