@@ -1,10 +1,11 @@
 // Builds the instrument sample banks in data/samples/ from the original recordings (all CC0 / public domain). Not part of the app: run it by hand when a bank changes.
-//   node tools/samples/build.js <folder with the downloaded sources>
+//   node tools/samples/build.js <folder with the downloaded sources> [violin|guitar|ukulele|piano]
 // The folder holds (each in its own sub-folder, extracted as downloaded; nothing in it is ever run):
 //   vsco/    the .wav files of "Strings/Solo Violin/Arco Vib" from https://github.com/sgossner/VSCO-2-CE   (CC0 1.0, Versilian / Sam Gossner)
 //   guitar/  FreePats Spanish Classical Guitar, SFZ+FLAC, the 'samples' folder                           (CC0 1.0, Roberto Garcia, https://freepats.zenvoid.org/Guitar/acoustic-guitar.html)
 //   uke/     FreePats Ukulele, SFZ+FLAC, the 'samples' folder                                            (CC0 1.0, https://freepats.zenvoid.org/GuitarFamily/ukulele.html)
-//   piano/   FreePats Upright Piano KW (small), SFZ+FLAC, the 'samples' folder                          (CC0 1.0, Kawai upright, https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html)
+//   ydp/     FreePats YDP Grand Piano, SF2 (the .sf2 file in it)                                          (CC BY 3.0: Zenph Studios Yamaha Disklavier Pro Piano Multisamples for OLPC, edited by Roberto Garcia for FreePats; credit required)
+//   piano/   (older) FreePats Upright Piano KW (small), SFZ+FLAC, the 'samples' folder: used only when there is no ydp/ folder
 // For every sample it: cuts it to a length the app can use, makes it mono 44.1 kHz, fades its tail, stores it as a small MP3, and MEASURES the pitch it really has (with the app's own
 // yin(), js/core/pitch.js) so the sampler can play it in tune: some of the original packs ship small tuning corrections (an SFZ "tune=-5") and the names are only nominal.
 // It also measures the level (so notes of different samples sound equally loud) and, for the violin, the vibrato the player really made (rate and depth).
@@ -41,6 +42,22 @@ function measure(x, midi, from, to) {
   return { cents: +m.toFixed(2), vib: { hz: +((depth >= 4 && vibHz) || 5.5).toFixed(2), depth: +depth.toFixed(1) } };   // a swing under 4 cents is too small to give a reliable rate
 }
 
+// The grand piano comes as one SoundFont file: its samples (one per three semitones, several velocities) are written out as WAV files first, the loudest velocity of each key.
+const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'], noteName = m => NAMES[m % 12] + (Math.floor(m / 12) - 1);
+function extractGrand(srcDir) {
+  const d = path.join(srcDir, 'ydp'); if (!fs.existsSync(d)) return null;
+  const sf2 = find(d, /\.sf2$/i)[0]; if (!sf2) return null;
+  const out = path.join(d, '_wav'); fs.mkdirSync(out, { recursive: true }); for (const f of fs.readdirSync(out)) fs.unlinkSync(path.join(out, f));
+  const { readSf2 } = require('./sf2.js'), sf = readSf2(fs.readFileSync(sf2)), best = new Map();
+  for (const s of sf.samples) { const v = +((/v(\d+)$/.exec(s.name) || [])[1] || 0), b = best.get(s.pitch); if (!b || v > b.v) best.set(s.pitch, { s, v }); }
+  for (const [key, { s }] of best) {
+    const x = sf.pcm(s), h = Buffer.alloc(44), n = x.length, pcm = Buffer.alloc(n * 2); for (let i = 0; i < n; i++) pcm.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(x[i] * 32767))), i * 2);
+    h.write('RIFF', 0); h.writeUInt32LE(36 + pcm.length, 4); h.write('WAVEfmt ', 8); h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(s.rate, 24); h.writeUInt32LE(s.rate * 2, 28); h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34); h.write('data', 36); h.writeUInt32LE(pcm.length, 40);
+    fs.writeFileSync(path.join(out, noteName(key) + '.wav'), Buffer.concat([h, pcm]));
+  }
+  return out;
+}
+const GRAND = extractGrand(src);
 const BANKS = {
   violin: { dir: 'vsco', re: /\.wav$/i, parse: f => { const m = /_([A-G]#?\d)_([fp])\.wav$/i.exec(f); return m && { midi: midiOf(m[1]), layer: m[2].toLowerCase(), name: m[1] + '_' + m[2].toLowerCase() }; }, keep: 5.0, fade: 0.35, measureTo: 4.2, region: [0.3, 1.5], vibrato: true,
     license: 'CC0 1.0', credit: 'VSCO 2 Community Edition (Versilian Studios / Sam Gossner), Solo Violin, Arco Vib', url: 'https://github.com/sgossner/VSCO-2-CE', kind: 'bowed' },
@@ -48,11 +65,14 @@ const BANKS = {
     license: 'CC0 1.0', credit: 'FreePats Spanish Classical Guitar (Roberto Garcia)', url: 'https://freepats.zenvoid.org/Guitar/acoustic-guitar.html', kind: 'plucked' },
   ukulele: { dir: 'uke', re: /\.flac$/i, parse: f => { const m = /^([A-G]#?\d)\.flac$/.exec(path.basename(f)); return m && { midi: midiOf(m[1]), name: m[1] }; }, keep: 2.2, fade: 0.3, measureTo: 1.2, vibrato: false,
     license: 'CC0 1.0', credit: 'FreePats Ukulele', url: 'https://freepats.zenvoid.org/GuitarFamily/ukulele.html', kind: 'plucked' },
-  piano: { dir: 'piano', re: /\.flac$/i, parse: f => { const m = /^([A-G]#?\d)vH\.flac$/.exec(path.basename(f)); return m && { midi: midiOf(m[1]), name: m[1] }; }, keep: 4.0, fade: 0.5, measureTo: 2.4, vibrato: false,
+  piano: GRAND ? { dir: 'ydp/_wav', re: /\.wav$/i, parse: f => { const m = /^([A-G]#?\d)\.wav$/.exec(path.basename(f)); return m && { midi: midiOf(m[1]), name: m[1] }; }, keep: 4.5, fade: 0.6, measureTo: 2.4, vibrato: false,
+    license: 'CC BY 3.0', credit: 'YDP Grand Piano: Zenph Studios Yamaha Disklavier Pro Piano Multisamples for OLPC (CC BY 3.0), edited by Roberto Garcia for FreePats', url: 'https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html', kind: 'struck' }
+    : { dir: 'piano', re: /\.flac$/i, parse: f => { const m = /^([A-G]#?\d)vH\.flac$/.exec(path.basename(f)); return m && { midi: midiOf(m[1]), name: m[1] }; }, keep: 4.0, fade: 0.5, measureTo: 2.4, vibrato: false,
     license: 'CC0 1.0', credit: 'FreePats Upright Piano KW (small)', url: 'https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html', kind: 'struck' },
 };
 
 for (const [inst, B] of Object.entries(BANKS)) {
+  if (process.argv[3] && process.argv[3] !== inst) continue;   // node tools/samples/build.js <folder> piano: only that bank
   const dir = path.join(src, B.dir); if (!fs.existsSync(dir)) { console.log('skip ' + inst + ': no ' + B.dir + '/ folder'); continue; }
   const out = path.join(root, 'data', 'samples', inst); fs.mkdirSync(out, { recursive: true }); for (const f of fs.readdirSync(out)) fs.unlinkSync(path.join(out, f));
   const files = [], skipped = [];

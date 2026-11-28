@@ -104,7 +104,7 @@ function psRender(spec) {
     const playedMidi = wrong ? t.midi + (rnd() < 0.5 ? 1 : -1) * (rnd() < 0.7 ? 1 : 2) : t.midi;
     const fault = !skipped && rnd() < P.faultP ? (rnd() < 0.5 ? -1 : 1) * (25 + rnd() * 20) : 0;
     const deg = (((playedMidi - tonic) % 12) + 12) % 12, just = P.just && inst === 'violin' ? PS_JI[deg] : 0;
-    const cents = P.offset + P.sigma * rnd.g() + fault + just;
+    const cents = (spec.plant && spec.plant.index === i ? spec.plant.cents : P.offset + P.sigma * rnd.g() + fault) + just;   // spec.plant: one note made out of tune on purpose, to see whether the feedback finds it
     const startMs = t.startMs * (1 + P.drift * (n > 1 ? i / (n - 1) : 0)) + P.lag + P.jitter * rnd.g();
     const nextStart = next ? next.startMs * (1 + P.drift * ((i + 1) / (n - 1))) + P.lag : startMs + beatMs;
     const endMs = legato ? Math.max(startMs + 80, nextStart + 8) : startMs + Math.max(60, t.durationMs * P.durFrac * (1 + 0.05 * rnd.g()));
@@ -168,4 +168,20 @@ function psCompare(truth, slots, tl, opts = {}) {
       badFound: bad.filter(r => r.heard).length, wrongFlagged: bad.filter(r => r.wrongFlag).length, falseWrong: played.filter(r => r.wrongFlag && clear.includes(r)).length },
     timing: { latencyMs: q(te, 0.5), spreadMs: te.length ? q(te, 0.75) - q(te, 0.25) : null, n: te.length },
   };
+}
+
+// ---- is the FEEDBACK right? The test knows what was really wrong (the truth), so the notes the app tells the player to work on can be checked against it.
+//   psFeedbackCheck(truth, tl, spots, o) -> { worst, recall, named, falseSpots, signWrong }
+//   spots: what the app named: [{ name, midi?, d?: 'up'|'down', bar?, bias? }] (bias: the cents the app measured, its sign is the "sharp / flat" it will have told the player)
+//   worst: the (up to) 3 notes that were really worst: a note 15 cents or more out (o.min), or one that was skipped or wrong
+//   recall: the share of those the app named (null when nothing was clearly wrong, so there is nothing to find)
+//   falseSpots: spots that name a note that was in tune (under 10 cents) wherever it occurs; signWrong: spots whose sharp / flat is the wrong way round
+function psFeedbackCheck(truth, tl, spots, o = {}) {
+  const min = o.min == null ? 15 : o.min, at = i => tl[i] || {};
+  const match = (s, i) => (s.midi == null || at(i).midi === s.midi) && (s.name == null || at(i).noteName === s.name) && (s.d == null || (at(i).direction || 'up') === s.d) && (s.bar == null || at(i).bar === s.bar);
+  const bad = truth.map((t, i) => ({ i, w: t.kind !== 'played' ? 100 : Math.abs(t.cents) })).filter(x => x.w >= min).sort((a, b) => b.w - a.w).slice(0, 3);
+  const recall = bad.length ? bad.filter(w => spots.some(s => match(s, w.i))).length / bad.length : null;
+  const falseSpots = spots.filter(s => !truth.some((t, i) => match(s, i) && (t.kind !== 'played' || Math.abs(t.cents) >= 10))).length;
+  let signWrong = 0; for (const s of spots) { if (s.bias == null || Math.abs(s.bias) < 8) continue; const cs = truth.map((t, i) => match(s, i) && t.kind === 'played' ? t.cents : null).filter(v => v != null); if (cs.length && Math.abs(cs.reduce((a, b) => a + b, 0) / cs.length) >= 8 && Math.sign(cs.reduce((a, b) => a + b, 0)) !== Math.sign(s.bias)) signWrong++; }
+  return { worst: bad.map(w => ({ index: w.i, note: at(w.i).noteName, bar: at(w.i).bar, cents: truth[w.i].kind === 'played' ? Math.round(truth[w.i].cents) : truth[w.i].kind })), recall, named: spots.length, falseSpots, signWrong };
 }

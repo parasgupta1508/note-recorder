@@ -107,7 +107,7 @@ function onAttempt(a) {
   a = Object.assign({}, a, { cents: scaleDev(a.cents, a.midi) }); const sh = scaleShift();   // the grader's deviation; sh = the player's overall offset to forgive
   if (sc.mode === 'wait') return waitAttempt(a);
   const seq = sc.seq, tl = sc.tl, exp = seq[sc.pos], T = scaleTol();
-  const terr = ix => sc.clock == null ? null : Math.round((a.t - sc.clock) * 1000 - tl[ix].startMs);
+  const lagMs = systemLagMs(frameWinS, ctx && ctx.outputLatency), terr = ix => sc.clock == null ? null : Math.round((a.t - sc.clock) * 1000 - tl[ix].startMs - lagMs);   // lagMs: the app's own delay, not the player's
   const rec = { index: sc.pos + 1, expected: tl[sc.pos].noteName, played: midiName(a.midi), hz: a.hz, cents: a.cents, time_s: a.t, pass: sc.pass, direction: tl[sc.pos].direction, timing_ms: null };
   // Re-playing the note just played is a retry: scored as another play of that note, never a skip or a wrong note.
   // If the clock had already skipped it, this is a late play: it replaces the skip.
@@ -166,7 +166,7 @@ function advanceWait(rule) {
 
 // ----- summary: intonation, timing, and the weakest spots -----
 function renderSummary() {
-  const sm = summariseRun(sc.slots, { tol: tol(), beatMs: 60000 / (sc.bpm || 80) });
+  const sm = summariseRun(sc.slots, { tol: tol(), beatMs: 60000 / (sc.bpm || 80), wobbleCap: ruleFor(sc.plan ? sc.plan.inst : $('scInst').value).wobble });
   if (!sm) { $('scSum').innerHTML = ''; return; }
   const big = (v, l) => `<div><b>${v}</b>${l}</div>`, dr = sm.timingDriftMs;
   const timing = sm.timing == null ? big('–', sc.mode === 'wait' ? 'Timing (Tempo-locked only)' : 'Timing') : big(sm.timing.toFixed(0) + '%', 'Timing');

@@ -68,8 +68,11 @@ function coachReview(cur, prior, opts = {}) {
     const diff = db - ub, past = same.map(r => r.up.bias != null && r.down.bias != null ? r.down.bias - r.up.bias : null).filter(v => v != null), again = past.filter(v => Math.sign(v) === Math.sign(diff) && Math.abs(v) >= 6).length;
     if (Math.abs(diff) >= 8 && (again >= 2 || Math.abs(diff) >= 15)) focus.push(`Coming down you are ${Math.abs(diff).toFixed(0)}¢ ${diff > 0 ? 'sharper' : 'flatter'} than going up${again >= 2 ? `, as in ${again} of your last ${past.length} runs` : ''}: listen again at the turn at the top and match the pitch on the way down.`);
   }
+  // The whole run sat sharp or flat (the Practical grader's own measure of it when it has one): that is the first thing to fix, and it is true from the very first run.
+  const wholeOff = cur.off != null ? cur.off : coachBias(cur);
+  if (wholeOff != null && Math.abs(wholeOff) >= 15) focus.push(`Your whole ${cur.type === 'piece' ? 'piece' : 'scale'} sat about ${Math.abs(wholeOff).toFixed(0)}¢ ${wholeOff > 0 ? 'sharp' : 'flat'}: check your tuning and where the first note lands, then ${coachFix(cur.inst, wholeOff > 0)}.`);
   const lean = coachBias(cur), leans = same.map(coachBias).filter(v => v != null);
-  if (lean != null && Math.abs(lean) >= 7 && leans.filter(v => Math.sign(v) === Math.sign(lean) && Math.abs(v) >= 7).length >= COACH_MIN_RUNS - 1 && !rec.length) focus.push(`You tend to play ${lean > 0 ? 'sharp' : 'flat'} overall (${coachSigned(lean)} on average): check your tuning, then ${coachFix(cur.inst, lean > 0)}.`);
+  if (lean != null && Math.abs(lean) >= 7 && leans.filter(v => Math.sign(v) === Math.sign(lean) && Math.abs(v) >= 7).length >= COACH_MIN_RUNS - 1 && !rec.length && !(Math.abs(wholeOff) >= 15)) focus.push(`You tend to play ${lean > 0 ? 'sharp' : 'flat'} overall (${coachSigned(lean)} on average): check your tuning, then ${coachFix(cur.inst, lean > 0)}.`);
   if (cur.mode !== 'wait' && cur.pulse != null) {
     if (cur.lag != null && cur.lag >= 70) focus.push(`You are about ${cur.lag.toFixed(0)} ms behind the click on average: think of the note before the beat so it lands on it.`);
     else if (cur.lag != null && cur.lag <= -70) focus.push(`You are about ${Math.abs(cur.lag).toFixed(0)} ms ahead of the click: wait for the beat before you play.`);

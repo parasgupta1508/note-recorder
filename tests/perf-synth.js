@@ -63,4 +63,15 @@ for (const inst of ['violin', 'guitar', 'ukulele']) {
   ok(fc.pitch.n === 0 && fc.pitch.ambiguous === fc.detection.found, 'notes 45 cents or more off are counted as ambiguous, not as measurement error');
   const swing = r.truth.map(t => Object.assign({}, t, { cents: -36, vib: { hz: 5.5, depth: 29 } })), sw = lib.psCompare(swing, lib.psTruthSlots(swing, t2, { tol: 10, smooth: 7 }), t2);
   ok(sw.pitch.n === 0 && sw.pitch.ambiguous === sw.detection.found, 'a note 36 cents flat with a 29 cent vibrato crosses the halfway point and is counted as ambiguous too'); }
+// the feedback check: it finds what the app should have named, and what it should not have said
+{ const t3 = lib.buildTimeline({ start: 55, type: 'major', span: 1, bpm: 80, slur: 1, rootPc: 7 }), tr = t3.map((x, i) => ({ index: i, midi: x.midi, kind: 'played', cents: i === 4 ? -35 : i === 9 ? 28 : 2 }));
+  const spot = i => ({ name: t3[i].noteName, midi: t3[i].midi, d: t3[i].direction, bias: tr[i].cents });
+  let c = lib.psFeedbackCheck(tr, t3, [spot(4), spot(9)]);
+  ok(c.worst.length === 2 && c.recall === 1 && c.falseSpots === 0 && c.signWrong === 0, 'feedback that names both out-of-tune notes, the right way round, is right');
+  c = lib.psFeedbackCheck(tr, t3, [spot(4)]); ok(c.recall === 0.5, 'naming one of two bad notes finds half');
+  c = lib.psFeedbackCheck(tr, t3, [spot(4), spot(2)]); ok(c.falseSpots === 1, 'naming a note that was in tune is counted as a false accusation');
+  c = lib.psFeedbackCheck(tr, t3, [Object.assign(spot(4), { bias: 30 })]); ok(c.signWrong === 1, 'telling the player a flat note was sharp is counted');
+  c = lib.psFeedbackCheck(tr.map(x => Object.assign({}, x, { cents: 3 })), t3, []); ok(c.recall === null && c.worst.length === 0, 'when nothing was clearly wrong there is nothing to find');
+  c = lib.psFeedbackCheck(tr.map((x, i) => i === 3 ? Object.assign({}, x, { kind: 'skipped', cents: null }) : x), t3, [spot(3)]); ok(c.worst.some(w => w.index === 3 && w.cents === 'skipped') && c.recall > 0, 'a skipped note is one of the worst, and naming it counts');
+  const planted = lib.psRender({ inst: 'violin', sr: 22050, tl: t3, level: 'expert', player: { vibrato: false, just: false }, plant: { index: 6, cents: -40 }, seed: 3, tonic: 7 }); ok(Math.abs(planted.truth[6].cents + 40) < 1e-6, 'a planted fault is exactly what the truth says'); }
 console.log(fail ? `\n${fail} FAILED` : '\nall performance-synth checks pass'); process.exit(fail ? 1 : 0);

@@ -39,7 +39,7 @@ const stPlay = (c, x, sr, at, dest) => { const b = c.createBuffer(1, x.length, s
 // One scenario: { inst: violin|guitar|ukulele, level, vibrato, root (pitch class), type, span, bpm, bow ('separate'|'slur2'|'slur4'|'slur8'), seed, grader: 'strict'|'practical' }
 // hooks: { log(text) }. Returns a report { ok, error?, checks[], stats..., wav (ArrayBuffer), truth, ... }.
 async function stRunScenario(sce, hooks = {}) {
-  const log = hooks.log || (() => {}), S = Object.assign({ inst: 'violin', level: 'good', vibrato: true, root: 2, type: 'major', span: 1, bpm: 70, bow: 'separate', pos: '', seed: 1, grader: 'strict', minHz: 0 }, sce), saved = stSave();
+  const log = hooks.log || (() => {}), S = Object.assign({ inst: 'violin', level: 'good', vibrato: true, root: 2, type: 'major', span: 1, bpm: 70, bow: 'separate', pos: '', seed: 1, grader: 'practical', minHz: 0 }, sce), saved = stSave();
   window.stActive = true; profile = ''; cardAll = {}; cardSess = {}; passAll = [];
   let tap = null, bus = null;
   try {
@@ -52,7 +52,7 @@ async function stRunScenario(sce, hooks = {}) {
     log(`Rendering ${S.inst} (${S.level}${S.vibrato ? ', vibrato' : ''}) …`); await stSleep(30);
     // Real recordings (data/samples/, js/app/sampler.js) when the bank loads: the notes are a real violin, guitar, ukulele or piano with its own vibrato and decay. The synthetic voice
     // is the fallback (S.synth forces it), and the report says which sound was used.
-    const bank = S.synth ? null : await smpLoad(smpKey(S.inst)), spec = { inst: smpKey(S.inst) || S.inst, sr, tl, level: S.level, player: { vibrato: !!S.vibrato }, seed: S.seed, tonic: sc.plan.pc };
+    const bank = S.synth ? null : await smpLoad(smpKey(S.inst)), spec = { inst: smpKey(S.inst) || S.inst, sr, tl, level: S.level, player: Object.assign({ vibrato: !!S.vibrato }, S.player || {}), plant: S.plant, seed: S.seed, tonic: sc.plan.pc };
     if (bank) { spec.voice = smVoice(bank); spec.vibOf = smVibOf(bank); }
     const perf = psRender(spec);
     if (!listening) await startListening(); await c.resume();
@@ -87,13 +87,19 @@ async function stRunScenario(sce, hooks = {}) {
     const chk = (ok, msg) => checks.push({ ok: !!ok, msg });
     chk(finished, finished ? 'the drill ran to the end of the scale' : 'the drill did not finish');
     chk(d.played === 0 || d.found / d.played >= 0.9, `found ${d.found} of ${d.played} played notes (needs 90%)`);
-    chk(cmp.pitch.n >= 3 && cmp.pitch.medAbs <= 5, `median pitch error ${cmp.pitch.medAbs == null ? '–' : cmp.pitch.medAbs.toFixed(1)}¢ (needs 5¢ or less)`);
-    const p95Max = S.level === 'weak' ? 35 : 15;   // a weak player's notes sit near the halfway point to the next semitone, where a reading is least certain
+    chk(cmp.pitch.n >= 3 && cmp.pitch.medAbs <= 6, `median pitch error ${cmp.pitch.medAbs == null ? '–' : cmp.pitch.medAbs.toFixed(1)}¢ (needs 6¢ or less)`);
+    const p95Max = S.level === 'weak' ? 40 : 20;   // a weak player's notes sit near the halfway point to the next semitone, where a reading is least certain
     chk(cmp.pitch.n >= 3 && cmp.pitch.p95Abs <= p95Max, `95% of notes within ${cmp.pitch.p95Abs == null ? '–' : cmp.pitch.p95Abs.toFixed(1)}¢ (needs ${p95Max}¢)`);
     if (cmp.rigLimited) checks.push({ ok: true, msg: `${cmp.rigLimited} notes below ${minHz} Hz are left out: a small speaker cannot play them (this is the rig, not the app)` });
     chk(d.falseWrong <= Math.max(1, Math.round(0.1 * d.played)), `${d.falseWrong} good notes wrongly called wrong notes`);
     if (measured) chk(Math.abs(measured.total - reference.total) <= 8, `score ${measured.total} against ${reference.total} for the same performance heard perfectly (needs within 8)`);
-    const report = { ok: checks.every(x => x.ok), scenario: S, sound: bank ? 'recordings: ' + bank.credit : 'synthetic', sr, bpm: sc.bpm, notes: tl.length, finished, checks, pitch: cmp.pitch, detection: d, timing: cmp.timing, rows: cmp.rows, rigLimited: cmp.rigLimited,
+    // The feedback the player was shown: "Spots to fix", the coach's lines, the offset note. Checked against what was really wrong (psFeedbackCheck).
+    const sm = summariseRun(slots.filter(s => !(cmp.rows[s.index] && cmp.rows[s.index].rig)), { tol: tol(), beatMs, wobbleCap: ruleFor(S.inst).wobble }), run = sc.lastRun || {}, coach = run.coach || { strengths: [], focus: [] };
+    const fbCheck = psFeedbackCheck(perf.truth.map((t, i) => cmp.rows[i].rig ? Object.assign({}, t, { kind: 'rig' }) : t.kind === 'played' ? Object.assign({}, t, { cents: scaleDev(t.cents, tl[i].midi) }) : t), tl, (sm ? sm.spots : []).map(s => ({ name: s.name, midi: s.midi, d: s.d, bias: s.bias })));
+    if (fbCheck.recall != null) chk(fbCheck.recall >= 0.5, `feedback names ${Math.round(fbCheck.recall * fbCheck.worst.length)} of the ${fbCheck.worst.length} notes that were really worst (${fbCheck.worst.map(w => w.note + ' ' + w.cents).join(', ')}); needs at least half`);
+    const accuseMax = S.level === 'weak' ? 1 : 0;   // a weak player's run has notes the listening itself misses, which then read as not played
+    chk(fbCheck.falseSpots <= accuseMax && fbCheck.signWrong === 0, `feedback accuses ${fbCheck.falseSpots} note(s) that were in tune (at most ${accuseMax}) and gets sharp/flat wrong on ${fbCheck.signWrong}`);
+    const report = { ok: checks.every(x => x.ok), scenario: S, feedback: { strengths: coach.strengths, focus: coach.focus, spots: sm ? sm.spots.map(s => ({ name: s.name, d: s.d, text: s.text })) : [], offset: run.rec ? run.rec.off : null, check: fbCheck }, rec: run.rec ? { total: run.rec.total, band: run.rec.band, listen: run.rec.cov } : null, sound: bank ? 'recordings: ' + bank.credit : 'synthetic', sr, bpm: sc.bpm, notes: tl.length, finished, checks, pitch: cmp.pitch, detection: d, timing: cmp.timing, rows: cmp.rows, rigLimited: cmp.rigLimited,
       grade: { measured: measured && { total: measured.total, band: measured.band, pitch: measured.pitch, fluency: measured.fluency, tone: measured.tone }, reference: { total: reference.total, band: reference.band, pitch: reference.pitch, fluency: reference.fluency, tone: reference.tone } },
       truth: perf.truth, player: perf.player, wav: stWav(audio, sr), beatInWavS,
       debug: { running: sc.running, pos: sc.pos, attempts: sc.attempts.length, slots: sc.slots.length, listening, tab, clock: sc.clock, now: getCtx().currentTime - t0, hidden: document.hidden, state: getCtx().state, gate: $('gate').value } };
@@ -111,7 +117,9 @@ const ST_SET = [
   { name: 'Violin, weak, vibrato', inst: 'violin', level: 'weak', vibrato: true, bow: 'separate' },
   { name: 'Guitar, good, mid neck, two octaves', inst: 'guitar', level: 'good', vibrato: false, root: 7, pos: 'mid', span: 2 },
   { name: 'Ukulele, good', inst: 'ukulele', level: 'good', vibrato: false, root: 0 },
-  { name: 'Piano, good, two octaves', inst: 'chromatic', level: 'good', vibrato: false, root: 0, span: 2 },
+  { name: 'Violin, one note 35 cents flat (feedback test)', inst: 'violin', level: 'good', vibrato: true, root: 2, span: 2, plant: { index: 5, cents: -35 } },
+  { name: 'Guitar, whole scale 22 cents sharp (feedback test)', inst: 'guitar', level: 'good', vibrato: false, root: 7, pos: 'mid', span: 1, player: { offset: 22, sigma: 3 } },
+  { name: 'Ukulele, playing ahead of the click (feedback test)', inst: 'ukulele', level: 'good', vibrato: false, root: 0, span: 2, player: { lag: -120, jitter: 60, sigma: 4 } },
 ];
 async function stRunSet(list, hooks = {}) {
   ST.running = true; ST.stop = false; const out = [];

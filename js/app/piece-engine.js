@@ -162,7 +162,7 @@ function peOnAttempt(a) {
   a = Object.assign({}, a, { cents: peDev(a.cents, a.midi) }); const sh = peShift();   // the grader's deviation; sh = the player's overall offset to forgive
   if (PE.mode === 'wait') return peWaitAttempt(a);
   const seq = PE.seq, tl = PE.tl, exp = seq[PE.pos], T = peTol();
-  const terr = ix => PE.clock == null ? null : Math.round((a.t - PE.clock) * 1000 - tl[ix].startMs);
+  const lagMs = systemLagMs(frameWinS, ctx && ctx.outputLatency), terr = ix => PE.clock == null ? null : Math.round((a.t - PE.clock) * 1000 - tl[ix].startMs - lagMs);   // lagMs: the app's own delay, not the player's
   const rec = { index: PE.pos + 1, expected: tl[PE.pos].noteName, played: midiName(a.midi), hz: a.hz, cents: a.cents, time_s: a.t, pass: PE.pass, direction: 'up', timing_ms: null };
   // Re-playing the note just played is a retry: scored as another play of that note, never a skip or a wrong note. If the clock had already skipped it, it is a late play that replaces the skip.
   // (In a piece the note after the next one can be the one just played, as in A B A: if the clock says the sound is nearer in time to that later note, it is that note, not a retry.)

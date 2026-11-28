@@ -6,7 +6,7 @@
 
 // S: { name, xml (the score text), part (index), inst, from, to (bars), maxSec (longest run, default 75), bpm (optional), level, vibrato, seed, grader, direct, minHz, synth }
 async function stRunPiece(sce, hooks = {}) {
-  const log = hooks.log || (() => {}), S = Object.assign({ inst: 'violin', part: 0, level: 'good', vibrato: true, seed: 1, grader: 'strict', minHz: 0, maxSec: 75 }, sce), saved = stSave();
+  const log = hooks.log || (() => {}), S = Object.assign({ inst: 'violin', part: 0, level: 'good', vibrato: true, seed: 1, grader: 'practical', minHz: 0, maxSec: 75 }, sce), saved = stSave();
   window.stActive = true; profile = ''; cardAll = {}; cardSess = {}; passAll = [];
   let tap = null, bus = null; const prevRepeat = $('pzRepeat').checked, prevMode = PE.mode;
   try {
@@ -61,7 +61,11 @@ async function stRunPiece(sce, hooks = {}) {
     chk(d.falseWrong <= Math.max(2, Math.round(0.1 * d.played)), `${d.falseWrong} good notes wrongly called wrong notes`);
     if (measured) chk(Math.abs(measured.total - reference.total) <= 12, `score ${measured.total} against ${reference.total} for the same performance heard perfectly (needs within 12)`);
     if (cmp.rigLimited) checks.push({ ok: true, msg: `${cmp.rigLimited} notes below ${minHz} Hz are left out: a small speaker cannot play them` });
-    return { ok: checks.every(x => x.ok), scenario: Object.assign({}, S, { xml: undefined }), kind: 'piece', sound: bank ? 'recordings: ' + bank.credit : 'synthetic', sr, bpm: PE.bpm, notes: tl.length, bars: [plan.from, plan.to], finished, checks, pitch: cmp.pitch, detection: d, timing: cmp.timing, rows: cmp.rows, rigLimited: cmp.rigLimited,
+    const sm = summariseRun(slots.filter(s => !dropped.has(s.index)), { tol: peTol(), beatMs }), run = PE.lastRun || {}, coach = run.coach || { strengths: [], focus: [] }, weak = run.weak || [];
+    const fbCheck = psFeedbackCheck(perf.truth.map((t, i) => cmp.rows[i].rig || dropped.has(i) ? Object.assign({}, t, { kind: 'rig' }) : t.kind === 'played' ? Object.assign({}, t, { cents: peDev(t.cents, tl[i].midi) }) : t), tl, weak.map(w => ({ name: w.name, bar: w.bar })));
+    if (fbCheck.recall != null) chk(fbCheck.recall >= 0.34, `feedback names ${Math.round(fbCheck.recall * fbCheck.worst.length)} of the ${fbCheck.worst.length} notes that were really worst (${fbCheck.worst.map(w => 'bar ' + w.bar + ' ' + w.note + ' ' + w.cents).join(', ')}); needs at least one in three`);
+    chk(fbCheck.falseSpots <= 1, `feedback accuses ${fbCheck.falseSpots} note(s) that were in tune (at most 1)`);
+    return { ok: checks.every(x => x.ok), scenario: Object.assign({}, S, { xml: undefined }), kind: 'piece', feedback: { strengths: coach.strengths, focus: coach.focus, spots: weak.map(w => ({ bar: w.bar, name: w.name, text: w.text })), offset: run.rec ? run.rec.off : null, check: fbCheck }, sound: bank ? 'recordings: ' + bank.credit : 'synthetic', sr, bpm: PE.bpm, notes: tl.length, bars: [plan.from, plan.to], finished, checks, pitch: cmp.pitch, detection: d, timing: cmp.timing, rows: cmp.rows, rigLimited: cmp.rigLimited,
       grade: { measured: measured && { total: measured.total, band: measured.band, pitch: measured.pitch, fluency: measured.fluency, tone: measured.tone }, reference: { total: reference.total, band: reference.band, pitch: reference.pitch, fluency: reference.fluency, tone: reference.tone } },
       truth: perf.truth, player: perf.player, wav: stWav(audio, sr), beatInWavS, clock0, trace: (window.stTrace || []).slice(0, 7000), attempts: PE.attempts.slice(0, 400).map(a => ({ i: a.index, e: a.expected, p: a.played, g: a.grade, t: +(a.time_s || 0).toFixed(3), ms: a.timing_ms })), debug: { need: peDet.need, scNeed: det.need, listen: dlMemo.v, running: PE.running, pos: PE.pos, attempts: PE.attempts.length, slots: PE.slots.length, listening, hidden: document.hidden } };
   } catch (e) { return { ok: false, error: 'Test error: ' + (e && e.message || e), scenario: S }; }

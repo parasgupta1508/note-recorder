@@ -195,4 +195,34 @@ ok(kb.units === 8 && kb.keys.filter(k => !k.black).length === 8 && kb.keys.filte
   ok(shorts.shorts === 7 && shorts.continuity < 90, `notes held under 60% of their length are counted and cost continuity (${shorts.shorts} short, continuity ${shorts.continuity.toFixed(0)})`);
 }
 
+// ---- the feedback the player reads (audit of what the app tells them)
+{
+  // spots to fix: a note that was not played comes before one that was merely out, when their scores tie; a note that was 40 cents out and one that was skipped both score 0
+  const sl = mkSlots(10, i => i === 2 ? { c: 45, m: 45, a: 0 } : i === 6 ? { k: 's', c: null, m: null, a: 0, s: null, e: null } : i === 8 ? { c: 44, m: 44, a: 0 } : {});
+  const sm = lib.summariseRun(sl, { tol: 10, beatMs: BEAT });
+  ok(sm.spots.length === 3 && sm.spots[0].bias == null && sm.spots[0].name === 'N6' && sm.spots[1].name === 'N2' && sm.spots[2].name === 'N8', `spots to fix: the skipped note first, then the notes furthest out (${sm.spots.map(s => s.name + (s.bias == null ? ' not played' : ' ' + s.bias.toFixed(0) + 'c')).join(', ')})`);
+  // a spot is only named when there is something to say: not "centred", a wrong note is described as one, and unsteadiness is said when that is the problem
+  { const base = i => ({ index: i, pass: 1, name: 'N' + i, midi: 60 + i, d: 'up', k: 'h', c: 0, m: 0, a: 1, s: 3, e: 0, sp: 0, wrong: 0, rt: 0 }), run = [0, 1, 2, 3, 4, 5].map(base);
+    run[1] = Object.assign(base(1), { c: 2, a: 0.3 });                                   // centred, only the share in tolerance is low (a wide vibrato): nothing to say
+    run[2] = Object.assign(base(2), { k: 's', c: null, m: null, a: 0, s: null, wrong: 1 });   // a wrong note sounded instead
+    run[3] = Object.assign(base(3), { k: 's', c: null, m: null, a: 0, s: null });            // not played at all
+    run[4] = Object.assign(base(4), { c: 1, a: 0.2, s: 36 });                                // centred but very unsteady (violin allowance 40)
+    const sp = lib.summariseRun(run, { tol: 10, beatMs: BEAT, wobbleCap: 40 }).spots, by = n => sp.find(x => x.name === n);
+    ok(!by('N1'), 'a note that was centred, with nothing else wrong, is not named');
+    ok(by('N2') && /different note sounded/.test(by('N2').text), `a missed note with a wrong note sounding is described as that (${by('N2') && by('N2').text})`);
+    ok(by('N3') && by('N3').text === 'not played', 'a note that was simply not played says so');
+    ok(by('N4') === undefined || /steadier/.test(by('N4').text), 'an unsteady note says to keep the pitch steadier'); }
+  // the app's own listening delay is not the player's lag
+  ok(Math.abs(lib.systemLagMs(4096 / 48000, 0) - (0.5 * 4096 / 48000 * 1000)) < 1e-9 && lib.systemLagMs(2048 / 48000, 0) < lib.systemLagMs(4096 / 48000, 0), 'the delay taken out of the timing is half the analysis window (a shorter window, a smaller delay)');
+  ok(Math.abs(lib.systemLagMs(4096 / 48000, 0.03) - lib.systemLagMs(4096 / 48000, 0) - 30) < 1e-9 && lib.systemLagMs(4096 / 48000, 5) === lib.systemLagMs(4096 / 48000, 0) && lib.systemLagMs(0, 0) > 40, 'the click is heard outputLatency later (30 ms is taken out); an absurd value or an unknown window is ignored');
+  // a whole run that sits sharp or flat is said on the first run
+  const rec = (o) => Object.assign({ inst: 'guitar', type: 'major', root: 7, span: 1, mode: 'tempo', total: 70, pitch: 60, fluency: 95, tone: 95, pulse: 95, lag: 0, wrong: 0, skipped: 0, retries: 0, notes: [], up: { bias: 22, abs: 22 }, down: { bias: 22, abs: 22 }, off: null }, o);
+  let rv = lib.coachReview(rec({}), [], {});
+  ok(rv.focus.some(t => /whole scale sat about 22¢ sharp/.test(t)), 'a scale played 22 cents sharp throughout says so on the first run, with the fix for the instrument');
+  rv = lib.coachReview(rec({ off: -18, up: { bias: -2, abs: 3 }, down: { bias: -2, abs: 3 } }), [], {});
+  ok(rv.focus.some(t => /about 18¢ flat/.test(t)), 'the Practical grader\'s own measure of the offset is used when it has one');
+  rv = lib.coachReview(rec({ up: { bias: 5, abs: 5 }, down: { bias: 4, abs: 4 } }), [], {});
+  ok(!rv.focus.some(t => /whole scale/.test(t)), 'a small offset (5 cents) is not called out');
+}
+
 console.log(fail ? `${fail} FAILED` : 'all evaluation tests passed'); process.exit(fail ? 1 : 0);

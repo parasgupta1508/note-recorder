@@ -57,6 +57,12 @@ function fixedRate(last, t, minDt) { if (t < last) last = -1; return t - last >=
 // score instead of counting as skipped; one that was heard still counts. tooShortSkipped(slot, noteMs) -> true when the note should be left out.
 const TOO_SHORT_MS = 120;   // measured on real scores: notes of 120 ms or more are found about 90% of the time, shorter ones well under that
 const tooShortSkipped = (slot, noteMs) => slot.k !== 'h' && typeof noteMs === 'number' && noteMs < TOO_SHORT_MS;
+// The app's OWN delay between a note starting and the drill noticing it: the pitch needs about half an analysis window of the new note, then the frames that confirm it (measured with
+// the speaker test in silent mode, where the true onset is known: about half the window), and the click is heard outputLatency later than it is scheduled. Taken out of the onset
+// times, so "behind the click" means the PLAYER is behind, not the app. winS: seconds of audio the pitch frame covered; outLatS: AudioContext.outputLatency (0 when not known).
+// What it cannot know is the rest of the hardware (a Bluetooth speaker or microphone): the score forgives a constant lag, and the advice only speaks of a large one.
+const ONSET_DELAY_MS = 0;   // measured in silent mode against the known onsets: half the window alone leaves the violin, guitar and ukulele within about 30 ms of the truth (20 ms more took out too much)
+const systemLagMs = (winS, outLatS) => 500 * (winS > 0 ? winS : 0.093) + ONSET_DELAY_MS + (outLatS > 0 && outLatS < 0.5 ? outLatS * 1000 : 0);
 // What a held note tells the grader besides its pitch. cl: the pitch detector's clarity for each frame of the note. skip: frames of the attack to leave out.
 // holdClarity -> the median clarity after the attack, or null when there are too few frames. heldRatio -> how long the note really sounded against its written length
 // (1 = all of it); the last frame stands for one frame period (about 1/60 s). Both are null when they cannot be measured.
@@ -130,10 +136,14 @@ function summariseRun(slots, opts) {
   const timing = timingScore(hits.map(x => x.e), beatMs);
   const te = hits.filter(x => typeof x.e === 'number'), drift = te.length ? te.reduce((s, x) => s + x.e, 0) / te.length : null;
   // weakest positions: a position's score mixes its in-tune share and how centred it was; a skipped position scores 0
-  const by = new Map();
-  for (const x of slots) { const k = x.d + x.midi; if (!by.has(k)) by.set(k, { name: x.name, midi: x.midi, d: x.d, v: [], c: [] }); const g = by.get(k); g.v.push(x.k === 'h' ? 100 * (0.6 * x.a + 0.4 * clamp01(1 - Math.abs(x.c) / 30)) : 0); if (x.k === 'h') g.c.push(x.c); }
-  const spots = [...by.values()].map(g => ({ name: g.name, midi: g.midi, d: g.d, score: g.v.reduce((a, b) => a + b, 0) / g.v.length, bias: g.c.length ? g.c.reduce((a, b) => a + b, 0) / g.c.length : null }))
-    .filter(g => g.score < 85).sort((a, b) => a.score - b.score).slice(0, 3)
-    .map(g => ({ ...g, text: g.bias == null ? 'not played' : guidance(g.bias, null) }));
+  const by = new Map(), wcap = opts.wobbleCap || 25;
+  for (const x of slots) { const k = x.d + x.midi; if (!by.has(k)) by.set(k, { name: x.name, midi: x.midi, d: x.d, v: [], c: [], s: [], wrong: 0 }); const g = by.get(k); g.v.push(x.k === 'h' ? 100 * (0.6 * x.a + 0.4 * clamp01(1 - Math.abs(x.c) / 30)) : 0); if (x.k === 'h') { g.c.push(x.c); if (typeof x.s === 'number') g.s.push(x.s); } g.wrong += x.wrong || 0; }
+  // weakest first; equal scores (a skipped note and one 40 cents out both score 0): the note that was not played first, then the one furthest out
+  const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+  const spots = [...by.values()].map(g => ({ name: g.name, midi: g.midi, d: g.d, score: avg(g.v), bias: avg(g.c), sd: avg(g.s), wrong: g.wrong }))
+    // a position is worth naming when it was not played, or was clearly out (beyond the in-tune tolerance, 12 cents at least: a few cents either way is not advice), or was unsteady
+    .filter(g => g.score < 85 && (g.bias == null || Math.abs(g.bias) >= Math.max(tol, 12) || (g.sd != null && g.sd > wcap * 0.75)))
+    .sort((a, b) => a.score - b.score || (b.bias == null) - (a.bias == null) || Math.abs(b.bias || 0) - Math.abs(a.bias || 0)).slice(0, 3)
+    .map(g => ({ ...g, text: g.bias == null ? (g.wrong ? 'a different note sounded here: check where the finger goes' : 'not played') : guidance(g.bias, g.sd, wcap) }));
   return { slots: slots.length, played: hits.length, skipped, wrongNotes, inTune, intonation, avgErr, timing, timingDriftMs: drift, spots };
 }

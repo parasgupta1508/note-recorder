@@ -72,6 +72,12 @@ srv.listen(0, '127.0.0.1', async () => {
       console.log(`${t.ok ? 'PASS' : 'FAIL'} ${t.name}  [${t.sound || '?'}]`);
       console.log(`     found ${d.found}/${d.played} played notes${d.playedLong != null && d.playedLong !== d.played ? ' (' + d.foundLong + '/' + d.playedLong + ' of 100 ms or more)' : ''} | pitch error median ${f1(p.medAbs)}c  p95 ${f1(p.p95Abs)}c  bias ${f1(p.bias)}c  (${p.within5}/${p.n} within 5c) | wrong notes: ${d.wrongFlagged}/${d.wrongTruth} flagged, ${d.falseWrong} false | skipped: ${d.skippedTruth}`);
       console.log(`     onset lag ${f1(tm.latencyMs, 0)} ms, spread ${f1(tm.spreadMs, 0)} ms | score from sound ${g.measured ? g.measured.total + ' ' + g.measured.band : 'n/a'}  deserved ${g.reference.total} ${g.reference.band}  (pitch ${g.measured ? f1(g.measured.pitch, 0) : '-'}/${f1(g.reference.pitch, 0)}  fluency ${g.measured ? f1(g.measured.fluency, 0) : '-'}/${f1(g.reference.fluency, 0)}  tone ${g.measured ? f1(g.measured.tone, 0) : '-'}/${f1(g.reference.tone, 0)})`);
+      if (t.feedback) {
+        const f = t.feedback, c = f.check || {};
+        console.log(`     feedback shown: spots to fix ${f.spots.length ? f.spots.map(s => (s.bar ? 'bar ' + s.bar + ' ' : '') + s.name + (s.d ? (s.d === 'up' ? '↑' : '↓') : '') + ' (' + s.text + ')').join('; ') : 'none'}${f.offset != null && Math.abs(f.offset) >= 8 ? ' | overall ' + (f.offset > 0 ? 'sharp' : 'flat') + ' ' + Math.abs(f.offset).toFixed(0) + 'c' : ''}`);
+        for (const l of f.focus) console.log('     improve: ' + l);
+        console.log(`     really worst: ${(c.worst || []).map(w => (w.bar ? 'bar ' + w.bar + ' ' : '') + w.note + ' ' + w.cents).join(', ') || 'nothing clearly out'} | named ${c.recall == null ? '-' : Math.round(c.recall * c.worst.length) + '/' + c.worst.length} | wrongly accused ${c.falseSpots} | sharp/flat wrong ${c.signWrong}`);
+      }
       for (const c of t.checks.filter(x => !x.ok)) console.log('     problem: ' + c.msg);
       if (!t.finished && t.debug) console.log('     debug: ' + JSON.stringify(t.debug));
       if (!t.ok) fail++;

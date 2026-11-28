@@ -6,15 +6,15 @@
     await new Promise(r => (document.readyState === 'complete' ? r() : addEventListener('load', r))); await sleep(800);
     let list; const inflate = async u8 => { const ds = new DecompressionStream('deflate-raw'), w = ds.writable.getWriter(); w.write(u8); w.close(); return new Uint8Array(await new Response(ds.readable).arrayBuffer()); };
     const loadPiece = async p => { const b = new Uint8Array(await (await fetch('/api/piece/' + encodeURIComponent(p.file))).arrayBuffer()); return (b[0] === 0x50 && b[1] === 0x4b) ? await mxlToXml(b, inflate) : new TextDecoder().decode(b); };
-    if (Q.get('inst')) list = [{ name: `${Q.get('inst')} ${Q.get('level') || 'good'}`, inst: Q.get('inst'), level: Q.get('level') || 'good', vibrato: Q.get('vib') !== '0', bow: Q.get('bow') || 'separate', span: +Q.get('span') || 1, bpm: +Q.get('bpm') || 70, type: Q.get('type') || 'major', root: Q.get('root') == null ? 2 : +Q.get('root'), pos: Q.get('pos') || '', seed: +Q.get('seed') || 1, grader: Q.get('grader') || 'strict', synth: Q.get('synth') === '1' }];
+    if (Q.get('inst')) list = [{ name: `${Q.get('inst')} ${Q.get('level') || 'good'}`, inst: Q.get('inst'), level: Q.get('level') || 'good', vibrato: Q.get('vib') !== '0', bow: Q.get('bow') || 'separate', span: +Q.get('span') || 1, bpm: +Q.get('bpm') || 70, type: Q.get('type') || 'major', root: Q.get('root') == null ? 2 : +Q.get('root'), pos: Q.get('pos') || '', seed: +Q.get('seed') || 1, grader: Q.get('grader') || 'practical', synth: Q.get('synth') === '1' }];
     else if (Q.get('pieces')) { const ix = await (await fetch('/api/pieces')).json(), want = Q.get('piece'), only = Q.get('only') === 'extra'; list = [];
-      const common = { bpm: +Q.get('bpm') || 0, maxSec: +Q.get('maxsec') || 75, level: Q.get('level') || 'good', vibrato: Q.get('vib') !== '0', grader: Q.get('grader') || 'strict' };
-      for (const p of ix) { if (want && want !== 'true' && p.file.indexOf(want) < 0) continue; if (only && !p.auto) continue;
+      const common = { bpm: +Q.get('bpm') || 0, maxSec: +Q.get('maxsec') || 75, level: Q.get('level') || 'good', vibrato: Q.get('vib') !== '0', grader: Q.get('grader') || 'practical' };
+      for (const p of ix) { if (want && want !== 'true' && p.file.indexOf(want) < 0) continue; if (only && !p.auto) continue; if (!p.auto && p.inst === 'chromatic') continue;   // the focus is violin, guitar and ukulele
         if (p.auto) {   // a score that was added by hand: each instrument part on its own, with the instrument the app recognises it as
           const xml = await loadPiece(p), sum = summariseParts(parseMusicXml(xml));
-          sum.forEach((s, i) => { const inst = s.key === 'violin' ? 'violin' : s.key === 'guitar' ? 'guitar' : s.key === 'ukulele' ? 'ukulele' : /viola/i.test(s.name) ? 'violin' : /cello|violoncello|bass|contrabass/i.test(s.name) ? null : s.key === 'chromatic' ? 'chromatic' : null;
-            if (!inst) { list.push({ name: `${p.title} - ${s.name}`, skip: `${s.name}: no recordings for this instrument (its notes are too low for a laptop speaker)` }); return; }
-            list.push(Object.assign({ name: `${p.title} - ${s.name}${/viola/i.test(s.name) ? ' (played with the violin recordings)' : ''}`, xml, part: i, inst }, common, { seed: 200 + i })); });
+          sum.forEach((s, i) => { const inst = ['violin', 'guitar', 'ukulele'].includes(s.key) ? s.key : null;
+            if (!inst) { list.push({ name: `${p.title} - ${s.name}`, skip: `${s.name}: ignored for now (the focus is violin, guitar and ukulele)` }); return; }
+            list.push(Object.assign({ name: `${p.title} - ${s.name}`, xml, part: i, inst }, common, { seed: 200 + i })); });
           continue; }
         list.push({ name: p.title, xml: await loadPiece(p), part: p.part || 0, inst: p.inst, from: p.bars && p.bars[0], to: p.bars && p.bars[1], bpm: +Q.get('bpm') || 0, maxSec: +Q.get('maxsec') || 75, level: Q.get('level') || 'good', vibrato: Q.get('vib') !== '0', grader: Q.get('grader') || 'strict' }); } }
     else list = Q.get('set') === 'quick' ? [ST_SET[1], ST_SET[5]] : ST_SET;

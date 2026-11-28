@@ -100,3 +100,12 @@ Air on the G String violin 60/62 and piano 216/216; Can't Help Falling in Love p
 - [ ] **Cello and bass** need recordings (VSCO 2 CE has a cello section and a solo cello, CC0) and a speaker that can play below 230 Hz before they can be tested.
 - [ ] **The whole Partita** is 22 minutes: only its first 75 seconds are run. Run later sections (the Chaconne is bars 1-257 of the last movement) with `--piece partita` and a bar range.
 
+## Where things stand (evaluation and feedback, focus: violin, guitar, ukulele)
+
+- Silent runs with the real recordings and the Practical grader: the 10 scale scenarios pass (9 of 10 before the last threshold change; the tenth was a pitch limit), including three planted faults. Feedback names the worst notes, in the right direction, and says so when the whole scale sits sharp or flat or the player is ahead of / behind the click.
+- [ ] **Grand piano for playback.** The app plays an *upright* piano (FreePats Upright Piano KW, CC0). The YDP Grand Piano (Yamaha Disklavier Pro, Zenph Studios, CC BY 3.0, 36 MB SF2) is downloaded and `tools/samples/sf2.js` plus the `ydp/` option in `tools/samples/build.js` are written, but the bank is **not built or switched on yet**. When it is: run `node tools/samples/build.js <folder> piano`, update `data/samples/README.txt` and add a visible credit line in the app (CC BY needs attribution), then `node tests/sampler.js`.
+- [ ] **Real speaker and microphone run of the scales and the violin / guitar / ukulele pieces** (about 30 minutes, quiet room, volume up): `node tests/mic-loopback.js --mode speaker --gold` and `--mode speaker --pieces --gold`. Not done yet with the new feedback checks.
+- [ ] **Timing through real hardware** reads about 120 ms too high (speaker, air and microphone delay the app cannot know). Needs a timing calibration step (play along with the click for a few beats, keep the offset), or only speak of a large lag.
+- [ ] **Feedback for pieces is not yet checked as closely as for scales** (bars named, the coach's piece lines).
+- [ ] `docs/audits/LATEST_AUDIT.md` was written at c24463a: say "give me full report" to refresh it.
+

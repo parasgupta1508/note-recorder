@@ -89,7 +89,7 @@ function drillListen(lo) {
   if (dlMemo.tl !== tl || dlMemo.lo !== lo || Math.abs(dlMemo.dt - pracDt) > 0.15 * pracDt) { dlMemo = { tl, lo, dt: pracDt, v: listenFor(tl, ctx.sampleRate, lo, pracDt) }; det.need = dlMemo.v.need; if (typeof peDet !== 'undefined') peDet.need = dlMemo.v.need; }
   return dlMemo.v;
 }
-let gateOn = false, trkF = 0, trkT = -9, hpCut = 70, recTickT = -1, pracTickT = -1, pracDt = 1 / 60, frameCl = null, frameT = 0, frameRms = 0, frameFast = 0;   // frameCl / frameT: clarity and time of the frame just analysed (the drills store them with each note)
+let gateOn = false, trkF = 0, trkT = -9, hpCut = 70, recTickT = -1, pracTickT = -1, pracDt = 1 / 60, frameCl = null, frameT = 0, frameRms = 0, frameFast = 0, frameWinS = 0.093;   // frameCl / frameT: clarity and time of the frame just analysed (the drills store them with each note)
 function loop() {
   rafId = requestAnimationFrame(loop);
   analyser.getFloatTimeDomainData(buf);
@@ -120,7 +120,7 @@ function loop() {
     const cut = Math.min(6000, Math.max(1000, hi * 3));
     if (lpA && Math.abs(cut - lpCut) > lpCut * 0.1) { lpCut = cut; lpA.frequency.value = lpB.frequency.value = cut; }
     const rm = recording ? recModeCfg() : null, dl = recording ? null : drillListen(lo);
-    const yb = rm && rm.win && lo >= 80 ? buf.subarray(buf.length - rm.win) : dl && dl.win < buf.length ? buf.subarray(buf.length - dl.win) : buf;   // fast mode and quick music: only the newest samples, so a quick note change is not smeared
+    const yb = rm && rm.win && lo >= 80 ? buf.subarray(buf.length - rm.win) : dl && dl.win < buf.length ? buf.subarray(buf.length - dl.win) : buf; frameWinS = yb.length / ctx.sampleRate;   // fast mode and quick music: only the newest samples, so a quick note change is not smeared
     const r = f0Engine().frame(yb, ctx.sampleRate, lo, hi), conf = +$('conf').value;
     const near = r && track && Math.abs(centsBetween(r.freq, trkF)) < 45;
     if (r && (gateOn ? r.clarity > conf : near && r.clarity > 0.5) || (near && r.clarity > 0.5)) { f = r.freq; frameCl = r.clarity; }
